@@ -1,8 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { WeaponConfigTab } from "@/components/weapons";
 import { CharacterConfigTab } from "@/components/character";
 import { ConfigLoader } from "@/components/ConfigLoader";
+import { ApplyChangesButton } from "@/components/ApplyChangesButton";
 
 export default function Home() {
   return (
@@ -10,7 +10,7 @@ export default function Home() {
       <main className="container mx-auto p-4">
         <header className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">EZConfig</h1>
-          <Button>Apply Changes</Button>
+          <ApplyChangesButton />
         </header>
 
         <Tabs defaultValue="weapons" className="w-full">
