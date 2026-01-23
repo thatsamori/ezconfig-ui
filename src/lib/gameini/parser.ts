@@ -157,8 +157,10 @@ export async function parseGameIni(filePath: string): Promise<ParsedGameIni> {
 
       if (isCharacter) {
         result.characterValues[key] = convertedValue;
-      } else if (currentWeapon) {
-        result.weaponValues[currentWeapon][key] = convertedValue;
+      } else if (currentWeapon && currentSection) {
+        // Build full key with group prefix to match UI expectations: General_IsParryHeld
+        const fullKey = `${currentSection.group}_${key}`;
+        result.weaponValues[currentWeapon][fullKey] = convertedValue;
       }
     }
   }
