@@ -15,7 +15,7 @@ None
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Foundation** - Next.js setup, Zustand store, environment config
-- [ ] **Phase 2: Core UI** - Config tabs, inputs, collapsible sections, weapon multi-select
+- [x] **Phase 2: Core UI** - Config tabs, inputs, collapsible sections, weapon multi-select
 - [ ] **Phase 3: Integration** - RCON execution, Game.ini parsing, staged state sync
 - [ ] **Phase 4: Features** - Preset system, search/filter, simple auth
 
@@ -40,7 +40,7 @@ Plans:
 Plans:
 - [x] 02-01: Type-specific input components (Boolean, Float, Vector, etc.)
 - [x] 02-02: Weapon config tab with multi-select and collapsible sections
-- [ ] 02-03: Character config tab with collapsible sections
+- [x] 02-03: Character config tab with collapsible sections
 
 ### Phase 3: Integration
 **Goal**: End-to-end flow: edit → stage → apply via RCON → verify in Game.ini
@@ -70,6 +70,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-01-23 |
-| 2. Core UI | 2/3 | In progress | - |
+| 2. Core UI | 3/3 | Complete | 2026-01-23 |
 | 3. Integration | 0/2 | Not started | - |
 | 4. Features | 0/2 | Not started | - |
