@@ -1,0 +1,1 @@
+export { CharacterConfigTab } from "./CharacterConfigTab";

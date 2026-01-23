@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { WeaponConfigTab } from "@/components/weapons";
+import { CharacterConfigTab } from "@/components/character";
 
 export default function Home() {
   return (
@@ -19,7 +20,7 @@ export default function Home() {
           <WeaponConfigTab />
         </TabsContent>
         <TabsContent value="character">
-          <p className="text-muted-foreground">Character configuration UI coming in Phase 2</p>
+          <CharacterConfigTab />
         </TabsContent>
       </Tabs>
     </main>
