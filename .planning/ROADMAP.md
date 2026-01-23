@@ -28,7 +28,7 @@ None
 **Plans**: TBD
 
 Plans:
-- [ ] 01-01: Project setup (Next.js, Tailwind, Shadcn, Zustand)
+- [x] 01-01: Project setup (Next.js, Tailwind, Shadcn, Zustand)
 - [ ] 01-02: Store structure and environment config
 
 ### Phase 2: Core UI
@@ -69,7 +69,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/2 | Not started | - |
+| 1. Foundation | 1/2 | In progress | - |
 | 2. Core UI | 0/3 | Not started | - |
 | 3. Integration | 0/2 | Not started | - |
 | 4. Features | 0/2 | Not started | - |
