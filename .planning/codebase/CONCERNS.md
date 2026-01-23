@@ -2,106 +2,111 @@
 
 **Analysis Date:** 2026-01-23
 
-## Tech Debt
+## Security Issues
 
-**Hardcoded RCON credentials:**
-- Issue: Connection host, port, and password hardcoded in source file
-- File: `rconExamples.ts` (lines 15-19)
-- Why: Rapid prototyping
-- Impact: Security risk if code is shared, can't easily switch servers
-- Fix approach: Move to environment variables, create .env.example
+**Hardcoded RCON Credentials:**
+- Issue: Server host, port, and password hardcoded in source code
+- File: `rconExamples.ts` (lines 16-20)
+- Risk: Credentials exposed in version control (file is gitignored but pattern is dangerous)
+- Current mitigation: File added to `.gitignore` line 36
+- Fix approach: Move to environment variables, create `.env.example` template
 
-**No project structure:**
-- Issue: All code files in root directory
-- Files: All `.ts` files in root
-- Why: Early project stage
-- Impact: Will become messy as project grows
-- Fix approach: Create `src/` directory with proper module organization
+## Critical Bugs
 
-## Known Bugs
+**Vector/Vector2D Data Type Mismatch:**
+- Issue: Schema defines vectors as objects `{x, y, z}` but validation expects arrays `[x, y, z]`
+- Files:
+  - Schema objects: `characterConfigSchema.ts` (lines 433, 440, 447, etc.), `weaponConfigSchema.ts` (lines 269, 405, etc.)
+  - Validation: `rconExamples.ts` (lines 52-74)
+- Example schema: `default: { x: 75.0, y: 0.0, z: -35.0 }`
+- Validation expects: `Array.isArray(configValue) && configValue.length === 3`
+- Impact: Runtime failure when trying to use Vector or Vector2D config values
+- Fix approach: Either change schema defaults to arrays or update validation to accept object format
 
-**Type mismatch in sendCharacterConfigUpdate:**
-- Symptoms: Passing `configKey` (string) to `validateAndConvertDataType` instead of full `ConfigEntry` object
-- File: `rconExamples.ts` (line 94)
-- Trigger: Calling `sendCharacterConfigUpdate()` would fail
-- Workaround: Not in active use, just example code
-- Root cause: Missing lookup of config entry from `characterConfigFlatMap`
-- Fix: Add `const configEntry = characterConfigFlatMap[configKey]` before validation
+## Error Handling
 
-## Security Considerations
+**Missing Error Handling for RCON Operations:**
+- Issue: No try/catch around `rcon.send()` calls
+- Files: `rconExamples.ts` (lines 85-87, 97-99)
+- Impact: Unhandled promise rejections, silent failures
+- Fix approach: Add try/catch with proper error logging
 
-**Exposed credentials in source:**
-- Risk: RCON password visible in `rconExamples.ts`
-- File: `rconExamples.ts` (line 18: `password: "ezbones"`)
-- Current mitigation: File is example code
-- Recommendations:
-  1. Move to .env file
-  2. Add .env to .gitignore
-  3. Create .env.example with placeholder values
+**Missing Error Logging:**
+- Issue: Only success logging present, no error logs
+- File: `rconExamples.ts` (line 101 has console.log for success only)
+- Impact: Difficult to debug failures
+- Fix approach: Add console.error for failures
 
-**No input validation at API boundary (future):**
-- Risk: When UI is built, user input will need sanitization
-- File: Future concern
-- Current mitigation: No API exists yet
-- Recommendations: Plan for input validation when building API layer
+**Validation Function Silent Return:**
+- Issue: `validateAndConvertDataType()` returns undefined if no dataType matches
+- File: `rconExamples.ts` (line 75 - function ends without return for unhandled types)
+- Impact: Could send malformed RCON commands
+- Fix approach: Add exhaustive type checking or throw for unknown types
+
+## Type Safety
+
+**Loose `any` Types:**
+- Issue: `default: any` in ConfigEntry defeats TypeScript type safety
+- File: `types.ts` (line 15)
+- Impact: No compile-time validation of default values
+- Fix approach: Use generic type or union type for default values
+
+**Function Parameters Using `any`:**
+- Issue: `configValue: any` in validation and send functions
+- Files: `rconExamples.ts` (lines 23, 81, 93)
+- Impact: No compile-time type checking for config values
+- Fix approach: Create union type or generic constraint
+
+## Documentation
+
+**Missing Environment Configuration:**
+- Issue: No `.env.example` file despite needing credentials
+- Impact: Developers don't know what env vars to set
+- Fix approach: Create `.env.example` with placeholder values
+
+**Empty Documentation Fields:**
+- Issue: All 100+ config entries have `documentation: ""`
+- Files: `characterConfigSchema.ts`, `weaponConfigSchema.ts`
+- Impact: No guidance for users on what each config does
+- Fix approach: Populate from game documentation
+
+**Incomplete README:**
+- Issue: README has incomplete run command (`bun run ` with no script)
+- File: `README.md` (line 12)
+- Impact: Users can't run the project from instructions
+- Fix approach: Add proper run instructions
+
+## Dependencies
+
+**Floating Version:**
+- Issue: `@types/bun: "latest"` uses unpinned version
+- File: `package.json` (line 5)
+- Impact: Build could break with new @types/bun release
+- Fix approach: Pin to specific version (currently 1.3.6)
+
+## Incomplete Implementation
+
+**All Features Marked Unimplemented:**
+- Issue: Every config entry has `isImplemented: false`
+- Files: `characterConfigSchema.ts`, `weaponConfigSchema.ts`
+- Impact: UI could show non-functional options
+- Fix approach: Update as features are implemented or remove flag if not needed
 
 ## Performance Bottlenecks
 
-**No significant performance concerns detected.**
-
-The codebase is schema definitions and simple RCON commands - inherently lightweight.
-
-## Fragile Areas
-
-**Type validation switch statement:**
-- File: `rconExamples.ts` (lines 21-74)
-- Why fragile: If/else chain for each DataType, easy to miss a case
-- Common failures: New DataType added without handler
-- Safe modification: Add exhaustive check at end, or use switch with TypeScript exhaustiveness checking
-- Test coverage: None
-
-## Scaling Limits
-
-**Not applicable at current stage.**
-
-Project is local tooling, not a scalable service.
-
-## Dependencies at Risk
-
-**rcon package:**
-- Package: rcon ^1.1.0
-- Risk: Last published 7+ years ago (2016)
-- Impact: May have compatibility issues with modern Node/Bun
-- Note: rcon-client (more recent, 2021) is also included and may be sufficient alone
-
-## Missing Critical Features
-
-**Environment variable support:**
-- Problem: No .env loading or env var configuration
-- Files: `rconExamples.ts` (hardcoded values)
-- Current workaround: Edit source code directly
-- Blocks: Cannot safely share code, cannot switch servers easily
-- Implementation complexity: Low (add .env file, use process.env)
-
-**No test infrastructure:**
-- Problem: No tests for validation logic
-- Files: All source files untested
-- Current workaround: Manual testing
-- Blocks: Safe refactoring, CI/CD pipeline
-- Implementation complexity: Low (Bun has built-in test runner)
+**RCON Connection at Module Load:**
+- Issue: Top-level await establishes connection on import
+- File: `rconExamples.ts` (line 16)
+- Impact: Module import blocks on network, cold start delay
+- Fix approach: Lazy connection on first use or explicit connect function
 
 ## Test Coverage Gaps
 
-**All code is untested:**
-- What's not tested: Everything
-- Risk: Validation bugs, data formatting errors
-- Priority: Medium (project is early stage)
-- Difficulty to test: Low - pure functions are easily testable
-
-**Specific gaps:**
-1. `validateAndConvertDataType` - Critical function, no tests
-2. Config flat map generation - Derived data, should verify completeness
-3. RCON command formatting - String output, easily testable
+**No Tests:**
+- Issue: No test files exist
+- Risk: Validation logic, schema generation, RCON formatting all untested
+- Priority: High for `validateAndConvertDataType()` function
+- Fix approach: Add Bun test suite for critical paths
 
 ---
 

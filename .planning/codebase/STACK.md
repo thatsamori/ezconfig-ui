@@ -5,7 +5,7 @@
 ## Languages
 
 **Primary:**
-- TypeScript ^5 - All application code
+- TypeScript 5.9.3 - All application code (`characterConfigSchema.ts`, `weaponConfigSchema.ts`, `types.ts`, `rconExamples.ts`)
 
 **Secondary:**
 - None
@@ -13,52 +13,62 @@
 ## Runtime
 
 **Environment:**
-- Bun v1.3.2 - JavaScript/TypeScript runtime
-- No Node.js dependency (Bun native)
+- Bun v1.3.2+ - Runtime and package manager
+- Created with `bun init` - `README.md`
 
 **Package Manager:**
-- Bun (native package manager)
-- Lockfile: `bun.lock` present
+- Bun
+- Lockfile: `bun.lock` present (lockfileVersion: 1)
 
 ## Frameworks
 
 **Core:**
-- None (vanilla TypeScript modules, no framework yet)
+- None (vanilla TypeScript library)
 
 **Testing:**
-- Not detected
+- Not configured (coverage directory in `.gitignore` indicates future planning)
 
 **Build/Dev:**
-- TypeScript ^5 - Type checking only (noEmit: true in `tsconfig.json`)
-- Bun bundler mode (`moduleResolution: bundler`)
+- TypeScript 5.9.3 - Compilation and type checking
+- `tsconfig.json` configured for ESNext target, bundler mode, strict checks
 
 ## Key Dependencies
 
 **Critical:**
-- rcon-client ^4.2.5 - RCON protocol client for game server communication - `package.json`
-- rcon ^1.1.0 - RCON protocol implementation - `package.json`
+- rcon-client 4.2.5 - RCON protocol client for game server communication (`package.json`)
 
 **Infrastructure:**
-- @types/bun - Bun type definitions - `package.json`
+- typed-emitter 0.1.0 - Event emitter with TypeScript support (transitive via rcon-client)
+
+**Dev Dependencies:**
+- @types/bun 1.3.6 - Bun runtime type definitions
+- @types/node 25.0.10 - Node.js type definitions (transitive)
+- bun-types 1.3.6 - Additional Bun type definitions
 
 ## Configuration
 
 **Environment:**
-- No .env file detected
-- Hardcoded connection settings in `rconExamples.ts` (host, port, password)
+- Environment variables not yet used in code
+- `.gitignore` includes `.env`, `.env.local`, `.env.*.local` patterns (ready for future use)
+- Comment in `rconExamples.ts` line 15: "These should be moved to env vars"
 
 **Build:**
-- `tsconfig.json` - TypeScript compiler options (strict mode, ESNext target, React JSX support)
+- `tsconfig.json` - TypeScript compiler configuration
+  - Target: ESNext
+  - Module: Preserve
+  - Strict mode enabled
+  - JSX: react-jsx (React 17+ support)
+  - moduleResolution: bundler
 
 ## Platform Requirements
 
 **Development:**
-- Bun runtime required (v1.3.2+)
-- Any platform with Bun support (macOS, Linux, Windows)
+- Any platform with Bun runtime installed
+- No external dependencies required
 
 **Production:**
-- Bun runtime
-- Network access to game server RCON port
+- Bun runtime required
+- Network access to RCON server (currently hardcoded: 15.204.103.39:4747)
 
 ---
 

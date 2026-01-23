@@ -4,11 +4,15 @@
 
 ## APIs & External Services
 
-**Game Server RCON:**
-- RCON Protocol - Remote console for game server configuration
-  - SDK/Client: rcon-client npm package v4.2.5 - `package.json`
-  - Connection: Host/Port/Password based - `rconExamples.ts`
-  - Commands: `string ezconfig <target> <group> <key> <value>`
+**RCON (Remote Console) Server:**
+- Service: Game server configuration via RCON protocol
+- SDK/Client: rcon-client npm package v4.2.5 (`package.json`)
+- Connection: `rconExamples.ts` (lines 16-20)
+  - Host: `15.204.103.39`
+  - Port: `4747`
+  - Password: `ezbones` (hardcoded - security concern)
+- Commands: `string ezconfig [Entity] [Group] [Key] [Value]`
+- Usage: Character and weapon configuration updates
 
 **Payment Processing:**
 - Not applicable
@@ -17,28 +21,27 @@
 - Not applicable
 
 **External APIs:**
-- None detected
+- None
 
 ## Data Storage
 
 **Databases:**
-- None detected
+- None (configuration sent directly to game server)
 
 **File Storage:**
-- Local filesystem (planned for presets in `./presets/` per `t.md`)
+- Not applicable
 
 **Caching:**
-- None detected
+- None
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- Not applicable (no user auth)
+- RCON password authentication only
+- Credentials: Hardcoded in `rconExamples.ts` (line 19)
 
-**RCON Authentication:**
-- Password-based RCON authentication
-- Currently hardcoded in `rconExamples.ts`
-- Needs: Move to environment variables
+**OAuth Integrations:**
+- None
 
 ## Monitoring & Observability
 
@@ -46,33 +49,42 @@
 - None configured
 
 **Analytics:**
-- None configured
+- None
 
 **Logs:**
-- Console output only
+- Console.log only (`rconExamples.ts` line 101)
+- No structured logging
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Not configured (local development only)
+- Not configured (local development tool)
 
 **CI Pipeline:**
 - Not configured
+- No GitHub Actions or similar
 
 ## Environment Configuration
 
 **Development:**
-- Required: Bun runtime
-- RCON credentials: Currently hardcoded (needs .env)
-  - RCON_HOST
-  - RCON_PORT
-  - RCON_PASSWORD
+- Required env vars: None currently (credentials hardcoded)
+- Secrets location: Should be `.env.local` (pattern in `.gitignore`)
+- Mock/stub services: None (direct RCON connection)
 
-**Staging:**
-- Not applicable
+**Future Environment Setup:**
+- `.gitignore` prepared for env files:
+  - `.env`
+  - `.env.local`
+  - `.env.development.local`
+  - `.env.test.local`
+  - `.env.production.local`
 
-**Production:**
-- Not configured
+**Recommended Environment Variables:**
+```
+RCON_HOST=15.204.103.39
+RCON_PORT=4747
+RCON_PASSWORD=<secret>
+```
 
 ## Webhooks & Callbacks
 
@@ -80,7 +92,33 @@
 - None
 
 **Outgoing:**
-- RCON commands to game server (not webhooks, but similar pattern)
+- None
+
+## RCON Protocol Details
+
+**Connection Pattern:**
+```typescript
+// rconExamples.ts (lines 16-20)
+const rcon = await Rcon.connect({
+  host: "15.204.103.39",
+  port: 4747,
+  password: "ezbones",
+});
+```
+
+**Command Format:**
+- Character: `string ezconfig Character [GroupName] [ConfigKey] [FormattedValue]`
+- Weapon: `string ezconfig [WeaponName] [GroupName] [ConfigKey] [FormattedValue]`
+
+**Value Formatting:**
+- Boolean: `"True"` or `"False"`
+- Float: `"0.00"` (2 decimal places)
+- Vector: `"X=0.00,Y=0.00,Z=0.00"`
+- Vector2D: `"X=0.00,Y=0.00"`
+- FloatArray: `"(0.00,0.00,0.00)"`
+
+**Transitive Dependencies:**
+- typed-emitter v0.1.0 - Event emitter for RCON client internals
 
 ---
 

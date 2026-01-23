@@ -5,119 +5,172 @@
 ## Test Framework
 
 **Runner:**
-- Not detected
+- Not configured
 
 **Assertion Library:**
-- Not detected
+- Not configured
 
 **Run Commands:**
 ```bash
-# No test commands configured
+# No test commands available yet
+# Coverage directory in .gitignore indicates future planning
 ```
 
 ## Test File Organization
 
 **Location:**
-- No test files detected
+- No test files present
+- Future pattern expected: `*.test.ts` co-located with source (based on common Bun/TypeScript patterns)
 
 **Naming:**
 - Not established
+- Suggested: `types.test.ts`, `characterConfigSchema.test.ts`
 
 **Structure:**
 ```
-# No test structure exists
-# Recommended structure for future:
-characterConfigSchema.test.ts
-weaponConfigSchema.test.ts
-rconExamples.test.ts
+ezconfig-ui/
+├── types.ts
+├── types.test.ts              # (future)
+├── characterConfigSchema.ts
+├── characterConfigSchema.test.ts  # (future)
+├── weaponConfigSchema.ts
+├── weaponConfigSchema.test.ts     # (future)
+└── rconExamples.ts
 ```
 
 ## Test Structure
 
 **Suite Organization:**
-- Not applicable (no tests exist)
+- Not established
+- Suggested pattern for Bun:
 
-**Recommended pattern for Bun:**
 ```typescript
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect } from "bun:test";
 
-describe('validateAndConvertDataType', () => {
-  it('should format boolean values', () => {
-    // test code
-  })
-})
+describe('ModuleName', () => {
+  describe('functionName', () => {
+    it('should handle valid input', () => {
+      // arrange
+      // act
+      // assert
+    });
+  });
+});
 ```
-
-## Mocking
-
-**Framework:**
-- Not detected
 
 **Patterns:**
 - Not established
 
-**What would need mocking:**
-- RCON client connection (`rcon-client` package)
-- Network calls to game server
+## Mocking
+
+**Framework:**
+- Not configured
+- Bun has built-in mocking via `mock` from "bun:test"
+
+**What Would Need Mocking:**
+- RCON client (`rcon.send()` calls)
+- Network operations
 
 ## Fixtures and Factories
 
 **Test Data:**
 - Not established
+- Config entries from schema files could serve as test fixtures
 
-**Recommended pattern:**
-```typescript
-// tests/fixtures/config-entries.ts
-export const mockBooleanConfig: ConfigEntry = {
-  configKey: "TestBool",
-  dataType: DataType.Boolean,
-  isImplemented: false,
-  documentation: "",
-  default: false
-}
-```
+**Location:**
+- Not established
+- Suggested: `tests/fixtures/` or inline in test files
 
 ## Coverage
 
 **Requirements:**
-- Not established
+- None established
+- `.gitignore` includes `coverage/` and `*.lcov` (prepared for future)
 
 **Configuration:**
 - Not configured
+- Bun supports coverage via `bun test --coverage`
+
+**View Coverage:**
+```bash
+# Future command
+bun test --coverage
+```
 
 ## Test Types
 
 **Unit Tests:**
-- Not present
-- Would test: validation functions, data type formatting
+- Not implemented
+- Key candidates:
+  - `validateAndConvertDataType()` in `rconExamples.ts`
+  - Flat map generation in schema files
+  - Type validation logic
 
 **Integration Tests:**
-- Not present
-- Would test: RCON connection, command sending
+- Not implemented
+- Key candidates:
+  - RCON command formatting
+  - End-to-end config update flow (with mocked RCON)
 
 **E2E Tests:**
-- Not present
-- Would test: Full config update flow
+- Not implemented
+- Would require actual RCON server connection
 
-## Common Patterns
+## What Needs Testing
 
-**What should be tested:**
+**Critical Paths:**
+1. `validateAndConvertDataType()` - All data type conversions
+   - Boolean → "True"/"False"
+   - Float → fixed decimal string
+   - Vector → "X=0.00,Y=0.00,Z=0.00"
+   - Vector2D → "X=0.00,Y=0.00"
+   - FloatArray → "(0.00,0.00,...)"
 
-1. `validateAndConvertDataType` function:
-   - Boolean conversion (true -> "True", false -> "False")
-   - Float formatting (1.5 -> "1.50")
-   - Vector formatting ([1,2,3] -> "X=1.00,Y=2.00,Z=3.00")
-   - Vector2D formatting ([1,2] -> "X=1.00,Y=2.00")
-   - FloatArray formatting ([1,2] -> "(1.00,2.00)")
-   - Invalid type rejection
+2. Schema flat map generation
+   - All config keys present
+   - Correct lookup returns
 
-2. Config flat maps:
-   - All keys present
-   - Lookup by key works correctly
+3. RCON command formatting
+   - Correct string format
+   - Proper escaping if needed
 
-3. RCON functions:
-   - Command format is correct
-   - Error handling on connection failure
+**Edge Cases:**
+- Invalid input types
+- Boundary values for floats
+- Empty arrays for FloatArray
+- Null/undefined handling
+
+## Recommended Test Setup
+
+**Install Bun Test (built-in):**
+```bash
+# No installation needed - Bun includes test runner
+```
+
+**Add to package.json:**
+```json
+{
+  "scripts": {
+    "test": "bun test",
+    "test:coverage": "bun test --coverage"
+  }
+}
+```
+
+**Example Test File (`validateAndConvertDataType.test.ts`):**
+```typescript
+import { describe, it, expect } from "bun:test";
+
+describe('validateAndConvertDataType', () => {
+  it('should convert boolean true to "True"', () => {
+    // Test implementation
+  });
+
+  it('should throw on invalid boolean', () => {
+    // Test implementation
+  });
+});
+```
 
 ---
 

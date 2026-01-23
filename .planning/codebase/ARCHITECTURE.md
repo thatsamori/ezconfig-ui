@@ -4,103 +4,118 @@
 
 ## Pattern Overview
 
-**Overall:** Schema-driven Configuration Library
+**Overall:** Schema-Driven Configuration Management Library
 
 **Key Characteristics:**
-- Configuration schemas define available game settings
-- Type-safe config entries with validation
-- RCON protocol for game server communication
-- No UI yet (library/module stage)
+- Declarative configuration schemas for game entities
+- Type-safe validation and conversion layer
+- RCON protocol integration for server communication
+- Flat map pattern for O(1) config lookup
 
 ## Layers
 
-**Schema Layer:**
-- Purpose: Define available configuration options with types and defaults
-- Contains: Config entry definitions, enums for categories
-- Location: `characterConfigSchema.ts`, `weaponConfigSchema.ts`, `types.ts`
-- Depends on: Nothing (pure data definitions)
-- Used by: RCON layer
-
-**RCON Layer:**
-- Purpose: Send configuration updates to game server
-- Contains: Connection setup, value formatting, command sending
-- Location: `rconExamples.ts`
-- Depends on: Schema layer, rcon-client package
-- Used by: Future UI layer
-
-**Types Layer:**
-- Purpose: Shared type definitions
-- Contains: ConfigEntry type, DataType enum
+**Data Models Layer:**
+- Purpose: Central type definitions and enumerations
+- Contains: `ConfigEntry` interface, `DataType` enum
 - Location: `types.ts`
-- Depends on: Nothing
-- Used by: Schema layer, RCON layer
+- Depends on: Nothing (foundation layer)
+- Used by: All schema files
+
+**Schema Definition Layer:**
+- Purpose: Declarative config schemas organized by functional groups
+- Contains: Configuration constants, group enums, flattened lookup maps
+- Location: `characterConfigSchema.ts`, `weaponConfigSchema.ts`
+- Depends on: types.ts
+- Used by: RCON integration layer
+
+**Validation & Conversion Layer:**
+- Purpose: Convert JavaScript types to RCON command format
+- Contains: `validateAndConvertDataType()` function
+- Location: `rconExamples.ts` (lines 22-75)
+- Depends on: types.ts for DataType enum
+- Used by: RCON send functions
+
+**Integration Layer:**
+- Purpose: RCON client connection and command sending
+- Contains: `sendWeaponConfigUpdate()`, `sendCharacterConfigUpdate()`
+- Location: `rconExamples.ts` (lines 77-102)
+- Depends on: All schema files, rcon-client package
+- Used by: External consumers
 
 ## Data Flow
 
-**Configuration Update:**
+**Configuration Update Flow:**
 
-1. Schema defines config key, data type, and default value
-2. User provides config key and new value
-3. `validateAndConvertDataType()` validates value matches expected type
-4. Value formatted to string for RCON protocol
-5. RCON command sent to game server
-6. Server applies configuration change
+1. User provides config value (e.g., `{ weaponName, groupName, configKey, value }`)
+2. Lookup config entry from flat map (`weaponConfigFlatMap[configKey]`)
+3. Validate and convert value via `validateAndConvertDataType()`
+   - Type checking against `DataType` enum
+   - Format conversion (e.g., boolean → "True"/"False", vector → "X=0.00,Y=0.00,Z=0.00")
+4. Build RCON command string: `string ezconfig [Entity] [Group] [Key] [Value]`
+5. Send via `rcon.send()` to game server
+6. Log response (success path only)
 
 **State Management:**
-- Stateless - each update is independent
-- No persistent state (yet)
-- RCON connection maintained for duration of session
+- Stateless - each config update is independent
+- RCON connection established at module load (top-level await)
+- No persistent state or caching
 
 ## Key Abstractions
 
 **ConfigEntry:**
-- Purpose: Single configuration option definition
-- Examples: `{ configKey: "CanDodge", dataType: DataType.Boolean, default: false }`
-- Pattern: Plain object with typed fields
+- Purpose: Standardized shape for all configuration options
+- Fields: configKey, dataType, isImplemented, documentation, default
+- Location: `types.ts` (lines 11-17)
+- Pattern: Interface with discriminated union potential (via dataType)
 
-**DataType Enum:**
-- Purpose: Define supported value types
-- Examples: Boolean, Float, Vector, Vector2D, FloatArray
-- Pattern: TypeScript string enum
-
-**Config Flat Maps:**
-- Purpose: Quick lookup of config entries by key
+**Flat Map Pattern:**
+- Purpose: O(1) lookup for config entries by key
 - Examples: `characterConfigFlatMap`, `weaponConfigFlatMap`
-- Pattern: Derived lookup object from grouped arrays
+- Location: End of each schema file
+- Pattern: Reduce array to object with configKey as key
+
+**Type-Safe Keys:**
+- Purpose: Branded types for compile-time config key validation
+- Examples: `CharacterConfigKeyType`, `WeaponConfigKeyType`
+- Location: Schema file exports
+- Pattern: `keyof typeof flatMap`
 
 ## Entry Points
 
-**RCON Examples:**
+**Module Entry:**
 - Location: `rconExamples.ts`
-- Triggers: Direct execution (`bun run rconExamples.ts`)
-- Responsibilities: Connect to server, send config updates
+- Triggers: Import of module
+- Responsibilities: Establish RCON connection, export API functions
 
-**No Main Entry:**
-- Project is currently library/schema stage
-- No index.ts or main entry point
+**Public API:**
+- `sendCharacterConfigUpdate()` - Update character configuration
+- `sendWeaponConfigUpdate()` - Update weapon configuration
+- Schema exports for UI consumption
 
 ## Error Handling
 
-**Strategy:** Throw errors on validation failure
+**Strategy:** Throw on validation failure, no catch at integration layer
 
 **Patterns:**
-- Type validation in `validateAndConvertDataType()`
-- Throw Error with descriptive message on type mismatch
-- No try/catch at top level (errors bubble to caller)
+- Validation throws `Error` with descriptive message including config key
+- No try/catch around RCON send operations (gap identified)
+- Success logging only (`console.log` on line 101)
 
 ## Cross-Cutting Concerns
 
 **Logging:**
-- console.log for RCON response output
-- No structured logging
+- Console.log for success responses only
+- No structured logging framework
+- No error logging (gap identified)
 
 **Validation:**
 - Runtime type checking in `validateAndConvertDataType()`
-- TypeScript static typing for schemas
+- Supports: Boolean, Float, FloatArray, Vector, Vector2D
+- Throws on type mismatch
 
-**Authentication:**
-- RCON password in connection config
-- Currently hardcoded (needs env vars)
+**Configuration:**
+- Hardcoded RCON credentials (security concern identified)
+- No environment variable usage yet
 
 ---
 
