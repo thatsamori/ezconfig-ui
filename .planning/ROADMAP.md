@@ -14,7 +14,7 @@ None
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Foundation** - Next.js setup, Zustand store, environment config
+- [x] **Phase 1: Foundation** - Next.js setup, Zustand store, environment config
 - [ ] **Phase 2: Core UI** - Config tabs, inputs, collapsible sections, weapon multi-select
 - [ ] **Phase 3: Integration** - RCON execution, Game.ini parsing, staged state sync
 - [ ] **Phase 4: Features** - Preset system, search/filter, simple auth
@@ -29,7 +29,7 @@ None
 
 Plans:
 - [x] 01-01: Project setup (Next.js, Tailwind, Shadcn, Zustand)
-- [ ] 01-02: Store structure and environment config
+- [x] 01-02: Store structure and environment config
 
 ### Phase 2: Core UI
 **Goal**: Complete UI for editing weapon and character configs with all input types
@@ -69,7 +69,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 1/2 | In progress | - |
+| 1. Foundation | 2/2 | Complete | 2026-01-23 |
 | 2. Core UI | 0/3 | Not started | - |
 | 3. Integration | 0/2 | Not started | - |
 | 4. Features | 0/2 | Not started | - |
