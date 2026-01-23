@@ -1,5 +1,7 @@
 import { DataType } from "./types";
 
+export const CHARACTER_CATEGORY_NAME = "Character";
+
 export enum CharacterConfigGroupName {
   Movement = "Movement",
   Combat = "Combat",
@@ -18,6 +20,13 @@ export const CHARACTER_CONFIG_OPTIONS = {
     },
 
     // Floats
+    {
+      configKey: "TimeToMaxSprint",
+      dataType: DataType.Float,
+      isImplemented: false,
+      documentation: "",
+      default: 0.96,
+    },
     {
       configKey: "CrouchCooldown",
       dataType: DataType.Float,

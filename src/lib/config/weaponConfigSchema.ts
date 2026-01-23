@@ -1,7 +1,7 @@
 import { DataType } from "./types";
 
-export enum WeaponName {
-  GreatSword = "GreatSword",
+export enum CategoryName {
+  Greatsword = "Greatsword",
 }
 
 export enum WeaponConfigAttackName {

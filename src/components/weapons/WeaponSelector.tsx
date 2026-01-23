@@ -1,15 +1,17 @@
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { WeaponName } from "@/lib/config/weaponConfigSchema";
+import { CategoryName } from "@/lib/config/weaponConfigSchema";
 import { useConfigStore } from "@/lib/store/configStore";
 import { Label } from "@/components/ui/label";
 
 export function WeaponSelector() {
   const selectedWeapons = useConfigStore((state) => state.selectedWeapons);
-  const setSelectedWeapons = useConfigStore((state) => state.setSelectedWeapons);
+  const setSelectedWeapons = useConfigStore(
+    (state) => state.setSelectedWeapons,
+  );
 
-  const allWeapons = Object.values(WeaponName);
+  const allWeapons = Object.values(CategoryName);
 
   const handleWeaponToggle = (weapon: string, checked: boolean) => {
     if (checked) {
