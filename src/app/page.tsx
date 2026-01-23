@@ -1,10 +1,26 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold">EZConfig UI</h1>
-      <p className="mt-4 text-lg text-gray-600">
-        Configuration interface for the ezconfig game mod
-      </p>
+    <main className="container mx-auto p-4">
+      <header className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">EZConfig</h1>
+        <Button>Apply Changes</Button>
+      </header>
+
+      <Tabs defaultValue="weapons" className="w-full">
+        <TabsList>
+          <TabsTrigger value="weapons">Weapons</TabsTrigger>
+          <TabsTrigger value="character">Character</TabsTrigger>
+        </TabsList>
+        <TabsContent value="weapons">
+          <p className="text-muted-foreground">Weapon configuration UI coming in Phase 2</p>
+        </TabsContent>
+        <TabsContent value="character">
+          <p className="text-muted-foreground">Character configuration UI coming in Phase 2</p>
+        </TabsContent>
+      </Tabs>
     </main>
   );
 }

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "EZConfig UI",
-  description: "Configuration interface for the ezconfig game mod",
+  title: "EZConfig",
+  description: "Game configuration management",
 };
 
 export default function RootLayout({
