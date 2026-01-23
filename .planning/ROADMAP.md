@@ -49,7 +49,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 03-01: Game.ini parsing and staged state initialization
+- [x] 03-01: Game.ini parsing and staged state initialization
 - [ ] 03-02: RCON command execution (sequential) and UI sync
 
 ### Phase 4: Features
@@ -71,5 +71,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-01-23 |
 | 2. Core UI | 3/3 | Complete | 2026-01-23 |
-| 3. Integration | 0/2 | Not started | - |
+| 3. Integration | 1/2 | In progress | - |
 | 4. Features | 0/2 | Not started | - |

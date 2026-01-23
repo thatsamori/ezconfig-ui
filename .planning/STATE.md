@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-23)
 
 **Core value:** Weapon configuration with multi-weapon selection must work end-to-end: edit values, stage changes, apply via RCON, verify in Game.ini.
-**Current focus:** Phase 2 — Core UI
+**Current focus:** Phase 3 — Integration
 
 ## Current Position
 
-Phase: 2 of 4 (Core UI)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-01-23 — Completed 02-03-PLAN.md
+Phase: 3 of 4 (Integration)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-01-23 — Completed 03-01-PLAN.md
 
-Progress: ██████░░░░ 56%
+Progress: ███████░░░ 67%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 6 min
-- Total execution time: 0.5 hours
+- Total plans completed: 6
+- Average duration: 5 min
+- Total execution time: 0.6 hours
 
 **By Phase:**
 
@@ -29,9 +29,10 @@ Progress: ██████░░░░ 56%
 |-------|-------|-------|----------|
 | 1. Foundation | 2/2 | 14 min | 7 min |
 | 2. Core UI | 3/3 | 17 min | 6 min |
+| 3. Integration | 1/2 | 4 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (8 min), 01-02 (6 min), 02-01 (4 min), 02-02 (10 min), 02-03 (3 min)
+- Last 5 plans: 01-02 (6 min), 02-01 (4 min), 02-02 (10 min), 02-03 (3 min), 03-01 (4 min)
 - Trend: stable
 
 ## Accumulated Context
@@ -50,6 +51,9 @@ Recent decisions affecting current work:
 - 02-02: Multi-weapon editing applies changes to ALL selected weapons
 - 02-02: Display value from first selected weapon when multiple selected
 - 02-02: General section defaultOpen, attack sections collapsed by default
+- 03-01: Parser skips unknown config keys (not in schema)
+- 03-01: Missing Game.ini returns empty config (fresh state)
+- 03-01: Server actions return discriminated union: { success: true, data } | { success: false, error }
 
 ### Deferred Issues
 
@@ -62,5 +66,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-23
-Stopped at: Completed 02-03-PLAN.md (Phase 2 complete)
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None
