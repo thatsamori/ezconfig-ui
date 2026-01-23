@@ -14,3 +14,4 @@ export {
   type Vector2Array,
   type Vector2Value,
 } from "./Vector2DInput";
+export { FloatArrayInput, type FloatArrayInputProps } from "./FloatArrayInput";
