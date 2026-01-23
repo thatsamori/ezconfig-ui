@@ -38,7 +38,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 02-01: Type-specific input components (Boolean, Float, Vector, etc.)
+- [x] 02-01: Type-specific input components (Boolean, Float, Vector, etc.)
 - [ ] 02-02: Weapon config tab with multi-select and collapsible sections
 - [ ] 02-03: Character config tab with collapsible sections
 
@@ -70,6 +70,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-01-23 |
-| 2. Core UI | 0/3 | Not started | - |
+| 2. Core UI | 1/3 | In progress | - |
 | 3. Integration | 0/2 | Not started | - |
 | 4. Features | 0/2 | Not started | - |
