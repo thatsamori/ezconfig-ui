@@ -12,17 +12,28 @@ export function ApplyChangesButton() {
   const getStagedChanges = useConfigStore((state) => state.getStagedChanges);
   const initializeFromGameIni = useConfigStore((state) => state.initializeFromGameIni);
 
-  // Calculate the count of staged changes
-  const stagedChanges = getStagedChanges();
-  const characterCount = Object.keys(stagedChanges.character).length;
-  const weaponCount = Object.values(stagedChanges.weapons).reduce(
-    (acc, configs) => acc + Object.keys(configs).length,
+  // Subscribe to staged state to trigger re-renders when staged changes
+  const characterStaged = useConfigStore((state) => state.characterStaged);
+  const weaponStaged = useConfigStore((state) => state.weaponStaged);
+
+  // Calculate the count of staged changes (for display only)
+  const characterCount = Object.values(characterStaged).filter(Boolean).length;
+  const weaponCount = Object.values(weaponStaged).reduce(
+    (acc, configs) => Object.values(configs).filter(Boolean).length + acc,
     0
   );
   const totalCount = characterCount + weaponCount;
 
   const handleApply = async () => {
-    if (totalCount === 0) return;
+    // Get fresh staged changes at time of apply (includes current values)
+    const stagedChanges = getStagedChanges();
+    const count = Object.keys(stagedChanges.character).length +
+      Object.values(stagedChanges.weapons).reduce(
+        (acc, configs) => acc + Object.keys(configs).length,
+        0
+      );
+
+    if (count === 0) return;
 
     setIsApplying(true);
 
