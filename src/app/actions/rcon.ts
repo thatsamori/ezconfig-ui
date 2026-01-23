@@ -51,7 +51,7 @@ function findCharacterGroupName(configKey: string): CharacterConfigGroupName | n
 /**
  * Parse a weapon config key to extract group name and base config key
  * Weapon keys may be prefixed with attack type: "Strike_CanCombo" -> { group: "Strike", key: "CanCombo" }
- * Or non-prefixed for General configs: "CanBlock" -> { group: "General", key: "CanBlock" }
+ * Or prefixed with General: "General_IsParryHeld" -> { group: "General", key: "IsParryHeld" }
  */
 function parseWeaponConfigKey(fullKey: string): { groupName: WeaponConfigGroupName; configKey: string } | null {
   // Check if it has an attack prefix
@@ -69,13 +69,16 @@ function parseWeaponConfigKey(fullKey: string): { groupName: WeaponConfigGroupNa
     }
   }
 
-  // Check if it's a General config key
-  const generalConfigs = WEAPON_CONFIG_OPTIONS.General;
-  if (generalConfigs.some((config) => config.configKey === fullKey)) {
-    return {
-      groupName: WeaponConfigGroupName.General,
-      configKey: fullKey,
-    };
+  // Check if it has a General_ prefix
+  if (fullKey.startsWith('General_')) {
+    const configKey = fullKey.substring('General_'.length);
+    const generalConfigs = WEAPON_CONFIG_OPTIONS.General;
+    if (generalConfigs.some((config) => config.configKey === configKey)) {
+      return {
+        groupName: WeaponConfigGroupName.General,
+        configKey,
+      };
+    }
   }
 
   return null;
