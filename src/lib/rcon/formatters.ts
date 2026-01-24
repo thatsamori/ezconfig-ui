@@ -26,10 +26,10 @@ export function formatVector(value: { x: number; y: number; z: number }): string
 /**
  * Format a Vector2D value for RCON commands
  * Store format: { x: number, y: number }
- * Output format: "X=0.00,Y=0.00"
+ * Output format: "X=0.00,Y=0.00,Z=0.00" (Z is always 0 for 2D vectors)
  */
 export function formatVector2D(value: { x: number; y: number }): string {
-  return `X=${value.x.toFixed(2)},Y=${value.y.toFixed(2)}`;
+  return `X=${value.x.toFixed(2)},Y=${value.y.toFixed(2)},Z=0.00`;
 }
 
 /**
