@@ -265,7 +265,7 @@ export const WEAPON_CONFIG_OPTIONS = {
 
     // Vector 2D
     {
-      configKey: "TurnCaps",
+      configKey: "Turncap",
       dataType: DataType.Vector2D,
       isImplemented: false,
       documentation: "",
