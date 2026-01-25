@@ -2,74 +2,59 @@
 
 ## Overview
 
-Build a web-based configuration interface for the ezconfig game mod. Starting with project foundation, then building the core UI components for weapon/character editing, integrating with the existing RCON/Game.ini systems, and finishing with preset management and auth.
+Build a web-based configuration interface for the ezconfig game mod. The web app is the authoritative source for all user configuration. The game mod reads from the web app on startup and receives live updates via RCON.
 
 ## Domain Expertise
 
 None
 
-## Phases
+## Milestones
+
+- **v0.1 Game.ini Integration** — Phases 1-3 (SUPERSEDED 2026-01-25) — [Archive](milestones/v0.1-ROADMAP.md)
+- **v1.0 Database-Driven Config** — Phases 5+ (planned)
+
+## Completed Milestones
+
+<details>
+<summary>v0.1 Game.ini Integration (Phases 1-3) — SUPERSEDED 2026-01-25</summary>
+
+Initial implementation using Game.ini as source of truth. Superseded before shipping due to architectural pivot to database-driven configuration.
+
+- [x] Phase 1: Foundation (2/2 plans) — completed 2026-01-23
+- [x] Phase 2: Core UI (3/3 plans) — completed 2026-01-23
+- [x] Phase 3: Integration (2/2 plans) — completed 2026-01-23
+- [ ] ~~Phase 4: Features~~ — not started, superseded
+
+See [v0.1-ROADMAP.md](milestones/v0.1-ROADMAP.md) for full details.
+
+</details>
+
+## Current Milestone: v1.0 Database-Driven Config
+
+**Goal:** Web app as source of truth with JSON database, lazy loading, and mod startup integration
+
+**Architecture:** See `architecture_update.md`
+
+### Phases
+
+- [ ] **Phase 5: Database Layer** — JSON file storage, API endpoints, schema validation
+- [ ] **Phase 6: UI Refactor** — Accordion-based weapon list, lazy loading, working state
+- [ ] **Phase 7: Apply Flow** — Save/Reset/Apply buttons, WipeDatabases + batch RCON
+- [ ] **Phase 8: Polish** — Search/filter, auth, error handling
 
 **Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-
-- [x] **Phase 1: Foundation** - Next.js setup, Zustand store, environment config
-- [x] **Phase 2: Core UI** - Config tabs, inputs, collapsible sections, weapon multi-select
-- [x] **Phase 3: Integration** - RCON execution, Game.ini parsing, staged state sync
-- [ ] **Phase 4: Features** - Preset system, search/filter, simple auth
-
-## Phase Details
-
-### Phase 1: Foundation
-**Goal**: Working Next.js app with Zustand store structure and environment configuration
-**Depends on**: Nothing (first phase)
-**Research**: Unlikely (established patterns)
-**Plans**: TBD
-
-Plans:
-- [x] 01-01: Project setup (Next.js, Tailwind, Shadcn, Zustand)
-- [x] 01-02: Store structure and environment config
-
-### Phase 2: Core UI
-**Goal**: Complete UI for editing weapon and character configs with all input types
-**Depends on**: Phase 1
-**Research**: Unlikely (internal UI patterns, Shadcn components)
-**Plans**: TBD
-
-Plans:
-- [x] 02-01: Type-specific input components (Boolean, Float, Vector, etc.)
-- [x] 02-02: Weapon config tab with multi-select and collapsible sections
-- [x] 02-03: Character config tab with collapsible sections
-
-### Phase 3: Integration
-**Goal**: End-to-end flow: edit → stage → apply via RCON → verify in Game.ini
-**Depends on**: Phase 2
-**Research**: Unlikely (RCON patterns exist in codebase)
-**Plans**: TBD
-
-Plans:
-- [x] 03-01: Game.ini parsing and staged state initialization
-- [x] 03-02: RCON command execution (sequential) and UI sync
-
-### Phase 4: Features
-**Goal**: Preset save/load/delete, search filter, and simple JSON auth
-**Depends on**: Phase 3
-**Research**: Unlikely (standard patterns)
-**Plans**: TBD
-
-Plans:
-- [ ] 04-01: Preset system (save, load, delete)
-- [ ] 04-02: Search/filter and auth
+- Phases 1-4: v0.1 (superseded)
+- Phases 5+: v1.0 (current milestone)
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Foundation | 2/2 | Complete | 2026-01-23 |
-| 2. Core UI | 3/3 | Complete | 2026-01-23 |
-| 3. Integration | 2/2 | Complete | 2026-01-23 |
-| 4. Features | 0/2 | Not started | - |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Foundation | v0.1 | 2/2 | Superseded | 2026-01-23 |
+| 2. Core UI | v0.1 | 3/3 | Superseded | 2026-01-23 |
+| 3. Integration | v0.1 | 2/2 | Superseded | 2026-01-23 |
+| 4. Features | v0.1 | 0/2 | Superseded | - |
+| 5. Database Layer | v1.0 | 0/? | Not started | - |
+| 6. UI Refactor | v1.0 | 0/? | Not started | - |
+| 7. Apply Flow | v1.0 | 0/? | Not started | - |
+| 8. Polish | v1.0 | 0/? | Not started | - |
