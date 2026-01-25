@@ -1,36 +1,35 @@
 'use server';
 
-import { env, validateEnv } from '@/lib/env';
-import { parseGameIni, ParsedGameIni } from '@/lib/gameini';
+/**
+ * @deprecated This action is from v0.1 and will be removed.
+ * The v1.0 architecture uses JSON database files instead of Game.ini.
+ * Use /api/config/{database}/{category} endpoints instead.
+ */
 
-export type LoadGameIniResult = {
-  success: true;
-  data: ParsedGameIni;
-} | {
-  success: false;
-  error: string;
-};
+import { ParsedGameIni } from '@/lib/gameini';
 
+export type LoadGameIniResult =
+  | {
+      success: true;
+      data: ParsedGameIni;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+/**
+ * @deprecated This function is from v0.1 and will be removed.
+ * Returns empty data structure for backwards compatibility during migration.
+ */
 export async function loadGameIniConfig(): Promise<LoadGameIniResult> {
-  try {
-    validateEnv();
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Environment validation failed',
-    };
-  }
-
-  try {
-    const data = await parseGameIni(env.gameIniPath);
-    return {
-      success: true,
-      data,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to parse Game.ini',
-    };
-  }
+  // Return empty data structure for v0.1 UI compatibility
+  // This will be removed when the v1.0 UI refactor is complete
+  return {
+    success: true,
+    data: {
+      characterValues: {},
+      weaponValues: {},
+    },
+  };
 }
