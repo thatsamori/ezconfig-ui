@@ -5,7 +5,7 @@
  * to quickly set up their game configuration.
  */
 
-import { readFile, readdir, stat } from 'fs/promises';
+import { readFile, readdir, stat, writeFile, mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { env } from '@/lib/env';
 import type { ConfigEntry } from '@/lib/database/types';
@@ -23,6 +23,30 @@ export function getPresetsRoot(): string {
  */
 export function getStaticPresetsPath(): string {
   return join(getPresetsRoot(), 'Static');
+}
+
+/**
+ * Get the path to user presets directory
+ */
+export function getUserPresetsPath(): string {
+  return join(getPresetsRoot(), 'User');
+}
+
+/**
+ * Validate that a preset name is safe (alphanumeric, hyphens, underscores only)
+ * Throws an error if name is invalid
+ */
+export function validateUserPresetName(name: string): void {
+  if (!name || name.length === 0) {
+    throw new Error('Preset name is required');
+  }
+
+  if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+    throw new Error('Preset name can only contain letters, numbers, hyphens, and underscores');
+  }
+
+  // Also run path traversal check
+  validatePresetName(name);
 }
 
 /**
@@ -209,6 +233,187 @@ export async function loadPresetData(presetName: string): Promise<PresetData> {
         data.weapons[weaponName][category] = values;
       }
       // Skip files that don't match expected structure
+    } catch (error) {
+      console.warn(`Error parsing ${relativePath}: ${(error as Error).message}`);
+    }
+  }
+
+  return data;
+}
+
+/**
+ * Read manifest from any preset path
+ */
+async function readManifestFromPath(presetPath: string): Promise<PresetManifest> {
+  const manifestPath = join(presetPath, 'manifest.json');
+  const content = await readFile(manifestPath, 'utf-8');
+  const parsed = JSON.parse(content);
+
+  if (typeof parsed.title !== 'string' || typeof parsed.description !== 'string') {
+    throw new Error('Invalid manifest format');
+  }
+
+  return {
+    title: parsed.title,
+    description: parsed.description,
+  };
+}
+
+/**
+ * List all user presets with their manifests
+ */
+export async function listUserPresets(): Promise<PresetInfo[]> {
+  const userPath = getUserPresetsPath();
+
+  try {
+    const entries = await readdir(userPath, { withFileTypes: true });
+    const presets: PresetInfo[] = [];
+
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        try {
+          const manifest = await readManifestFromPath(join(userPath, entry.name));
+          presets.push({
+            name: entry.name,
+            manifest,
+          });
+        } catch (error) {
+          // Skip presets with invalid or missing manifests
+          console.warn(`Skipping user preset "${entry.name}": ${(error as Error).message}`);
+        }
+      }
+    }
+
+    return presets;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      // User presets directory doesn't exist - return empty list
+      return [];
+    }
+    throw error;
+  }
+}
+
+/**
+ * Save a user preset
+ */
+export async function saveUserPreset(
+  name: string,
+  manifest: PresetManifest,
+  data: PresetData
+): Promise<void> {
+  validateUserPresetName(name);
+
+  const presetPath = join(getUserPresetsPath(), name);
+
+  // Create preset directory
+  await mkdir(presetPath, { recursive: true });
+
+  // Write manifest.json
+  await writeFile(
+    join(presetPath, 'manifest.json'),
+    JSON.stringify(manifest, null, 2),
+    'utf-8'
+  );
+
+  // Write Character config files
+  if (Object.keys(data.character).length > 0) {
+    const characterPath = join(presetPath, 'Character');
+    await mkdir(characterPath, { recursive: true });
+
+    for (const [category, values] of Object.entries(data.character)) {
+      // Convert Record<string, ConfigValue> to ConfigEntry[] format
+      const entries = Object.entries(values).map(([key, value]) => ({ [key]: value }));
+      await writeFile(
+        join(characterPath, `${category}.json`),
+        JSON.stringify(entries, null, 2),
+        'utf-8'
+      );
+    }
+  }
+
+  // Write Weapon config files
+  if (Object.keys(data.weapons).length > 0) {
+    for (const [weaponName, categories] of Object.entries(data.weapons)) {
+      const weaponPath = join(presetPath, 'Weapon', weaponName);
+      await mkdir(weaponPath, { recursive: true });
+
+      for (const [category, values] of Object.entries(categories)) {
+        // Convert Record<string, ConfigValue> to ConfigEntry[] format
+        const entries = Object.entries(values).map(([key, value]) => ({ [key]: value }));
+        await writeFile(
+          join(weaponPath, `${category}.json`),
+          JSON.stringify(entries, null, 2),
+          'utf-8'
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Delete a user preset
+ */
+export async function deleteUserPreset(name: string): Promise<void> {
+  validateUserPresetName(name);
+
+  const presetPath = join(getUserPresetsPath(), name);
+
+  // Verify preset exists
+  try {
+    await stat(presetPath);
+  } catch {
+    throw new Error(`User preset "${name}" not found`);
+  }
+
+  // Recursively delete the preset directory
+  await rm(presetPath, { recursive: true });
+}
+
+/**
+ * Load user preset data
+ */
+export async function loadUserPresetData(presetName: string): Promise<PresetData> {
+  validateUserPresetName(presetName);
+
+  const presetPath = join(getUserPresetsPath(), presetName);
+
+  // Verify preset exists
+  try {
+    await stat(presetPath);
+  } catch {
+    throw new Error(`User preset "${presetName}" not found`);
+  }
+
+  const data: PresetData = {
+    character: {},
+    weapons: {},
+  };
+
+  // Find all JSON files in the preset directory
+  const jsonFiles = await findJsonFiles(presetPath);
+
+  for (const relativePath of jsonFiles) {
+    // Normalize path separators for cross-platform support
+    const normalizedPath = relativePath.replace(/\\/g, '/');
+    const parts = normalizedPath.split('/');
+
+    try {
+      const fullPath = join(presetPath, relativePath);
+      const values = await parseConfigFile(fullPath);
+
+      if (parts[0] === 'Character' && parts.length === 2) {
+        const category = parts[1].replace('.json', '');
+        data.character[category] = values;
+      } else if (parts[0] === 'Weapon' && parts.length === 3) {
+        const weaponName = parts[1];
+        const category = parts[2].replace('.json', '');
+
+        if (!data.weapons[weaponName]) {
+          data.weapons[weaponName] = {};
+        }
+        data.weapons[weaponName][category] = values;
+      }
     } catch (error) {
       console.warn(`Error parsing ${relativePath}: ${(error as Error).message}`);
     }
