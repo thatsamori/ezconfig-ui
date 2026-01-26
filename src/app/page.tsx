@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WeaponConfigTab } from "@/components/weapons";
 import { CharacterConfigTab } from "@/components/character";
+import { PresetsTab } from "@/components/presets";
 import { ActionButtons } from "@/components/ActionButtons";
 
 export default function Home() {
@@ -15,12 +16,16 @@ export default function Home() {
         <TabsList>
           <TabsTrigger value="weapons">Weapons</TabsTrigger>
           <TabsTrigger value="character">Character</TabsTrigger>
+          <TabsTrigger value="presets">Presets</TabsTrigger>
         </TabsList>
         <TabsContent value="weapons">
           <WeaponConfigTab />
         </TabsContent>
         <TabsContent value="character">
           <CharacterConfigTab />
+        </TabsContent>
+        <TabsContent value="presets">
+          <PresetsTab />
         </TabsContent>
       </Tabs>
     </main>
