@@ -5,7 +5,7 @@
  * all databases, subdatabases (for grouped types like Weapon), and categories.
  */
 
-import { readdir, stat } from 'fs/promises';
+import { readdir, readFile, stat } from 'fs/promises';
 import { join } from 'path';
 import { getDatabasesRoot } from './service';
 
@@ -18,6 +18,16 @@ import { getDatabasesRoot } from './service';
 export type FlatDatabase = string[];
 export type GroupedDatabase = Record<string, string[]>;
 export type DatabaseStructure = Record<string, FlatDatabase | GroupedDatabase>;
+
+/**
+ * Override map types
+ *
+ * Flat override map: { "Character": { "Movement": true, "Combat": false, ... } }
+ * Grouped override map: { "Weapon": { "Greatsword": { "General": true, "Strike": false }, ... } }
+ */
+export type FlatOverrideMap = Record<string, boolean>;
+export type GroupedOverrideMap = Record<string, Record<string, boolean>>;
+export type OverrideMap = Record<string, FlatOverrideMap | GroupedOverrideMap>;
 
 /**
  * Check if a directory contains only subdirectories (no JSON files directly)
@@ -130,4 +140,120 @@ export async function scanDatabaseStructure(): Promise<DatabaseStructure> {
   }
 
   return structure;
+}
+
+/**
+ * Check if a JSON file has non-empty content (at least one entry)
+ */
+async function hasOverrides(filePath: string): Promise<boolean> {
+  try {
+    const content = await readFile(filePath, 'utf-8');
+    const parsed = JSON.parse(content);
+    return Array.isArray(parsed) && parsed.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get override status for categories in a database directory
+ */
+async function getCategoryOverrides(dirPath: string): Promise<FlatOverrideMap> {
+  const result: FlatOverrideMap = {};
+
+  try {
+    const entries = await readdir(dirPath, { withFileTypes: true });
+    const jsonFiles = entries.filter((entry) => entry.isFile() && entry.name.endsWith('.json'));
+
+    for (const file of jsonFiles) {
+      const categoryName = file.name.replace('.json', '');
+      const filePath = join(dirPath, file.name);
+      result[categoryName] = await hasOverrides(filePath);
+    }
+  } catch {
+    // Directory doesn't exist or can't be read
+  }
+
+  return result;
+}
+
+/**
+ * Scan a grouped database directory for override status
+ */
+async function scanGroupedOverrides(dirPath: string): Promise<GroupedOverrideMap> {
+  const result: GroupedOverrideMap = {};
+
+  try {
+    const entries = await readdir(dirPath, { withFileTypes: true });
+    const subdirs = entries.filter((entry) => entry.isDirectory());
+
+    for (const subdir of subdirs) {
+      const subdirPath = join(dirPath, subdir.name);
+      const categoryOverrides = await getCategoryOverrides(subdirPath);
+      // Only include subdatabases that have at least one category
+      if (Object.keys(categoryOverrides).length > 0) {
+        result[subdir.name] = categoryOverrides;
+      }
+    }
+  } catch {
+    // Directory doesn't exist or can't be read
+  }
+
+  return result;
+}
+
+/**
+ * Scan the entire Databases directory for override presence
+ *
+ * Returns a structure like:
+ * {
+ *   "Character": { "Movement": true, "Combat": false, "General": false },
+ *   "Weapon": {
+ *     "Greatsword": { "General": true, "Strike": false, ... },
+ *     "Longsword": { "General": false, "Strike": false, ... }
+ *   }
+ * }
+ */
+export async function scanOverrides(): Promise<OverrideMap> {
+  const root = getDatabasesRoot();
+  const overrides: OverrideMap = {};
+
+  try {
+    const rootStat = await stat(root);
+    if (!rootStat.isDirectory()) {
+      return overrides;
+    }
+  } catch {
+    // Databases directory doesn't exist yet
+    return overrides;
+  }
+
+  try {
+    const entries = await readdir(root, { withFileTypes: true });
+    const dirs = entries.filter((entry) => entry.isDirectory());
+
+    for (const dir of dirs) {
+      const dirPath = join(root, dir.name);
+
+      if (await isGroupDirectory(dirPath)) {
+        // This is a grouped database (like Weapon/)
+        const grouped = await scanGroupedOverrides(dirPath);
+        // Only include if it has at least one subdatabase
+        if (Object.keys(grouped).length > 0) {
+          overrides[dir.name] = grouped;
+        }
+      } else {
+        // This is a flat database (like Character/)
+        const categoryOverrides = await getCategoryOverrides(dirPath);
+        // Only include if it has at least one category
+        if (Object.keys(categoryOverrides).length > 0) {
+          overrides[dir.name] = categoryOverrides;
+        }
+      }
+    }
+  } catch {
+    // Can't read root directory
+  }
+
+  return overrides;
 }
