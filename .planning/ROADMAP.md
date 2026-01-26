@@ -53,7 +53,7 @@ See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full details.
 ### Phases
 
 - [x] **Phase 11: Static Presets** — Read-only preset files, UI to browse and load (2/2 plans) ✓
-- [ ] **Phase 12: User Presets** — Save current config as preset, manage user presets
+- [x] **Phase 12: User Presets** — Save current config as preset, manage user presets (2/2 plans) ✓
 - [ ] **Phase 13: Preset Polish** — Preview before load, import/export, UX refinements
 
 ### Phase Details
@@ -78,7 +78,7 @@ Plans:
 
 Plans:
 - [x] 12-01: User preset service layer and API endpoints ✓
-- [ ] 12-02: Save as Preset UI and preset management
+- [x] 12-02: Save as Preset UI and preset management ✓
 
 #### Phase 13: Preset Polish
 
@@ -105,5 +105,5 @@ Plans:
 | 9. Overrides View | v1.0 | 2/2 | Complete | 2026-01-26 |
 | 10. Bulk Weapon Update | v1.0 | 1/1 | Complete | 2026-01-26 |
 | 11. Static Presets | v1.1 | 2/2 | Complete | 2026-01-26 |
-| 12. User Presets | v1.1 | 1/2 | In progress | - |
+| 12. User Presets | v1.1 | 2/2 | Complete | 2026-01-26 |
 | 13. Preset Polish | v1.1 | 0/? | Not started | - |
