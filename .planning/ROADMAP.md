@@ -74,10 +74,11 @@ Plans:
 **Goal:** Allow users to save current config as a preset, manage saved presets
 **Depends on:** Phase 11
 **Research:** Unlikely (extends existing patterns)
-**Plans:** TBD
+**Plans:** 2
 
 Plans:
-- [ ] 12-01: TBD
+- [ ] 12-01: User preset service layer and API endpoints
+- [ ] 12-02: Save as Preset UI and preset management
 
 #### Phase 13: Preset Polish
 
