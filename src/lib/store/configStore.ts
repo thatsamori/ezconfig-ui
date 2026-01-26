@@ -31,6 +31,7 @@ export interface ConfigState {
   isCategoryLoaded: (path: string) => boolean;
   resetWorkingValues: () => void;
   clearSavedCategory: (database: string, category: string) => void;
+  removeWorkingValue: (database: string, category: string, key: string) => void;
 
   // ============================================================
   // DEPRECATED: v0.1 compatibility layer - will be removed in Phase 7
@@ -300,6 +301,60 @@ export const useConfigStore = create<ConfigState>()(
                 [...state.loadedCategories].filter((p) => p !== `${database}/${category}`)
               ),
               hasUnsavedChanges: calculateHasUnsavedChanges(state.workingValues, newSavedValues),
+            };
+          }
+        }),
+
+      removeWorkingValue: (database, category, key) =>
+        set((state) => {
+          const isCharacter = database === 'Character';
+
+          if (isCharacter) {
+            const categoryValues = state.workingValues.character[category] || {};
+            const { [key]: _, ...remainingKeys } = categoryValues;
+            const newWorkingValues = {
+              ...state.workingValues,
+              character: {
+                ...state.workingValues.character,
+                [category]: remainingKeys,
+              },
+            };
+            // Clean up empty category objects
+            if (Object.keys(remainingKeys).length === 0) {
+              const { [category]: __, ...remainingCategories } = newWorkingValues.character;
+              newWorkingValues.character = remainingCategories;
+            }
+            return {
+              workingValues: newWorkingValues,
+              hasUnsavedChanges: calculateHasUnsavedChanges(newWorkingValues, state.savedValues),
+            };
+          } else {
+            const weaponCategories = state.workingValues.weapons[database] || {};
+            const categoryValues = weaponCategories[category] || {};
+            const { [key]: _, ...remainingKeys } = categoryValues;
+            const newWorkingValues = {
+              ...state.workingValues,
+              weapons: {
+                ...state.workingValues.weapons,
+                [database]: {
+                  ...weaponCategories,
+                  [category]: remainingKeys,
+                },
+              },
+            };
+            // Clean up empty category objects
+            if (Object.keys(remainingKeys).length === 0) {
+              const { [category]: __, ...remainingCategories } = newWorkingValues.weapons[database];
+              newWorkingValues.weapons[database] = remainingCategories;
+            }
+            // Clean up empty weapon objects
+            if (Object.keys(newWorkingValues.weapons[database]).length === 0) {
+              const { [database]: ___, ...remainingWeapons } = newWorkingValues.weapons;
+              newWorkingValues.weapons = remainingWeapons;
+            }
+            return {
+              workingValues: newWorkingValues,
+              hasUnsavedChanges: calculateHasUnsavedChanges(newWorkingValues, state.savedValues),
             };
           }
         }),

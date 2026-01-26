@@ -66,10 +66,24 @@ export function WeaponAccordion({ weapons }: WeaponAccordionProps) {
   );
   const [loadingWeapon, setLoadingWeapon] = useState<string | null>(null);
 
-  // Store selectors
-  const getEffectiveValue = useConfigStore((state) => state.getEffectiveValue);
+  // Subscribe to actual state values to trigger re-renders
+  const workingValues = useConfigStore((state) => state.workingValues);
+  const savedValues = useConfigStore((state) => state.savedValues);
+  const loadedCategories = useConfigStore((state) => state.loadedCategories);
+
+  // Get action functions (these don't need to trigger re-renders)
   const setWorkingValue = useConfigStore((state) => state.setWorkingValue);
-  const isCategoryLoaded = useConfigStore((state) => state.isCategoryLoaded);
+  const removeWorkingValue = useConfigStore((state) => state.removeWorkingValue);
+
+  // Helper to get effective value (working ?? saved)
+  const getEffectiveValue = (weaponName: string, category: string, key: string) => {
+    const workingVal = workingValues.weapons[weaponName]?.[category]?.[key];
+    if (workingVal !== undefined) return workingVal;
+    return savedValues.weapons[weaponName]?.[category]?.[key];
+  };
+
+  // Helper to check if category is loaded
+  const isCategoryLoaded = (path: string) => loadedCategories.has(path);
 
   const handleAccordionChange = async (value: string) => {
     setExpandedWeapon(value || undefined);
@@ -115,6 +129,9 @@ export function WeaponAccordion({ weapons }: WeaponAccordionProps) {
             value={getEffectiveValue(weaponName, category, configEntry.configKey)}
             onChange={(value) =>
               setWorkingValue(weaponName, category, configEntry.configKey, value)
+            }
+            onReset={() =>
+              removeWorkingValue(weaponName, category, configEntry.configKey)
             }
           />
         ))}
