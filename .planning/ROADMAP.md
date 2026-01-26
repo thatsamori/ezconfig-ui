@@ -51,6 +51,8 @@ See [v0.1-ROADMAP.md](milestones/v0.1-ROADMAP.md) for full details.
 - [x] **Phase 9: Overrides View** — Toggle to show only config values that override game defaults — COMPLETE 2026-01-26
   - [x] Plan 01: Basic toggle with per-category filtering (2026-01-26)
   - [x] Plan 02: Enhanced filtering with API (2026-01-26)
+- [x] **Phase 10: Bulk Weapon Update** — Context menu "Apply to all weapons" with batch API — COMPLETE 2026-01-26
+  - [x] Plan 01: Context menu, batch API, confirmation dialog (2026-01-26)
 
 **Phase Numbering:**
 - Phases 1-4: v0.1 (superseded)
@@ -69,3 +71,4 @@ See [v0.1-ROADMAP.md](milestones/v0.1-ROADMAP.md) for full details.
 | 7. Apply Flow | v1.0 | 1/1 | Complete | 2026-01-26 |
 | 8. Polish | v1.0 | 2/2 | Complete | 2026-01-26 |
 | 9. Overrides View | v1.0 | 2/2 | Complete | 2026-01-26 |
+| 10. Bulk Weapon Update | v1.0 | 1/1 | Complete | 2026-01-26 |
