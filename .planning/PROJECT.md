@@ -10,11 +10,19 @@ Database-driven configuration with working state persistence: edit freely, save 
 
 ## Current State
 
-**Version:** v1.0 shipped 2026-01-26
-**LOC:** 6,177 TypeScript
-**Tech stack:** Next.js 16, React 19, Tailwind CSS 4, Shadcn UI, Zustand
+**Version:** v1.1 shipped 2026-01-26
+**LOC:** ~8,600 TypeScript
+**Tech stack:** Next.js 16, React 19, Tailwind CSS 4, Shadcn UI, Zustand, JSZip
 
-**What shipped in v1.0:**
+**What shipped in v1.1:**
+- Static presets (read-only) with folder structure
+- User presets (save/load/delete)
+- Preview before load with content summary
+- Import/export via ZIP files with name validation
+
+<details>
+<summary>v1.0 (shipped 2026-01-26)</summary>
+
 - JSON database filesystem with schema validation
 - API endpoints for config CRUD and apply to game
 - Accordion-based weapon list with lazy loading
@@ -23,6 +31,8 @@ Database-driven configuration with working state persistence: edit freely, save 
 - Overrides view toggle showing only customized values
 - Bulk weapon update via context menu
 - Search/filter for weapons
+
+</details>
 
 ## Requirements
 
@@ -47,14 +57,16 @@ Database-driven configuration with working state persistence: edit freely, save 
 - ✓ Search/filter weapons by name — v1.0
 - ✓ Schema validation on save (reject invalid keys/types) — v1.0
 - ✓ Simple password auth for /api/apply — v1.0
+- ✓ Static presets (read-only folder structure) — v1.1
+- ✓ User presets (save/load/delete) — v1.1
+- ✓ Preset preview before loading — v1.1
+- ✓ Import/export presets via ZIP — v1.1
 
 ### Active
 
 None — no active milestone
 
 ### Out of Scope
-
-- Static presets (`./presets/static/` read-only folder) — deferred to future version
 - Real-time collaboration — single user at a time
 - Undo/redo — user can reload saved config
 - Audit logging — not needed for this use case
@@ -108,5 +120,10 @@ See `architecture_update.md` for full details.
 | ~~Multi-weapon bulk editing~~ | ~~Apply to all selected~~ | ⚠️ Superseded |
 | ~~Game.ini as source of truth~~ | ~~Match existing mod behavior~~ | ⚠️ Superseded |
 
+| Filesystem-based presets | Presets stored as folders with manifest.json + config files | ✓ Good |
+| Two-stage dialog for preset loading | Protect unsaved changes before loading | ✓ Good |
+| Preview-before-action pattern | Show preset contents before destructive operation | ✓ Good |
+| ZIP import with dialog | Let user customize name/title/description on import | ✓ Good |
+
 ---
-*Last updated: 2026-01-26 after v1.0 milestone*
+*Last updated: 2026-01-26 after v1.1 milestone*

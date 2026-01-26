@@ -12,7 +12,7 @@ None
 
 - **v0.1 Game.ini Integration** — Phases 1-3 (SUPERSEDED 2026-01-25) — [Archive](milestones/v0.1-ROADMAP.md)
 - **v1.0 Database-Driven Config** — Phases 5-10 (SHIPPED 2026-01-26) — [Archive](milestones/v1.0-ROADMAP.md)
-- **v1.1 Presets** — Phases 11-13 (SHIPPED 2026-01-26)
+- **v1.1 Presets** — Phases 11-13 (SHIPPED 2026-01-26) — [Archive](milestones/v1.1-ROADMAP.md)
 
 ## Completed Milestones
 
@@ -46,56 +46,18 @@ See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full details.
 
 </details>
 
-## Milestone Complete: v1.1 Presets (SHIPPED 2026-01-26)
+<details>
+<summary>v1.1 Presets (Phases 11-13) — SHIPPED 2026-01-26</summary>
 
-**Goal:** Full preset system with static read-only presets and user-defined presets for saving/loading configurations
+Full preset system with static read-only presets and user-defined presets.
 
-**Delivered:**
-- Static presets (read-only) with folder structure
-- User presets (save/load/delete)
-- Preview before load with diff view
-- Import/export via ZIP files
+- [x] Phase 11: Static Presets (2/2 plans) — completed 2026-01-26
+- [x] Phase 12: User Presets (2/2 plans) — completed 2026-01-26
+- [x] Phase 13: Preset Polish (2/2 plans) — completed 2026-01-26
 
-### Phases
+See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full details.
 
-- [x] **Phase 11: Static Presets** — Read-only preset files, UI to browse and load (2/2 plans) ✓
-- [x] **Phase 12: User Presets** — Save current config as preset, manage user presets (2/2 plans) ✓
-- [x] **Phase 13: Preset Polish** — Preview before load, import/export, UX refinements (2/2 plans) ✓
-
-### Phase Details
-
-#### Phase 11: Static Presets
-
-**Goal:** Read-only preset files that ship with the app, UI to browse and load them
-**Depends on:** v1.0 complete
-**Research:** Unlikely (extends existing filesystem patterns)
-**Plans:** 2
-
-Plans:
-- [x] 11-01: Preset service layer and API endpoints ✓
-- [x] 11-02: Preset gallery UI and load flow ✓
-
-#### Phase 12: User Presets
-
-**Goal:** Allow users to save current config as a preset, manage saved presets
-**Depends on:** Phase 11
-**Research:** Unlikely (extends existing patterns)
-**Plans:** 2
-
-Plans:
-- [x] 12-01: User preset service layer and API endpoints ✓
-- [x] 12-02: Save as Preset UI and preset management ✓
-
-#### Phase 13: Preset Polish
-
-**Goal:** Preview preset before loading, import/export presets
-**Depends on:** Phase 12
-**Research:** No (extends existing patterns)
-**Plans:** 2
-
-Plans:
-- [x] 13-01: Preset preview before load ✓
-- [x] 13-02: Import/export with ZIP files ✓
+</details>
 
 ## Progress
 

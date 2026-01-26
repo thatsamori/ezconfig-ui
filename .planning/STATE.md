@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
-**Current focus:** v1.1 Presets — SHIPPED
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 13 of 13 (Preset Polish)
-Plan: 2 of 2 in current phase
-Status: Milestone complete
-Last activity: 2026-01-26 — Completed 13-02-PLAN.md
+Phase: 13 of 13 complete
+Plan: N/A
+Status: Ready to plan next milestone
+Last activity: 2026-01-26 — v1.1 milestone complete
 
-Progress: ███████████ 100% (v1.1: 6/6 plans complete)
+Progress: ███████████ 100% (all milestones shipped)
 
 ## Milestone History
 
@@ -23,7 +23,7 @@ Progress: ███████████ 100% (v1.1: 6/6 plans complete)
 - v1.0 Database-Driven Config: SHIPPED (Phases 5-10, 10 plans)
   - See: .planning/milestones/v1.0-ROADMAP.md
 - v1.1 Presets: SHIPPED (Phases 11-13, 6 plans)
-  - See: .planning/ROADMAP.md (to be archived)
+  - See: .planning/milestones/v1.1-ROADMAP.md
 
 ## Performance Metrics
 
@@ -37,17 +37,25 @@ Progress: ███████████ 100% (v1.1: 6/6 plans complete)
 - Timeline: 2 days (2026-01-25 → 2026-01-26)
 - Files modified: 55 (+6,332 / -543 lines)
 
+**v1.1 (shipped):**
+- Total plans completed: 6
+- Timeline: 1 day (2026-01-26)
+- Files modified: 20 (+2,425 lines)
+
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
-All v1.0 decisions validated as Good:
+All v1.0 and v1.1 decisions validated as Good:
 - Web app JSON as source of truth
 - Accordion-based weapon selection
 - Working → Save → Apply flow
 - Context menu on all rows
+- Filesystem-based presets
+- Preview-before-action pattern
+- ZIP import with dialog
 
 ### Deferred Issues
 
@@ -66,5 +74,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 13-02-PLAN.md — Milestone v1.1 complete
+Stopped at: Milestone v1.1 complete, archived
 Resume file: None
