@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readCategory, writeCategory } from '@/lib/database/service';
 import { validateEntries } from '@/lib/database/validation';
-import type { ConfigEntry } from '@/lib/database/types';
+import type { ConfigData } from '@/lib/database/types';
 
 /**
  * Parse path segments into database and category
@@ -66,10 +66,10 @@ export async function GET(
 /**
  * POST /api/config/{database}/{category}
  *
- * Write config entries to a category file.
- * Validates entries against schema before writing.
+ * Write config data to a category file.
+ * Validates data against schema before writing.
  *
- * Request body: { entries: ConfigEntry[] }
+ * Request body: { entries: ConfigData } (object with key-value pairs)
  */
 export async function POST(
   request: NextRequest,
@@ -89,7 +89,7 @@ export async function POST(
     const { database, category } = parsed;
 
     // Parse request body
-    let body: { entries?: ConfigEntry[] };
+    let body: { entries?: ConfigData };
     try {
       body = await request.json();
     } catch {
@@ -99,9 +99,9 @@ export async function POST(
       );
     }
 
-    if (!body.entries || !Array.isArray(body.entries)) {
+    if (!body.entries || typeof body.entries !== 'object' || Array.isArray(body.entries)) {
       return NextResponse.json(
-        { success: false, error: 'Request body must contain "entries" array' },
+        { success: false, error: 'Request body must contain "entries" object' },
         { status: 400 }
       );
     }

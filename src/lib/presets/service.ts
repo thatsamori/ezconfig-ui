@@ -8,7 +8,7 @@
 import { readFile, readdir, stat, writeFile, mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { env } from '@/lib/env';
-import type { ConfigEntry } from '@/lib/database/types';
+import type { ConfigData } from '@/lib/database/types';
 import type { PresetManifest, PresetInfo, PresetData, ConfigValue } from './types';
 
 /**
@@ -159,27 +159,17 @@ async function findJsonFiles(dirPath: string, relativePath: string = ''): Promis
 }
 
 /**
- * Parse a JSON file containing ConfigEntry[] and extract key-value pairs
+ * Parse a JSON config file containing ConfigData (object with key-value pairs)
  */
 async function parseConfigFile(filePath: string): Promise<Record<string, ConfigValue>> {
   const content = await readFile(filePath, 'utf-8');
-  const entries = JSON.parse(content) as ConfigEntry[];
+  const data = JSON.parse(content) as ConfigData;
 
-  if (!Array.isArray(entries)) {
-    throw new Error(`Invalid config file format: expected array`);
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+    throw new Error(`Invalid config file format: expected object`);
   }
 
-  const result: Record<string, ConfigValue> = {};
-
-  for (const entry of entries) {
-    // Each ConfigEntry is a record with one key-value pair
-    const keys = Object.keys(entry);
-    for (const key of keys) {
-      result[key] = entry[key] as ConfigValue;
-    }
-  }
-
-  return result;
+  return data as Record<string, ConfigValue>;
 }
 
 /**
@@ -322,11 +312,10 @@ export async function saveUserPreset(
     await mkdir(characterPath, { recursive: true });
 
     for (const [category, values] of Object.entries(data.character)) {
-      // Convert Record<string, ConfigValue> to ConfigEntry[] format
-      const entries = Object.entries(values).map(([key, value]) => ({ [key]: value }));
+      // Write object directly (ConfigData format)
       await writeFile(
         join(characterPath, `${category}.json`),
-        JSON.stringify(entries, null, 2),
+        JSON.stringify(values, null, 2),
         'utf-8'
       );
     }
@@ -339,11 +328,10 @@ export async function saveUserPreset(
       await mkdir(weaponPath, { recursive: true });
 
       for (const [category, values] of Object.entries(categories)) {
-        // Convert Record<string, ConfigValue> to ConfigEntry[] format
-        const entries = Object.entries(values).map(([key, value]) => ({ [key]: value }));
+        // Write object directly (ConfigData format)
         await writeFile(
           join(weaponPath, `${category}.json`),
-          JSON.stringify(entries, null, 2),
+          JSON.stringify(values, null, 2),
           'utf-8'
         );
       }

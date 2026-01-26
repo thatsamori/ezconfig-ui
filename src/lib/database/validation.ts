@@ -9,7 +9,7 @@
 import { DataType, type ConfigEntry as SchemaConfigEntry } from '@/lib/config/types';
 import { CHARACTER_CONFIG_OPTIONS } from '@/lib/config/characterConfigSchema';
 import { WEAPON_CONFIG_OPTIONS, WeaponConfigAttackName } from '@/lib/config/weaponConfigSchema';
-import type { ConfigEntry, ConfigValue } from './types';
+import type { ConfigData, ConfigValue } from './types';
 
 /**
  * Schema lookup result - a flat map of config key to schema entry
@@ -161,7 +161,7 @@ function valueMatchesType(value: ConfigValue, dataType: DataType): boolean {
 }
 
 /**
- * Validation result for a single entry
+ * Validation result for a single key-value pair
  */
 export type ValidateEntryResult = {
   valid: boolean;
@@ -169,26 +169,14 @@ export type ValidateEntryResult = {
 };
 
 /**
- * Validate a single config entry against the schema
+ * Validate a single config key-value pair against the schema
  *
- * @param entry - The config entry to validate (single key-value object)
+ * @param key - The config key
+ * @param value - The config value
  * @param schema - The schema map to validate against
  * @returns Validation result with error message if invalid
  */
-export function validateConfigEntry(entry: ConfigEntry, schema: SchemaMap): ValidateEntryResult {
-  const keys = Object.keys(entry);
-
-  // Entry must have exactly one key
-  if (keys.length !== 1) {
-    return {
-      valid: false,
-      error: `Entry must have exactly one key, got ${keys.length}`,
-    };
-  }
-
-  const key = keys[0];
-  const value = entry[key];
-
+export function validateConfigEntry(key: string, value: ConfigValue, schema: SchemaMap): ValidateEntryResult {
   // Key must exist in schema
   const schemaEntry = schema[key];
   if (!schemaEntry) {
@@ -212,7 +200,7 @@ export function validateConfigEntry(entry: ConfigEntry, schema: SchemaMap): Vali
 }
 
 /**
- * Validation error for a specific entry
+ * Validation error for a specific key
  */
 export type ValidationError = {
   key: string;
@@ -220,7 +208,7 @@ export type ValidationError = {
 };
 
 /**
- * Validation result for multiple entries
+ * Validation result for config data
  */
 export type ValidateEntriesResult = {
   valid: boolean;
@@ -228,15 +216,15 @@ export type ValidateEntriesResult = {
 };
 
 /**
- * Validate multiple config entries against the schema for a database/category
+ * Validate config data against the schema for a database/category
  *
- * @param entries - Array of config entries to validate
+ * @param data - Config data object to validate
  * @param database - The database name
  * @param category - The category name
  * @returns Validation result with all errors
  */
 export function validateEntries(
-  entries: ConfigEntry[],
+  data: ConfigData,
   database: string,
   category: string
 ): ValidateEntriesResult {
@@ -251,11 +239,8 @@ export function validateEntries(
 
   const errors: ValidationError[] = [];
 
-  for (const entry of entries) {
-    const keys = Object.keys(entry);
-    const key = keys.length === 1 ? keys[0] : JSON.stringify(keys);
-
-    const result = validateConfigEntry(entry, schema);
+  for (const [key, value] of Object.entries(data)) {
+    const result = validateConfigEntry(key, value, schema);
     if (!result.valid && result.error) {
       errors.push({ key, reason: result.error });
     }
@@ -291,20 +276,20 @@ if (import.meta.main) {
 
   console.log('Test: Valid boolean entry passes');
   test('Character/Movement with CanDodge boolean', () => {
-    const result = validateEntries([{ CanDodge: true }], 'Character', 'Movement');
+    const result = validateEntries({ CanDodge: true }, 'Character', 'Movement');
     return result.valid && result.errors.length === 0;
   });
 
   console.log('\nTest: Valid float entry passes');
   test('Character/Movement with TimeToMaxSprint float', () => {
-    const result = validateEntries([{ TimeToMaxSprint: 0.96 }], 'Character', 'Movement');
+    const result = validateEntries({ TimeToMaxSprint: 0.96 }, 'Character', 'Movement');
     return result.valid && result.errors.length === 0;
   });
 
   console.log('\nTest: Valid Vector2D entry passes (weapon)');
   test('Greatsword/General with ParryTurnCap Vector2D', () => {
     const result = validateEntries(
-      [{ ParryTurnCap: { x: 375.0, y: 262.5 } }],
+      { ParryTurnCap: { x: 375.0, y: 262.5 } },
       'Greatsword',
       'General'
     );
@@ -314,7 +299,7 @@ if (import.meta.main) {
   console.log('\nTest: Valid Vector entry passes (weapon)');
   test('Greatsword/General with ClashNormal Vector', () => {
     const result = validateEntries(
-      [{ ClashNormal: { x: 0.0, y: -1.0, z: 0.0 } }],
+      { ClashNormal: { x: 0.0, y: -1.0, z: 0.0 } },
       'Greatsword',
       'General'
     );
@@ -323,13 +308,13 @@ if (import.meta.main) {
 
   console.log('\nTest: Valid attack category passes');
   test('Greatsword/Strike with Windup float', () => {
-    const result = validateEntries([{ Windup: 0.675 }], 'Greatsword', 'Strike');
+    const result = validateEntries({ Windup: 0.675 }, 'Greatsword', 'Strike');
     return result.valid && result.errors.length === 0;
   });
 
   console.log('\nTest: Unknown key fails with "Unknown config key"');
   test('Character/Movement with InvalidKey', () => {
-    const result = validateEntries([{ InvalidKey: true }], 'Character', 'Movement');
+    const result = validateEntries({ InvalidKey: true }, 'Character', 'Movement');
     return (
       !result.valid &&
       result.errors.length === 1 &&
@@ -340,7 +325,7 @@ if (import.meta.main) {
 
   console.log('\nTest: Type mismatch fails with expected vs actual type');
   test('Character/Movement with CanDodge as number (should be boolean)', () => {
-    const result = validateEntries([{ CanDodge: 123 }], 'Character', 'Movement');
+    const result = validateEntries({ CanDodge: 123 }, 'Character', 'Movement');
     return (
       !result.valid &&
       result.errors.length === 1 &&
@@ -352,7 +337,7 @@ if (import.meta.main) {
   console.log('\nTest: Vector2D as Vector3D fails');
   test('Greatsword/General with ParryTurnCap as Vector (has z)', () => {
     const result = validateEntries(
-      [{ ParryTurnCap: { x: 375.0, y: 262.5, z: 0.0 } }],
+      { ParryTurnCap: { x: 375.0, y: 262.5, z: 0.0 } },
       'Greatsword',
       'General'
     );
@@ -365,14 +350,20 @@ if (import.meta.main) {
 
   console.log('\nTest: FloatArray validation');
   test('Greatsword/Strike with Damage as FloatArray', () => {
-    const result = validateEntries([{ Damage: [50, 45, 40] }], 'Greatsword', 'Strike');
+    const result = validateEntries({ Damage: [50, 45, 40] }, 'Greatsword', 'Strike');
     return result.valid && result.errors.length === 0;
   });
 
   console.log('\nTest: Unknown category fails');
   test('Character/Unknown category', () => {
-    const result = validateEntries([{ CanDodge: true }], 'Character', 'Unknown');
+    const result = validateEntries({ CanDodge: true }, 'Character', 'Unknown');
     return !result.valid && result.errors[0].reason.includes('Unknown database/category');
+  });
+
+  console.log('\nTest: Multiple entries in single object');
+  test('Character/Movement with multiple keys', () => {
+    const result = validateEntries({ CanDodge: true, TimeToMaxSprint: 0.96 }, 'Character', 'Movement');
+    return result.valid && result.errors.length === 0;
   });
 
   console.log('\n---');

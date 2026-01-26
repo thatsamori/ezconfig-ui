@@ -17,7 +17,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readCategory, writeCategory } from '@/lib/database/service';
 import { validateEntries } from '@/lib/database/validation';
 import { scanDatabaseStructure, type GroupedDatabase } from '@/lib/database/structure';
-import type { ConfigEntry } from '@/lib/database/types';
+import type { ConfigData, ConfigValue } from '@/lib/database/types';
 
 // Valid weapon categories
 const VALID_CATEGORIES = ['General', 'Strike', 'AltStrike', 'Stab', 'AltStab'] as const;
@@ -35,7 +35,7 @@ function isValidCategory(category: string): category is ValidCategory {
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
-    let body: { category?: string; entry?: ConfigEntry };
+    let body: { category?: string; entry?: Record<string, ConfigValue> };
     try {
       body = await request.json();
     } catch {
@@ -81,10 +81,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const entry = body.entry;
+    const entry = body.entry as ConfigData;
+    const entryKey = entryKeys[0];
+    const entryValue = entry[entryKey];
 
     // Validate entry against schema using any weapon name (schema is same for all weapons)
-    const validation = validateEntries([entry], 'AnyWeapon', category);
+    const validation = validateEntries(entry, 'AnyWeapon', category);
     if (!validation.valid) {
       return NextResponse.json(
         {
@@ -118,33 +120,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Apply entry to each weapon
-    const entryKey = entryKeys[0];
-    const entryValue = entry[entryKey];
     let weaponsUpdated = 0;
 
     for (const weaponName of weaponNames) {
       try {
-        // Read existing entries
-        const existingEntries = await readCategory(weaponName, category);
+        // Read existing data
+        const existingData = await readCategory(weaponName, category);
 
-        // Merge or add the new entry
-        let updated = false;
-        const newEntries: ConfigEntry[] = existingEntries.map((existingEntry) => {
-          const existingKey = Object.keys(existingEntry)[0];
-          if (existingKey === entryKey) {
-            updated = true;
-            return { [entryKey]: entryValue };
-          }
-          return existingEntry;
-        });
-
-        // If key didn't exist, append it
-        if (!updated) {
-          newEntries.push({ [entryKey]: entryValue });
-        }
+        // Merge the new entry into existing data
+        const newData: ConfigData = {
+          ...existingData,
+          [entryKey]: entryValue,
+        };
 
         // Write back
-        await writeCategory(weaponName, category, newEntries);
+        await writeCategory(weaponName, category, newData);
         weaponsUpdated++;
       } catch (error) {
         // Log error but continue with other weapons
