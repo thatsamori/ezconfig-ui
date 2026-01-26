@@ -88,7 +88,7 @@ Plans:
 **Plans:** 2
 
 Plans:
-- [ ] 13-01: Preset preview before load
+- [x] 13-01: Preset preview before load ✓
 - [ ] 13-02: Import/export with ZIP files
 
 ## Progress
@@ -107,4 +107,4 @@ Plans:
 | 10. Bulk Weapon Update | v1.0 | 1/1 | Complete | 2026-01-26 |
 | 11. Static Presets | v1.1 | 2/2 | Complete | 2026-01-26 |
 | 12. User Presets | v1.1 | 2/2 | Complete | 2026-01-26 |
-| 13. Preset Polish | v1.1 | 0/2 | Planned | - |
+| 13. Preset Polish | v1.1 | 1/2 | In progress | - |
