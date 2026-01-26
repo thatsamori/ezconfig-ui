@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
-**Current focus:** None — v1.0 complete, planning next milestone
+**Current focus:** v1.1 Presets — Full preset system with static and user-defined presets
 
 ## Current Position
 
-Phase: None active
-Plan: None
-Status: Milestone v1.0 shipped
-Last activity: 2026-01-26 — v1.0 milestone complete
+Phase: 11 of 13 (Static Presets)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-01-26 — Milestone v1.1 created
 
-Progress: ██████████ 100% (v1.0)
+Progress: ░░░░░░░░░░ 0% (v1.1)
 
 ## Milestone History
 
@@ -59,9 +59,10 @@ None.
 
 - v0.1 superseded 2026-01-25: Architectural pivot to database-driven configuration
 - v1.0 shipped 2026-01-26: All 6 phases (5-10) complete
+- v1.1 created 2026-01-26: Presets milestone, 3 phases (11-13)
 
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: v1.0 milestone complete
+Stopped at: Milestone v1.1 initialization
 Resume file: None

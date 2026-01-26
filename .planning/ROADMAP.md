@@ -12,6 +12,7 @@ None
 
 - **v0.1 Game.ini Integration** — Phases 1-3 (SUPERSEDED 2026-01-25) — [Archive](milestones/v0.1-ROADMAP.md)
 - **v1.0 Database-Driven Config** — Phases 5-10 (SHIPPED 2026-01-26) — [Archive](milestones/v1.0-ROADMAP.md)
+- 🚧 **v1.1 Presets** — Phases 11-13 (in progress)
 
 ## Completed Milestones
 
@@ -45,9 +46,47 @@ See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full details.
 
 </details>
 
-## Current Milestone: None
+## Current Milestone: v1.1 Presets
 
-No active milestone. Run `/gsd:discuss-milestone` or `/gsd:new-milestone` to plan the next version.
+**Goal:** Full preset system with static read-only presets and user-defined presets for saving/loading configurations
+
+### Phases
+
+- [ ] **Phase 11: Static Presets** — Read-only preset files, UI to browse and load
+- [ ] **Phase 12: User Presets** — Save current config as preset, manage user presets
+- [ ] **Phase 13: Preset Polish** — Preview before load, import/export, UX refinements
+
+### Phase Details
+
+#### Phase 11: Static Presets
+
+**Goal:** Read-only preset files that ship with the app, UI to browse and load them
+**Depends on:** v1.0 complete
+**Research:** Unlikely (extends existing filesystem patterns)
+**Plans:** TBD (run /gsd:plan-phase 11 to break down)
+
+Plans:
+- [ ] 11-01: TBD
+
+#### Phase 12: User Presets
+
+**Goal:** Allow users to save current config as a preset, manage saved presets
+**Depends on:** Phase 11
+**Research:** Unlikely (extends existing patterns)
+**Plans:** TBD
+
+Plans:
+- [ ] 12-01: TBD
+
+#### Phase 13: Preset Polish
+
+**Goal:** Preview preset before loading, import/export presets, UX refinements
+**Depends on:** Phase 12
+**Research:** Unlikely (UI polish)
+**Plans:** TBD
+
+Plans:
+- [ ] 13-01: TBD
 
 ## Progress
 
@@ -63,3 +102,6 @@ No active milestone. Run `/gsd:discuss-milestone` or `/gsd:new-milestone` to pla
 | 8. Polish | v1.0 | 2/2 | Complete | 2026-01-26 |
 | 9. Overrides View | v1.0 | 2/2 | Complete | 2026-01-26 |
 | 10. Bulk Weapon Update | v1.0 | 1/1 | Complete | 2026-01-26 |
+| 11. Static Presets | v1.1 | 0/? | Not started | - |
+| 12. User Presets | v1.1 | 0/? | Not started | - |
+| 13. Preset Polish | v1.1 | 0/? | Not started | - |
