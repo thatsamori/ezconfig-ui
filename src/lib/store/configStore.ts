@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { PresetData } from '@/lib/presets/types';
 
 // Config values can be various types from the schema
 // null is used as a tombstone to mark saved values for deletion (reset to game default)
@@ -35,6 +36,7 @@ export interface ConfigState {
   commitWorkingToSaved: () => void;
   clearSavedCategory: (database: string, category: string) => void;
   removeWorkingValue: (database: string, category: string, key: string) => void;
+  loadPreset: (presetData: PresetData) => void;
 }
 
 // Deep equality check for comparing working vs saved values
@@ -475,6 +477,20 @@ export const useConfigStore = create<ConfigState>()(
             };
           }
         }),
+
+      loadPreset: (presetData) =>
+        set(() => ({
+          savedValues: {
+            character: presetData.character,
+            weapons: presetData.weapons,
+          },
+          workingValues: {
+            character: {},
+            weapons: {},
+          },
+          loadedCategories: new Set<string>(),
+          hasUnsavedChanges: false,
+        })),
     }),
     {
       name: 'ezconfig-working',
