@@ -52,6 +52,9 @@ export function WeaponConfigTab() {
     return <p className="text-muted-foreground py-8 text-center">Loading weapons...</p>;
   }
 
+  // Check if search yielded no results (only when weapons are loaded but none match)
+  const hasNoResults = filteredWeapons && Object.keys(filteredWeapons).length === 0;
+
   return (
     <div className="space-y-4">
       <Input
@@ -59,7 +62,13 @@ export function WeaponConfigTab() {
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
       />
-      <WeaponAccordion weapons={filteredWeapons!} />
+      {hasNoResults ? (
+        <p className="text-muted-foreground py-8 text-center">
+          No weapons match '{searchQuery}'
+        </p>
+      ) : (
+        <WeaponAccordion weapons={filteredWeapons!} />
+      )}
     </div>
   );
 }
