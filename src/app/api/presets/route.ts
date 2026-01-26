@@ -1,19 +1,25 @@
 /**
  * GET /api/presets
  *
- * Returns the list of available static presets with their manifests.
+ * Returns the list of available presets (both static and user) with their manifests.
  */
 
 import { NextResponse } from 'next/server';
-import { listStaticPresets } from '@/lib/presets';
+import { listStaticPresets, listUserPresets } from '@/lib/presets';
 
 export async function GET() {
   try {
-    const presets = await listStaticPresets();
+    const [staticPresets, userPresets] = await Promise.all([
+      listStaticPresets(),
+      listUserPresets(),
+    ]);
 
     return NextResponse.json({
       success: true,
-      data: presets,
+      data: {
+        static: staticPresets,
+        user: userPresets,
+      },
     });
   } catch (error) {
     console.error('Error listing presets:', error);
