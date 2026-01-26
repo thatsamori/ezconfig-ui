@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import JSZip from "jszip";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +18,7 @@ import { useConfigStore } from "@/lib/store/configStore";
 import { toast } from "sonner";
 import { SavePresetDialog } from "./SavePresetDialog";
 import { PresetPreviewDialog } from "./PresetPreviewDialog";
-import type { PresetInfo, PresetData } from "@/lib/presets/types";
+import type { PresetInfo, PresetData, PresetManifest } from "@/lib/presets/types";
 
 interface PresetsResponse {
   static: PresetInfo[];
@@ -41,6 +42,13 @@ export function PresetsTab() {
 
   // Save dialog state
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+
+  // Export state
+  const [exportingPreset, setExportingPreset] = useState<string | null>(null);
+
+  // Import state
+  const [isImporting, setIsImporting] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const hasUnsavedChanges = useConfigStore((state) => state.hasUnsavedChanges);
   const savedValues = useConfigStore((state) => state.savedValues);
@@ -187,6 +195,129 @@ export function PresetsTab() {
     }
   };
 
+  const handleExportPreset = async (preset: PresetInfo) => {
+    setExportingPreset(preset.name);
+    try {
+      // Fetch preset data
+      const res = await fetch(`/api/presets/user/${preset.name}`);
+      if (!res.ok) {
+        throw new Error("Failed to fetch preset data");
+      }
+      const response = await res.json();
+      const data = response.data as PresetData;
+
+      // Create ZIP file
+      const zip = new JSZip();
+
+      // Add manifest
+      const manifest: PresetManifest = {
+        title: preset.manifest.title,
+        description: preset.manifest.description,
+      };
+      zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+
+      // Add Character configs
+      for (const [category, values] of Object.entries(data.character)) {
+        const entries = Object.entries(values).map(([k, v]) => ({ [k]: v }));
+        zip.file(`Character/${category}.json`, JSON.stringify(entries, null, 2));
+      }
+
+      // Add Weapon configs
+      for (const [weaponName, categories] of Object.entries(data.weapons)) {
+        for (const [category, values] of Object.entries(categories)) {
+          const entries = Object.entries(values).map(([k, v]) => ({ [k]: v }));
+          zip.file(`Weapon/${weaponName}/${category}.json`, JSON.stringify(entries, null, 2));
+        }
+      }
+
+      // Generate and download blob
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${preset.name}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success(`Exported preset: ${preset.manifest.title}`, {
+        position: "bottom-right",
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to export preset", {
+        position: "bottom-right",
+      });
+    } finally {
+      setExportingPreset(null);
+    }
+  };
+
+  const handleImportPreset = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      // Validate file type
+      if (!file.name.endsWith(".zip")) {
+        throw new Error("Please select a ZIP file");
+      }
+
+      // Read and validate ZIP structure client-side first
+      const arrayBuffer = await file.arrayBuffer();
+      const zip = await JSZip.loadAsync(arrayBuffer);
+
+      // Check for manifest.json
+      const manifestFile = zip.file("manifest.json");
+      if (!manifestFile) {
+        throw new Error("Invalid preset: missing manifest.json");
+      }
+
+      // Validate manifest structure
+      const manifestContent = await manifestFile.async("string");
+      let manifest: PresetManifest;
+      try {
+        manifest = JSON.parse(manifestContent);
+        if (!manifest.title || typeof manifest.title !== "string") {
+          throw new Error("Invalid manifest: missing or invalid title");
+        }
+      } catch (parseErr) {
+        throw new Error("Invalid manifest.json format");
+      }
+
+      // Upload to server for extraction
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/presets/import", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.error || "Failed to import preset");
+      }
+
+      toast.success(`Imported preset: ${result.data.title}`, {
+        position: "bottom-right",
+      });
+
+      // Refresh preset list
+      fetchPresets();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to import preset", {
+        position: "bottom-right",
+      });
+    } finally {
+      setIsImporting(false);
+      // Clear file input
+      if (importInputRef.current) {
+        importInputRef.current.value = "";
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -206,8 +337,23 @@ export function PresetsTab() {
   return (
     <>
       <div className="space-y-8 py-4">
-        {/* Save as Preset button */}
-        <div className="flex justify-end">
+        {/* Header with Save and Import buttons */}
+        <div className="flex justify-end gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".zip"
+            onChange={handleImportPreset}
+            className="hidden"
+            aria-label="Import preset ZIP file"
+          />
+          <Button
+            onClick={() => importInputRef.current?.click()}
+            disabled={isImporting}
+            variant="outline"
+          >
+            {isImporting ? "Importing..." : "Import Preset"}
+          </Button>
           <Button
             onClick={() => setSaveDialogOpen(true)}
             disabled={!hasSavedContent}
@@ -239,6 +385,13 @@ export function PresetsTab() {
                       className="flex-1"
                     >
                       Load
+                    </Button>
+                    <Button
+                      onClick={() => handleExportPreset(preset)}
+                      disabled={exportingPreset === preset.name}
+                      variant="outline"
+                    >
+                      {exportingPreset === preset.name ? "Exporting..." : "Export"}
                     </Button>
                     <Button
                       onClick={() => handleDeleteClick(preset)}
