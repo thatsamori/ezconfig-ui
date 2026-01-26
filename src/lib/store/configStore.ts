@@ -30,6 +30,7 @@ export interface ConfigState {
   markCategoryLoaded: (path: string) => void;
   isCategoryLoaded: (path: string) => boolean;
   resetWorkingValues: () => void;
+  commitWorkingToSaved: () => void;
   clearSavedCategory: (database: string, category: string) => void;
   removeWorkingValue: (database: string, category: string, key: string) => void;
 
@@ -267,6 +268,45 @@ export const useConfigStore = create<ConfigState>()(
           },
           hasUnsavedChanges: false,
         })),
+
+      commitWorkingToSaved: () =>
+        set((state) => {
+          // Deep merge working values into saved values
+          const newSavedValues = {
+            character: { ...state.savedValues.character },
+            weapons: { ...state.savedValues.weapons },
+          };
+
+          // Merge character working values
+          for (const [category, entries] of Object.entries(state.workingValues.character)) {
+            newSavedValues.character[category] = {
+              ...newSavedValues.character[category],
+              ...entries,
+            };
+          }
+
+          // Merge weapon working values
+          for (const [weapon, categories] of Object.entries(state.workingValues.weapons)) {
+            if (!newSavedValues.weapons[weapon]) {
+              newSavedValues.weapons[weapon] = {};
+            }
+            for (const [category, entries] of Object.entries(categories)) {
+              newSavedValues.weapons[weapon][category] = {
+                ...newSavedValues.weapons[weapon][category],
+                ...entries,
+              };
+            }
+          }
+
+          return {
+            savedValues: newSavedValues,
+            workingValues: {
+              character: {},
+              weapons: {},
+            },
+            hasUnsavedChanges: false,
+          };
+        }),
 
       clearSavedCategory: (database, category) =>
         set((state) => {
