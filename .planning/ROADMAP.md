@@ -40,9 +40,9 @@ See [v0.1-ROADMAP.md](milestones/v0.1-ROADMAP.md) for full details.
 - [x] **Phase 5: Database Layer** — JSON file storage, API endpoints, schema validation — COMPLETE 2026-01-25
   - [x] Plan 01: Database service layer (2026-01-25)
   - [x] Plan 02: Databases structure & apply endpoints (2026-01-25)
-- [ ] **Phase 6: UI Refactor** — Accordion-based weapon list, lazy loading, working state — IN PROGRESS
+- [x] **Phase 6: UI Refactor** — Accordion-based weapon list, lazy loading, working state — COMPLETE 2026-01-25
   - [x] Plan 01: Store refactor for working state model (2026-01-25)
-  - [ ] Plan 02: Weapon accordion UI
+  - [x] Plan 02: Weapon accordion UI (2026-01-25)
 - [ ] **Phase 7: Apply Flow** — Save/Reset/Apply buttons, WipeDatabases + batch RCON
 - [ ] **Phase 8: Polish** — Search/filter, auth, error handling
 
@@ -59,6 +59,6 @@ See [v0.1-ROADMAP.md](milestones/v0.1-ROADMAP.md) for full details.
 | 3. Integration | v0.1 | 2/2 | Superseded | 2026-01-23 |
 | 4. Features | v0.1 | 0/2 | Superseded | - |
 | 5. Database Layer | v1.0 | 2/2 | Complete | 2026-01-25 |
-| 6. UI Refactor | v1.0 | 1/2 | In progress | - |
+| 6. UI Refactor | v1.0 | 2/2 | Complete | 2026-01-25 |
 | 7. Apply Flow | v1.0 | 0/? | Not started | - |
 | 8. Polish | v1.0 | 0/? | Not started | - |
