@@ -16,6 +16,7 @@ import {
 import { useConfigStore } from "@/lib/store/configStore";
 import { toast } from "sonner";
 import { SavePresetDialog } from "./SavePresetDialog";
+import { PresetPreviewDialog } from "./PresetPreviewDialog";
 import type { PresetInfo, PresetData } from "@/lib/presets/types";
 
 interface PresetsResponse {
@@ -33,7 +34,8 @@ export function PresetsTab() {
   // Dialog state for loading presets
   const [selectedPreset, setSelectedPreset] = useState<PresetInfo | null>(null);
   const [presetType, setPresetType] = useState<"static" | "user" | null>(null);
-  const [dialogType, setDialogType] = useState<"confirm" | "unsaved" | "delete" | null>(null);
+  const [dialogType, setDialogType] = useState<"unsaved" | "delete" | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [isLoadingPreset, setIsLoadingPreset] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -84,7 +86,8 @@ export function PresetsTab() {
     if (hasUnsavedChanges) {
       setDialogType("unsaved");
     } else {
-      setDialogType("confirm");
+      // No unsaved changes, go directly to preview
+      setPreviewOpen(true);
     }
   };
 
@@ -119,6 +122,7 @@ export function PresetsTab() {
       });
     } finally {
       setIsLoadingPreset(false);
+      setPreviewOpen(false);
       setDialogType(null);
       setSelectedPreset(null);
       setPresetType(null);
@@ -159,13 +163,24 @@ export function PresetsTab() {
 
   const handleDiscardAndLoad = async () => {
     resetWorkingValues();
-    setDialogType("confirm");
+    setDialogType(null);
+    // Open preview dialog after discarding changes
+    setPreviewOpen(true);
   };
 
   const handleCloseDialog = () => {
     setDialogType(null);
+    setPreviewOpen(false);
     setSelectedPreset(null);
     setPresetType(null);
+  };
+
+  const handlePreviewOpenChange = (open: boolean) => {
+    setPreviewOpen(open);
+    if (!open) {
+      setSelectedPreset(null);
+      setPresetType(null);
+    }
   };
 
   if (isLoading) {
@@ -290,24 +305,16 @@ export function PresetsTab() {
         </AlertDialog>
       )}
 
-      {/* Confirm load dialog */}
+      {/* Preview dialog */}
       {mounted && (
-        <AlertDialog open={dialogType === "confirm"} onOpenChange={(open) => !open && handleCloseDialog()}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Load Preset</AlertDialogTitle>
-              <AlertDialogDescription>
-                Load preset &quot;{selectedPreset?.manifest.title}&quot;? This will replace your current configuration.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={handleCloseDialog}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirmLoad} disabled={isLoadingPreset}>
-                {isLoadingPreset ? "Loading..." : "Load Preset"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <PresetPreviewDialog
+          open={previewOpen}
+          onOpenChange={handlePreviewOpenChange}
+          preset={selectedPreset}
+          presetType={presetType}
+          onConfirmLoad={handleConfirmLoad}
+          isLoading={isLoadingPreset}
+        />
       )}
 
       {/* Confirm delete dialog */}
