@@ -19,6 +19,7 @@ import type { ConfigEntry } from "@/lib/config/types";
 
 interface WeaponAccordionProps {
   weapons: GroupedDatabase; // { Greatsword: ["General", "Strike", ...], ... }
+  showOverridesOnly?: boolean;
 }
 
 // Get config options for a category
@@ -60,7 +61,7 @@ async function loadWeaponConfig(weaponName: string, categories: string[]) {
   }
 }
 
-export function WeaponAccordion({ weapons }: WeaponAccordionProps) {
+export function WeaponAccordion({ weapons, showOverridesOnly = false }: WeaponAccordionProps) {
   const [expandedWeapon, setExpandedWeapon] = useState<string | undefined>(
     undefined
   );
@@ -118,25 +119,37 @@ export function WeaponAccordion({ weapons }: WeaponAccordionProps) {
   ) => {
     const options = getConfigOptions(category);
 
+    const filteredOptions = showOverridesOnly
+      ? options.filter((configEntry) =>
+          getEffectiveValue(weaponName, category, configEntry.configKey) !== undefined
+        )
+      : options;
+
     return (
       <CollapsibleSection
         key={`${weaponName}-${category}`}
         title={category}
         defaultOpen={defaultOpen}
       >
-        {options.map((configEntry) => (
-          <ConfigRow
-            key={`${weaponName}-${category}-${configEntry.configKey}`}
-            configEntry={configEntry}
-            value={getEffectiveValue(weaponName, category, configEntry.configKey)}
-            onChange={(value) =>
-              setWorkingValue(weaponName, category, configEntry.configKey, value)
-            }
-            onReset={() =>
-              removeWorkingValue(weaponName, category, configEntry.configKey)
-            }
-          />
-        ))}
+        {filteredOptions.length === 0 ? (
+          <p className="text-muted-foreground py-2 text-sm italic">
+            No overrides in {category}
+          </p>
+        ) : (
+          filteredOptions.map((configEntry) => (
+            <ConfigRow
+              key={`${weaponName}-${category}-${configEntry.configKey}`}
+              configEntry={configEntry}
+              value={getEffectiveValue(weaponName, category, configEntry.configKey)}
+              onChange={(value) =>
+                setWorkingValue(weaponName, category, configEntry.configKey, value)
+              }
+              onReset={() =>
+                removeWorkingValue(weaponName, category, configEntry.configKey)
+              }
+            />
+          ))
+        )}
       </CollapsibleSection>
     );
   };
