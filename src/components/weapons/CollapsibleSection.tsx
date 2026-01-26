@@ -12,17 +12,24 @@ export interface CollapsibleSectionProps {
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function CollapsibleSection({
   title,
   children,
   defaultOpen = false,
+  onOpenChange,
 }: CollapsibleSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    onOpenChange?.(open);
+  };
+
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-4">
+    <Collapsible open={isOpen} onOpenChange={handleOpenChange} className="mb-4">
       <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 bg-muted rounded-t-lg hover:bg-muted/80 transition-colors">
         {isOpen ? (
           <ChevronDown className="h-4 w-4" />
