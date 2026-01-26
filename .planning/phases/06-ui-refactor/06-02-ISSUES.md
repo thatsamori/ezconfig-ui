@@ -10,6 +10,18 @@
 
 ## Resolved Issues
 
+### UAT-002: Character config changes do not persist
+
+**Discovered:** 2026-01-25
+**Resolved:** 2026-01-25
+**Phase/Plan:** 06-02
+**Severity:** Major
+**Feature:** Character config persistence
+**Description:** Character tab config changes were lost on page reload
+**Root Cause:** CharacterConfigTab was still using deprecated v0.1 store API (characterValues, setCharacterValue) which doesn't persist to localStorage
+**Fix:** Refactored CharacterConfigTab to use new store model (workingValues/savedValues with setWorkingValue/removeWorkingValue)
+**Commit:** d6b5d1c
+
 ### UAT-001: Config values cannot be edited
 
 **Discovered:** 2026-01-25
