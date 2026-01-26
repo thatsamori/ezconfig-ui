@@ -161,11 +161,15 @@ export function PresetsTab() {
     }
   };
 
-  const handleDiscardAndLoad = async () => {
+  const handleResetChanges = () => {
     resetWorkingValues();
+    // Close dialog and clear selection - user must click Load again
     setDialogType(null);
-    // Open preview dialog after discarding changes
-    setPreviewOpen(true);
+    setSelectedPreset(null);
+    setPresetType(null);
+    toast.info("Changes reset. You can now load a preset.", {
+      position: "bottom-right",
+    });
   };
 
   const handleCloseDialog = () => {
@@ -285,20 +289,21 @@ export function PresetsTab() {
         onSaved={fetchPresets}
       />
 
-      {/* Unsaved changes dialog */}
+      {/* Unsaved changes blocking dialog */}
       {mounted && (
         <AlertDialog open={dialogType === "unsaved"} onOpenChange={(open) => !open && handleCloseDialog()}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
               <AlertDialogDescription>
-                You have unsaved changes. Save or discard them before loading a preset.
+                You have unsaved changes that must be resolved before loading a preset.
+                Save your current configuration or reset your changes first.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
               <AlertDialogCancel onClick={handleCloseDialog}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDiscardAndLoad}>
-                Discard & Load
+              <AlertDialogAction onClick={handleResetChanges} variant="outline">
+                Reset Changes
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
