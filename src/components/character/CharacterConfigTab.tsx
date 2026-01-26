@@ -19,8 +19,10 @@ export function CharacterConfigTab() {
   const removeWorkingValue = useConfigStore((state) => state.removeWorkingValue);
 
   // Helper to get effective value (working ?? saved)
+  // null is a tombstone meaning "reset to game default"
   const getEffectiveValue = (category: string, key: string) => {
     const workingVal = workingValues.character[category]?.[key];
+    if (workingVal === null) return undefined; // Tombstone = game default
     if (workingVal !== undefined) return workingVal;
     return savedValues.character[category]?.[key];
   };

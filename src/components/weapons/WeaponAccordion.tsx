@@ -76,8 +76,10 @@ export function WeaponAccordion({ weapons }: WeaponAccordionProps) {
   const removeWorkingValue = useConfigStore((state) => state.removeWorkingValue);
 
   // Helper to get effective value (working ?? saved)
+  // null is a tombstone meaning "reset to game default"
   const getEffectiveValue = (weaponName: string, category: string, key: string) => {
     const workingVal = workingValues.weapons[weaponName]?.[category]?.[key];
+    if (workingVal === null) return undefined; // Tombstone = game default
     if (workingVal !== undefined) return workingVal;
     return savedValues.weapons[weaponName]?.[category]?.[key];
   };

@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 // Config values can be various types from the schema
-export type ConfigValue = boolean | number | number[] | { x: number; y: number } | { x: number; y: number; z: number };
+// null is used as a tombstone to mark saved values for deletion (reset to game default)
+export type ConfigValue = boolean | number | number[] | { x: number; y: number } | { x: number; y: number; z: number } | null;
 
 export interface ConfigState {
   // Saved values (from API, source of truth for UI reset)
@@ -108,7 +109,10 @@ function calculateHasUnsavedChanges(
     for (const key of Object.keys(workingValues.character[category])) {
       const workingVal = workingValues.character[category][key];
       const savedVal = savedValues.character[category]?.[key];
-      if (!deepEqual(workingVal, savedVal)) {
+      // null tombstone means "delete" - it's a change if saved value exists
+      if (workingVal === null) {
+        if (savedVal !== undefined) return true;
+      } else if (!deepEqual(workingVal, savedVal)) {
         return true;
       }
     }
@@ -120,7 +124,10 @@ function calculateHasUnsavedChanges(
       for (const key of Object.keys(workingValues.weapons[weapon][category])) {
         const workingVal = workingValues.weapons[weapon][category][key];
         const savedVal = savedValues.weapons[weapon]?.[category]?.[key];
-        if (!deepEqual(workingVal, savedVal)) {
+        // null tombstone means "delete" - it's a change if saved value exists
+        if (workingVal === null) {
+          if (savedVal !== undefined) return true;
+        } else if (!deepEqual(workingVal, savedVal)) {
           return true;
         }
       }
@@ -242,10 +249,14 @@ export const useConfigStore = create<ConfigState>()(
 
         if (isCharacter) {
           const workingVal = state.workingValues.character[category]?.[key];
+          // null is a tombstone meaning "reset to game default"
+          if (workingVal === null) return undefined;
           if (workingVal !== undefined) return workingVal;
           return state.savedValues.character[category]?.[key];
         } else {
           const workingVal = state.workingValues.weapons[database]?.[category]?.[key];
+          // null is a tombstone meaning "reset to game default"
+          if (workingVal === null) return undefined;
           if (workingVal !== undefined) return workingVal;
           return state.savedValues.weapons[database]?.[category]?.[key];
         }
@@ -272,6 +283,7 @@ export const useConfigStore = create<ConfigState>()(
       commitWorkingToSaved: () =>
         set((state) => {
           // Deep merge working values into saved values
+          // null values (tombstones) mean "delete from saved"
           const newSavedValues = {
             character: { ...state.savedValues.character },
             weapons: { ...state.savedValues.weapons },
@@ -279,10 +291,23 @@ export const useConfigStore = create<ConfigState>()(
 
           // Merge character working values
           for (const [category, entries] of Object.entries(state.workingValues.character)) {
-            newSavedValues.character[category] = {
-              ...newSavedValues.character[category],
-              ...entries,
-            };
+            if (!newSavedValues.character[category]) {
+              newSavedValues.character[category] = {};
+            } else {
+              newSavedValues.character[category] = { ...newSavedValues.character[category] };
+            }
+            for (const [key, value] of Object.entries(entries)) {
+              if (value === null) {
+                // Tombstone: delete from saved
+                delete newSavedValues.character[category][key];
+              } else {
+                newSavedValues.character[category][key] = value;
+              }
+            }
+            // Clean up empty categories
+            if (Object.keys(newSavedValues.character[category]).length === 0) {
+              delete newSavedValues.character[category];
+            }
           }
 
           // Merge weapon working values
@@ -291,10 +316,27 @@ export const useConfigStore = create<ConfigState>()(
               newSavedValues.weapons[weapon] = {};
             }
             for (const [category, entries] of Object.entries(categories)) {
-              newSavedValues.weapons[weapon][category] = {
-                ...newSavedValues.weapons[weapon][category],
-                ...entries,
-              };
+              if (!newSavedValues.weapons[weapon][category]) {
+                newSavedValues.weapons[weapon][category] = {};
+              } else {
+                newSavedValues.weapons[weapon][category] = { ...newSavedValues.weapons[weapon][category] };
+              }
+              for (const [key, value] of Object.entries(entries)) {
+                if (value === null) {
+                  // Tombstone: delete from saved
+                  delete newSavedValues.weapons[weapon][category][key];
+                } else {
+                  newSavedValues.weapons[weapon][category][key] = value;
+                }
+              }
+              // Clean up empty categories
+              if (Object.keys(newSavedValues.weapons[weapon][category]).length === 0) {
+                delete newSavedValues.weapons[weapon][category];
+              }
+            }
+            // Clean up empty weapons
+            if (Object.keys(newSavedValues.weapons[weapon]).length === 0) {
+              delete newSavedValues.weapons[weapon];
             }
           }
 
@@ -350,6 +392,27 @@ export const useConfigStore = create<ConfigState>()(
           const isCharacter = database === 'Character';
 
           if (isCharacter) {
+            const savedVal = state.savedValues.character[category]?.[key];
+
+            // If there's a saved value, set tombstone (null) to mark for deletion
+            if (savedVal !== undefined) {
+              const newWorkingValues = {
+                ...state.workingValues,
+                character: {
+                  ...state.workingValues.character,
+                  [category]: {
+                    ...state.workingValues.character[category],
+                    [key]: null,
+                  },
+                },
+              };
+              return {
+                workingValues: newWorkingValues,
+                hasUnsavedChanges: calculateHasUnsavedChanges(newWorkingValues, state.savedValues),
+              };
+            }
+
+            // No saved value, just remove the working value
             const categoryValues = state.workingValues.character[category] || {};
             const { [key]: _, ...remainingKeys } = categoryValues;
             const newWorkingValues = {
@@ -369,6 +432,30 @@ export const useConfigStore = create<ConfigState>()(
               hasUnsavedChanges: calculateHasUnsavedChanges(newWorkingValues, state.savedValues),
             };
           } else {
+            const savedVal = state.savedValues.weapons[database]?.[category]?.[key];
+
+            // If there's a saved value, set tombstone (null) to mark for deletion
+            if (savedVal !== undefined) {
+              const newWorkingValues = {
+                ...state.workingValues,
+                weapons: {
+                  ...state.workingValues.weapons,
+                  [database]: {
+                    ...state.workingValues.weapons[database],
+                    [category]: {
+                      ...state.workingValues.weapons[database]?.[category],
+                      [key]: null,
+                    },
+                  },
+                },
+              };
+              return {
+                workingValues: newWorkingValues,
+                hasUnsavedChanges: calculateHasUnsavedChanges(newWorkingValues, state.savedValues),
+              };
+            }
+
+            // No saved value, just remove the working value
             const weaponCategories = state.workingValues.weapons[database] || {};
             const categoryValues = weaponCategories[category] || {};
             const { [key]: _, ...remainingKeys } = categoryValues;

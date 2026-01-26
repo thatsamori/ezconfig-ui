@@ -22,8 +22,33 @@ export function ActionButtons() {
 
   const hasUnsavedChanges = useConfigStore((state) => state.hasUnsavedChanges);
   const workingValues = useConfigStore((state) => state.workingValues);
+  const savedValues = useConfigStore((state) => state.savedValues);
   const resetWorkingValues = useConfigStore((state) => state.resetWorkingValues);
   const commitWorkingToSaved = useConfigStore((state) => state.commitWorkingToSaved);
+
+  // Build merged entries for a category (saved + working, with null tombstones removing entries)
+  const buildMergedEntries = (
+    saved: Record<string, ConfigValue> | undefined,
+    working: Record<string, ConfigValue>
+  ): Array<{ [key: string]: ConfigValue }> => {
+    // Start with saved values
+    const merged: Record<string, ConfigValue> = { ...saved };
+
+    // Apply working changes
+    for (const [key, value] of Object.entries(working)) {
+      if (value === null) {
+        // Tombstone: delete from merged
+        delete merged[key];
+      } else {
+        merged[key] = value;
+      }
+    }
+
+    // Convert to array format, filtering out any null values (shouldn't happen, but be safe)
+    return Object.entries(merged)
+      .filter(([, value]) => value !== null)
+      .map(([key, value]) => ({ [key]: value }));
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -33,10 +58,11 @@ export function ActionButtons() {
       const errors: string[] = [];
 
       // Save character config changes
-      for (const [category, entries] of Object.entries(workingValues.character)) {
-        const configEntries = Object.entries(entries).map(([key, value]) => ({ [key]: value }));
-        if (configEntries.length === 0) continue;
+      for (const [category, workingEntries] of Object.entries(workingValues.character)) {
+        const savedEntries = savedValues.character[category];
+        const configEntries = buildMergedEntries(savedEntries, workingEntries);
 
+        // Send even if empty (to clear the category file)
         const res = await fetch(`/api/config/Character/${category}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -53,10 +79,11 @@ export function ActionButtons() {
 
       // Save weapon config changes
       for (const [weapon, categories] of Object.entries(workingValues.weapons)) {
-        for (const [category, entries] of Object.entries(categories)) {
-          const configEntries = Object.entries(entries).map(([key, value]) => ({ [key]: value }));
-          if (configEntries.length === 0) continue;
+        for (const [category, workingEntries] of Object.entries(categories)) {
+          const savedEntries = savedValues.weapons[weapon]?.[category];
+          const configEntries = buildMergedEntries(savedEntries, workingEntries);
 
+          // Send even if empty (to clear the category file)
           const res = await fetch(`/api/config/${weapon}/${category}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
