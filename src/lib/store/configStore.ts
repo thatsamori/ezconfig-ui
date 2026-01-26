@@ -34,37 +34,6 @@ export interface ConfigState {
   commitWorkingToSaved: () => void;
   clearSavedCategory: (database: string, category: string) => void;
   removeWorkingValue: (database: string, category: string, key: string) => void;
-
-  // ============================================================
-  // DEPRECATED: v0.1 compatibility layer - will be removed in Phase 7
-  // These exist only to allow old components to compile during transition
-  // ============================================================
-  /** @deprecated Use workingValues instead */
-  characterValues: Record<string, ConfigValue>;
-  /** @deprecated Will be removed - staging no longer used */
-  characterStaged: Record<string, boolean>;
-  /** @deprecated Use workingValues instead */
-  weaponValues: Record<string, Record<string, ConfigValue>>;
-  /** @deprecated Will be removed - staging no longer used */
-  weaponStaged: Record<string, Record<string, boolean>>;
-  /** @deprecated Will be removed - bulk selection no longer used */
-  selectedWeapons: string[];
-  /** @deprecated Use setWorkingValue instead */
-  setCharacterValue: (key: string, value: ConfigValue) => void;
-  /** @deprecated Will be removed - staging no longer used */
-  setCharacterStaged: (key: string, staged: boolean) => void;
-  /** @deprecated Use setWorkingValue instead */
-  setWeaponValue: (weapon: string, key: string, value: ConfigValue) => void;
-  /** @deprecated Will be removed - staging no longer used */
-  setWeaponStaged: (weapon: string, key: string, staged: boolean) => void;
-  /** @deprecated Will be removed - bulk selection no longer used */
-  setSelectedWeapons: (weapons: string[]) => void;
-  /** @deprecated Will be removed - no longer using Game.ini as source */
-  initializeFromGameIni: (characterValues: Record<string, ConfigValue>, weaponValues: Record<string, Record<string, ConfigValue>>) => void;
-  /** @deprecated Will be removed - staging no longer used */
-  getStagedChanges: () => { character: Record<string, ConfigValue>; weapons: Record<string, Record<string, ConfigValue>> };
-  /** @deprecated Use resetWorkingValues instead */
-  resetToDefaults: () => void;
 }
 
 // Deep equality check for comparing working vs saved values
@@ -148,12 +117,6 @@ const initialState = {
   },
   loadedCategories: new Set<string>(),
   hasUnsavedChanges: false,
-  // Deprecated v0.1 state
-  characterValues: {} as Record<string, ConfigValue>,
-  characterStaged: {} as Record<string, boolean>,
-  weaponValues: {} as Record<string, Record<string, ConfigValue>>,
-  weaponStaged: {} as Record<string, Record<string, boolean>>,
-  selectedWeapons: [] as string[],
 };
 
 export const useConfigStore = create<ConfigState>()(
@@ -484,78 +447,6 @@ export const useConfigStore = create<ConfigState>()(
               hasUnsavedChanges: calculateHasUnsavedChanges(newWorkingValues, state.savedValues),
             };
           }
-        }),
-
-      // ============================================================
-      // DEPRECATED: v0.1 compatibility methods - will be removed in Phase 7
-      // ============================================================
-      setCharacterValue: (key, value) =>
-        set((state) => ({
-          characterValues: { ...state.characterValues, [key]: value },
-        })),
-
-      setCharacterStaged: (key, staged) =>
-        set((state) => ({
-          characterStaged: { ...state.characterStaged, [key]: staged },
-        })),
-
-      setWeaponValue: (weapon, key, value) =>
-        set((state) => ({
-          weaponValues: {
-            ...state.weaponValues,
-            [weapon]: { ...state.weaponValues[weapon], [key]: value },
-          },
-        })),
-
-      setWeaponStaged: (weapon, key, staged) =>
-        set((state) => ({
-          weaponStaged: {
-            ...state.weaponStaged,
-            [weapon]: { ...state.weaponStaged[weapon], [key]: staged },
-          },
-        })),
-
-      setSelectedWeapons: (weapons) => set({ selectedWeapons: weapons }),
-
-      initializeFromGameIni: (characterValues, weaponValues) => {
-        const characterStaged: Record<string, boolean> = {};
-        for (const key of Object.keys(characterValues)) {
-          characterStaged[key] = true;
-        }
-        const weaponStaged: Record<string, Record<string, boolean>> = {};
-        for (const [weapon, configs] of Object.entries(weaponValues)) {
-          weaponStaged[weapon] = {};
-          for (const key of Object.keys(configs)) {
-            weaponStaged[weapon][key] = true;
-          }
-        }
-        set({ characterValues, characterStaged, weaponValues, weaponStaged });
-      },
-
-      getStagedChanges: () => {
-        const state = get();
-        const character: Record<string, ConfigValue> = {};
-        for (const [key, staged] of Object.entries(state.characterStaged)) {
-          if (staged && key in state.characterValues) {
-            character[key] = state.characterValues[key];
-          }
-        }
-        const weapons: Record<string, Record<string, ConfigValue>> = {};
-        for (const [weapon, stagedKeys] of Object.entries(state.weaponStaged)) {
-          for (const [key, staged] of Object.entries(stagedKeys)) {
-            if (staged && state.weaponValues[weapon]?.[key] !== undefined) {
-              if (!weapons[weapon]) weapons[weapon] = {};
-              weapons[weapon][key] = state.weaponValues[weapon][key];
-            }
-          }
-        }
-        return { character, weapons };
-      },
-
-      resetToDefaults: () =>
-        set({
-          ...initialState,
-          loadedCategories: new Set<string>(),
         }),
     }),
     {
