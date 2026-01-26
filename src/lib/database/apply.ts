@@ -11,7 +11,7 @@ import { getDatabasesRoot, readCategory } from './service';
 import { getSchemaForCategory } from './validation';
 import { formatValue } from '@/lib/rcon/formatters';
 import { executeBatchCommands } from '@/lib/rcon/service';
-import type { ConfigEntry } from './types';
+import type { ConfigData, ConfigValue } from './types';
 
 /**
  * Result of an apply operation
@@ -24,28 +24,25 @@ export interface ApplyResult {
 }
 
 /**
- * Convert a config entry's value to RCON format using the schema
+ * Convert a config value to RCON format using the schema
  */
-function convertEntryToRcon(
-  entry: ConfigEntry,
+function convertValueToRcon(
+  key: string,
+  value: ConfigValue,
   database: string,
   category: string
-): Record<string, string> | null {
+): string | null {
   const schema = getSchemaForCategory(database, category);
   if (!schema) {
     return null;
   }
 
-  const key = Object.keys(entry)[0];
-  const value = entry[key];
   const schemaEntry = schema[key];
-
   if (!schemaEntry) {
     return null;
   }
 
-  const rconValue = formatValue(schemaEntry.dataType, value);
-  return { [key]: rconValue };
+  return formatValue(schemaEntry.dataType, value);
 }
 
 /**
@@ -124,19 +121,19 @@ async function buildCommandForCategory(
   schemaDatabase: string,
   category: string
 ): Promise<string | null> {
-  const entries = await readCategory(schemaDatabase, category);
+  const data = await readCategory(schemaDatabase, category);
 
-  if (entries.length === 0) {
+  if (Object.keys(data).length === 0) {
     return null;
   }
 
-  // Convert each entry to RCON format and merge into single object
+  // Convert each key-value pair to RCON format
   const convertedEntries: Record<string, string> = {};
 
-  for (const entry of entries) {
-    const converted = convertEntryToRcon(entry, schemaDatabase, category);
-    if (converted) {
-      Object.assign(convertedEntries, converted);
+  for (const [key, value] of Object.entries(data)) {
+    const rconValue = convertValueToRcon(key, value, schemaDatabase, category);
+    if (rconValue !== null) {
+      convertedEntries[key] = rconValue;
     }
   }
 

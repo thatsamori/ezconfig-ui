@@ -143,13 +143,13 @@ export async function scanDatabaseStructure(): Promise<DatabaseStructure> {
 }
 
 /**
- * Check if a JSON file has non-empty content (at least one entry)
+ * Check if a JSON file has non-empty content (at least one key-value pair)
  */
 async function hasOverrides(filePath: string): Promise<boolean> {
   try {
     const content = await readFile(filePath, 'utf-8');
     const parsed = JSON.parse(content);
-    return Array.isArray(parsed) && parsed.length > 0;
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) && Object.keys(parsed).length > 0;
   } catch {
     return false;
   }
