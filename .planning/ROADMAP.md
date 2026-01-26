@@ -77,7 +77,7 @@ Plans:
 **Plans:** 2
 
 Plans:
-- [ ] 12-01: User preset service layer and API endpoints
+- [x] 12-01: User preset service layer and API endpoints ✓
 - [ ] 12-02: Save as Preset UI and preset management
 
 #### Phase 13: Preset Polish
@@ -105,5 +105,5 @@ Plans:
 | 9. Overrides View | v1.0 | 2/2 | Complete | 2026-01-26 |
 | 10. Bulk Weapon Update | v1.0 | 1/1 | Complete | 2026-01-26 |
 | 11. Static Presets | v1.1 | 2/2 | Complete | 2026-01-26 |
-| 12. User Presets | v1.1 | 0/? | Not started | - |
+| 12. User Presets | v1.1 | 1/2 | In progress | - |
 | 13. Preset Polish | v1.1 | 0/? | Not started | - |
