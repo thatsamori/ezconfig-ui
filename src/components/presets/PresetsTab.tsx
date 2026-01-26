@@ -18,6 +18,7 @@ import { useConfigStore } from "@/lib/store/configStore";
 import { toast } from "sonner";
 import { SavePresetDialog } from "./SavePresetDialog";
 import { PresetPreviewDialog } from "./PresetPreviewDialog";
+import { ImportPresetDialog } from "./ImportPresetDialog";
 import type { PresetInfo, PresetData, PresetManifest } from "@/lib/presets/types";
 
 interface PresetsResponse {
@@ -48,6 +49,9 @@ export function PresetsTab() {
 
   // Import state
   const [isImporting, setIsImporting] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importManifest, setImportManifest] = useState<PresetManifest | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const hasUnsavedChanges = useConfigStore((state) => state.hasUnsavedChanges);
@@ -251,11 +255,10 @@ export function PresetsTab() {
     }
   };
 
-  const handleImportPreset = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setIsImporting(true);
     try {
       // Validate file type
       if (!file.name.endsWith(".zip")) {
@@ -280,13 +283,37 @@ export function PresetsTab() {
         if (!manifest.title || typeof manifest.title !== "string") {
           throw new Error("Invalid manifest: missing or invalid title");
         }
-      } catch (parseErr) {
+      } catch {
         throw new Error("Invalid manifest.json format");
       }
 
-      // Upload to server for extraction
+      // Store file and manifest, open dialog for user to confirm/edit
+      setImportFile(file);
+      setImportManifest(manifest);
+      setImportDialogOpen(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to read preset file", {
+        position: "bottom-right",
+      });
+    } finally {
+      // Clear file input
+      if (importInputRef.current) {
+        importInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleImportConfirm = async (name: string, title: string, description: string) => {
+    if (!importFile) return;
+
+    setIsImporting(true);
+    try {
+      // Upload to server for extraction with custom metadata
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", importFile);
+      formData.append("name", name);
+      formData.append("title", title);
+      formData.append("description", description);
 
       const res = await fetch("/api/presets/import", {
         method: "POST",
@@ -303,6 +330,11 @@ export function PresetsTab() {
         position: "bottom-right",
       });
 
+      // Close dialog and reset
+      setImportDialogOpen(false);
+      setImportFile(null);
+      setImportManifest(null);
+
       // Refresh preset list
       fetchPresets();
     } catch (err) {
@@ -311,11 +343,13 @@ export function PresetsTab() {
       });
     } finally {
       setIsImporting(false);
-      // Clear file input
-      if (importInputRef.current) {
-        importInputRef.current.value = "";
-      }
     }
+  };
+
+  const handleImportDialogClose = () => {
+    setImportDialogOpen(false);
+    setImportFile(null);
+    setImportManifest(null);
   };
 
   if (isLoading) {
@@ -343,7 +377,7 @@ export function PresetsTab() {
             ref={importInputRef}
             type="file"
             accept=".zip"
-            onChange={handleImportPreset}
+            onChange={handleImportFileSelect}
             className="hidden"
             aria-label="Import preset ZIP file"
           />
@@ -440,6 +474,16 @@ export function PresetsTab() {
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
         onSaved={fetchPresets}
+      />
+
+      {/* Import Preset Dialog */}
+      <ImportPresetDialog
+        open={importDialogOpen}
+        onOpenChange={handleImportDialogClose}
+        manifest={importManifest}
+        existingNames={userPresets.map((p) => p.name)}
+        onConfirm={handleImportConfirm}
+        isImporting={isImporting}
       />
 
       {/* Unsaved changes blocking dialog */}

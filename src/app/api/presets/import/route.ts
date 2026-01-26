@@ -51,6 +51,11 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 
+    // Get custom metadata from form data (optional - falls back to manifest values)
+    const customName = formData.get('name') as string | null;
+    const customTitle = formData.get('title') as string | null;
+    const customDescription = formData.get('description') as string | null;
+
     if (!file) {
       return NextResponse.json(
         { success: false, error: 'No file provided' },
@@ -89,7 +94,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse and validate manifest
+    // Parse and validate manifest (used as fallback if no custom values provided)
     let manifest: PresetManifest;
     try {
       const manifestContent = await manifestFile.async('string');
@@ -108,27 +113,58 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate safe preset name from title
-    const baseName = slugify(manifest.title);
-    if (!baseName) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid preset title - cannot generate folder name' },
-        { status: 400 }
-      );
+    // Use custom values or fall back to manifest values
+    const finalTitle = customTitle || manifest.title;
+    const finalDescription = customDescription !== null ? customDescription : manifest.description;
+
+    // Determine preset name: use custom name if provided, otherwise generate from title
+    let presetName: string;
+    if (customName) {
+      // Validate the custom name
+      try {
+        validateUserPresetName(customName);
+      } catch {
+        return NextResponse.json(
+          { success: false, error: 'Invalid preset name - only alphanumeric, hyphens, and underscores allowed' },
+          { status: 400 }
+        );
+      }
+
+      // Check if name already exists
+      const existingPresets = await listUserPresets();
+      const existingNames = new Set(existingPresets.map((p) => p.name));
+      if (existingNames.has(customName)) {
+        return NextResponse.json(
+          { success: false, error: 'A preset with this name already exists' },
+          { status: 400 }
+        );
+      }
+
+      presetName = customName;
+    } else {
+      // Generate name from title (legacy behavior)
+      const baseName = slugify(manifest.title);
+      if (!baseName) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid preset title - cannot generate folder name' },
+          { status: 400 }
+        );
+      }
+
+      // Validate the name pattern
+      try {
+        validateUserPresetName(baseName);
+      } catch {
+        return NextResponse.json(
+          { success: false, error: 'Invalid preset title - contains invalid characters' },
+          { status: 400 }
+        );
+      }
+
+      // Generate unique name if needed
+      presetName = await generateUniqueName(baseName);
     }
 
-    // Validate the name pattern
-    try {
-      validateUserPresetName(baseName);
-    } catch {
-      return NextResponse.json(
-        { success: false, error: 'Invalid preset title - contains invalid characters' },
-        { status: 400 }
-      );
-    }
-
-    // Generate unique name if needed
-    const presetName = await generateUniqueName(baseName);
     const presetPath = join(getUserPresetsPath(), presetName);
 
     // Ensure user presets directory exists
@@ -142,12 +178,17 @@ export async function POST(request: NextRequest) {
     // Create preset directory
     await mkdir(presetPath, { recursive: true });
 
-    // Extract all files from ZIP
+    // Extract all files from ZIP, except manifest.json (we'll write our own)
     const files = Object.entries(zip.files);
 
     for (const [relativePath, zipEntry] of files) {
       // Skip directories - they'll be created when writing files
       if (zipEntry.dir) {
+        continue;
+      }
+
+      // Skip manifest.json - we'll write our own with custom values
+      if (relativePath === 'manifest.json') {
         continue;
       }
 
@@ -171,12 +212,22 @@ export async function POST(request: NextRequest) {
       await writeFile(fullPath, content);
     }
 
+    // Write manifest.json with custom title/description
+    const finalManifest: PresetManifest = {
+      title: finalTitle,
+      description: finalDescription,
+    };
+    await writeFile(
+      join(presetPath, 'manifest.json'),
+      JSON.stringify(finalManifest, null, 2)
+    );
+
     return NextResponse.json({
       success: true,
       data: {
         name: presetName,
-        title: manifest.title,
-        description: manifest.description,
+        title: finalTitle,
+        description: finalDescription,
       },
     });
   } catch (error) {
