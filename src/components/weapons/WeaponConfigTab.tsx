@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { WeaponAccordion } from "./WeaponAccordion";
+import { Input } from "@/components/ui/input";
 import type { GroupedDatabase } from "@/lib/database/structure";
 
 export function WeaponConfigTab() {
   const [weapons, setWeapons] = useState<GroupedDatabase | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     async function loadStructure() {
@@ -25,6 +27,23 @@ export function WeaponConfigTab() {
     loadStructure();
   }, []);
 
+  // Filter weapons based on search query (case-insensitive)
+  const filteredWeapons = useMemo(() => {
+    if (!weapons) return null;
+    if (!searchQuery.trim()) return weapons;
+
+    const query = searchQuery.toLowerCase();
+    const filtered: GroupedDatabase = {};
+
+    for (const [weaponName, categories] of Object.entries(weapons)) {
+      if (weaponName.toLowerCase().includes(query)) {
+        filtered[weaponName] = categories;
+      }
+    }
+
+    return filtered;
+  }, [weapons, searchQuery]);
+
   if (error) {
     return <p className="text-destructive py-8 text-center">{error}</p>;
   }
@@ -33,5 +52,14 @@ export function WeaponConfigTab() {
     return <p className="text-muted-foreground py-8 text-center">Loading weapons...</p>;
   }
 
-  return <WeaponAccordion weapons={weapons} />;
+  return (
+    <div className="space-y-4">
+      <Input
+        placeholder="Search weapons..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+      <WeaponAccordion weapons={filteredWeapons!} />
+    </div>
+  );
 }
