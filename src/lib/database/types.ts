@@ -13,10 +13,10 @@ export type ConfigValue =
   | { x: number; y: number; z: number };
 
 /**
- * A single config entry - a record with exactly one key-value pair
- * Example: { "CanDodge": true } or { "Windup": 0.675 }
+ * Config data stored in a category file - a single object with all key-value pairs
+ * Example: { "CanDodge": true, "Windup": 0.675 }
  */
-export type ConfigEntry = Record<string, ConfigValue>;
+export type ConfigData = Record<string, ConfigValue>;
 
 /**
  * Parsed database path from URL segments

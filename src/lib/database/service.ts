@@ -8,7 +8,7 @@
 import { mkdir, readFile, writeFile, stat, readdir } from 'fs/promises';
 import { join, resolve, dirname } from 'path';
 import { env } from '@/lib/env';
-import type { ConfigEntry } from './types';
+import type { ConfigData } from './types';
 
 /**
  * Get the root path for databases
@@ -105,38 +105,38 @@ export async function resolveCategoryPath(database: string, category: string): P
 }
 
 /**
- * Read config entries from a category file
- * Returns an empty array if the file doesn't exist
+ * Read config data from a category file
+ * Returns an empty object if the file doesn't exist
  */
-export async function readCategory(database: string, category: string): Promise<ConfigEntry[]> {
+export async function readCategory(database: string, category: string): Promise<ConfigData> {
   const filePath = await resolveCategoryPath(database, category);
 
   try {
     const content = await readFile(filePath, 'utf-8');
     const parsed = JSON.parse(content);
 
-    if (!Array.isArray(parsed)) {
-      throw new Error(`Invalid category file format: expected array, got ${typeof parsed}`);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      throw new Error(`Invalid category file format: expected object, got ${Array.isArray(parsed) ? 'array' : typeof parsed}`);
     }
 
-    return parsed as ConfigEntry[];
+    return parsed as ConfigData;
   } catch (error) {
-    // File doesn't exist or is invalid - return empty array
+    // File doesn't exist or is invalid - return empty object
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return [];
+      return {};
     }
     throw error;
   }
 }
 
 /**
- * Write config entries to a category file
+ * Write config data to a category file
  * Creates parent directories if they don't exist
  */
 export async function writeCategory(
   database: string,
   category: string,
-  entries: ConfigEntry[]
+  data: ConfigData
 ): Promise<void> {
   const filePath = await resolveCategoryPath(database, category);
 
@@ -145,7 +145,7 @@ export async function writeCategory(
   await mkdir(dir, { recursive: true });
 
   // Write with pretty formatting (2-space indent)
-  const content = JSON.stringify(entries, null, 2);
+  const content = JSON.stringify(data, null, 2);
   await writeFile(filePath, content, 'utf-8');
 }
 
@@ -171,22 +171,22 @@ if (import.meta.main) {
 
   const testDatabase = 'Test';
   const testCategory = 'General';
-  const testEntry: ConfigEntry[] = [{ TestKey: true }];
+  const testData: ConfigData = { TestKey: true, AnotherKey: 42 };
 
   try {
     // Test 1: Write test data
     console.log('Test 1: Writing test data...');
-    await writeCategory(testDatabase, testCategory, testEntry);
+    await writeCategory(testDatabase, testCategory, testData);
     console.log('  PASS: Write succeeded\n');
 
     // Test 2: Read test data
     console.log('Test 2: Reading test data...');
     const readData = await readCategory(testDatabase, testCategory);
-    if (JSON.stringify(readData) === JSON.stringify(testEntry)) {
+    if (JSON.stringify(readData) === JSON.stringify(testData)) {
       console.log('  PASS: Read data matches written data\n');
     } else {
       console.log('  FAIL: Read data does not match');
-      console.log('  Expected:', JSON.stringify(testEntry));
+      console.log('  Expected:', JSON.stringify(testData));
       console.log('  Got:', JSON.stringify(readData));
       process.exit(1);
     }
@@ -201,13 +201,13 @@ if (import.meta.main) {
       process.exit(1);
     }
 
-    // Test 4: Read non-existent file returns empty array
+    // Test 4: Read non-existent file returns empty object
     console.log('Test 4: Reading non-existent category...');
     const emptyData = await readCategory('NonExistent', 'Category');
-    if (Array.isArray(emptyData) && emptyData.length === 0) {
-      console.log('  PASS: Non-existent file returns empty array\n');
+    if (typeof emptyData === 'object' && !Array.isArray(emptyData) && Object.keys(emptyData).length === 0) {
+      console.log('  PASS: Non-existent file returns empty object\n');
     } else {
-      console.log('  FAIL: Expected empty array, got:', emptyData);
+      console.log('  FAIL: Expected empty object, got:', emptyData);
       process.exit(1);
     }
 
