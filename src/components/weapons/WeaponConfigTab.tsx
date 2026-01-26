@@ -5,13 +5,14 @@ import { WeaponAccordion } from "./WeaponAccordion";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import type { GroupedDatabase } from "@/lib/database/structure";
+import type { GroupedDatabase, GroupedOverrideMap } from "@/lib/database/structure";
 
 export function WeaponConfigTab() {
   const [weapons, setWeapons] = useState<GroupedDatabase | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showOverridesOnly, setShowOverridesOnly] = useState(false);
+  const [overrideMap, setOverrideMap] = useState<GroupedOverrideMap | null>(null);
 
   useEffect(() => {
     async function loadStructure() {
@@ -30,22 +31,47 @@ export function WeaponConfigTab() {
     loadStructure();
   }, []);
 
-  // Filter weapons based on search query (case-insensitive)
+  // Fetch override map when showOverridesOnly becomes true
+  useEffect(() => {
+    if (showOverridesOnly && !overrideMap) {
+      fetch("/api/databases/overrides")
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success && json.data?.Weapon) {
+            setOverrideMap(json.data.Weapon as GroupedOverrideMap);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [showOverridesOnly, overrideMap]);
+
+  // Filter weapons based on search query and override presence
   const filteredWeapons = useMemo(() => {
     if (!weapons) return null;
-    if (!searchQuery.trim()) return weapons;
 
-    const query = searchQuery.toLowerCase();
-    const filtered: GroupedDatabase = {};
+    let result = weapons;
 
-    for (const [weaponName, categories] of Object.entries(weapons)) {
-      if (weaponName.toLowerCase().includes(query)) {
-        filtered[weaponName] = categories;
-      }
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = Object.fromEntries(
+        Object.entries(result).filter(([name]) => name.toLowerCase().includes(query))
+      );
     }
 
-    return filtered;
-  }, [weapons, searchQuery]);
+    // Filter by override presence when toggle is on and map is loaded
+    if (showOverridesOnly && overrideMap) {
+      result = Object.fromEntries(
+        Object.entries(result).filter(([weaponName]) => {
+          const weaponOverrides = overrideMap[weaponName];
+          // Keep weapon if ANY category has overrides
+          return weaponOverrides && Object.values(weaponOverrides).some(Boolean);
+        })
+      );
+    }
+
+    return result;
+  }, [weapons, searchQuery, showOverridesOnly, overrideMap]);
 
   if (error) {
     return <p className="text-destructive py-8 text-center">{error}</p>;
@@ -83,7 +109,11 @@ export function WeaponConfigTab() {
           No weapons match '{searchQuery}'
         </p>
       ) : (
-        <WeaponAccordion weapons={filteredWeapons!} showOverridesOnly={showOverridesOnly} />
+        <WeaponAccordion
+          weapons={filteredWeapons!}
+          showOverridesOnly={showOverridesOnly}
+          overrideMap={showOverridesOnly && overrideMap ? overrideMap : undefined}
+        />
       )}
     </div>
   );

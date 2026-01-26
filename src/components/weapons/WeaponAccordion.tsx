@@ -20,6 +20,7 @@ import type { ConfigEntry } from "@/lib/config/types";
 interface WeaponAccordionProps {
   weapons: GroupedDatabase; // { Greatsword: ["General", "Strike", ...], ... }
   showOverridesOnly?: boolean;
+  overrideMap?: Record<string, Record<string, boolean>>; // { Greatsword: { General: true, Strike: false }, ... }
 }
 
 // Get config options for a category
@@ -61,7 +62,7 @@ async function loadWeaponConfig(weaponName: string, categories: string[]) {
   }
 }
 
-export function WeaponAccordion({ weapons, showOverridesOnly = false }: WeaponAccordionProps) {
+export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMap }: WeaponAccordionProps) {
   const [expandedWeapon, setExpandedWeapon] = useState<string | undefined>(
     undefined
   );
@@ -179,9 +180,17 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false }: WeaponAc
                 </p>
               ) : isExpanded ? (
                 <div className="space-y-2">
-                  {categories.map((category, index) =>
-                    renderConfigSection(weaponName, category, index === 0)
-                  )}
+                  {categories
+                    .filter((category) => {
+                      // When override map available, filter categories with no overrides
+                      if (showOverridesOnly && overrideMap) {
+                        return overrideMap[weaponName]?.[category] === true;
+                      }
+                      return true;
+                    })
+                    .map((category, index) =>
+                      renderConfigSection(weaponName, category, index === 0)
+                    )}
                 </div>
               ) : null}
             </AccordionContent>
