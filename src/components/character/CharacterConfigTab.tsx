@@ -8,6 +8,8 @@ import {
 } from "@/lib/config/characterConfigSchema";
 import { ConfigRow } from "@/components/weapons/ConfigRow";
 import { CollapsibleSection } from "@/components/weapons/CollapsibleSection";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import type { ConfigEntry } from "@/lib/config/types";
 
 // Lazy load character config from API
@@ -40,6 +42,7 @@ async function loadCharacterConfig(category: string) {
 
 export function CharacterConfigTab() {
   const [loadingCategory, setLoadingCategory] = useState<string | null>(null);
+  const [showOverridesOnly, setShowOverridesOnly] = useState(false);
 
   // Subscribe to actual state values for reactivity
   const workingValues = useConfigStore((state) => state.workingValues);
@@ -92,6 +95,12 @@ export function CharacterConfigTab() {
   ) => {
     const isLoading = loadingCategory === categoryName;
 
+    const filteredOptions = showOverridesOnly
+      ? options.filter((configEntry) =>
+          getEffectiveValue(categoryName, configEntry.configKey) !== undefined
+        )
+      : options;
+
     return (
       <CollapsibleSection
         key={categoryName}
@@ -103,8 +112,12 @@ export function CharacterConfigTab() {
           <p className="text-muted-foreground py-4 text-center">
             Loading {categoryName} configuration...
           </p>
+        ) : filteredOptions.length === 0 ? (
+          <p className="text-muted-foreground py-2 text-sm italic">
+            No overrides in {categoryName}
+          </p>
         ) : (
-          options.map((configEntry) => (
+          filteredOptions.map((configEntry) => (
             <ConfigRow
               key={configEntry.configKey}
               configEntry={configEntry}
@@ -124,6 +137,16 @@ export function CharacterConfigTab() {
 
   return (
     <div className="space-y-4 mt-4">
+      <div className="flex items-center gap-2">
+        <Switch
+          id="character-overrides-toggle"
+          checked={showOverridesOnly}
+          onCheckedChange={setShowOverridesOnly}
+        />
+        <Label htmlFor="character-overrides-toggle" className="text-sm">
+          Show overrides only
+        </Label>
+      </div>
       {renderSection(CharacterConfigGroupName.Movement, CHARACTER_CONFIG_OPTIONS.Movement, true)}
       {renderSection(CharacterConfigGroupName.Combat, CHARACTER_CONFIG_OPTIONS.Combat)}
       {renderSection(CharacterConfigGroupName.General, CHARACTER_CONFIG_OPTIONS.General)}
