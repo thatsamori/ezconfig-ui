@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { WeaponAccordion } from "./WeaponAccordion";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import type { GroupedDatabase } from "@/lib/database/structure";
 
 export function WeaponConfigTab() {
   const [weapons, setWeapons] = useState<GroupedDatabase | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showOverridesOnly, setShowOverridesOnly] = useState(false);
 
   useEffect(() => {
     async function loadStructure() {
@@ -57,17 +60,30 @@ export function WeaponConfigTab() {
 
   return (
     <div className="space-y-4">
-      <Input
-        placeholder="Search weapons..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-      />
+      <div className="flex items-center gap-4">
+        <Input
+          placeholder="Search weapons..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="flex-1"
+        />
+        <div className="flex items-center gap-2">
+          <Switch
+            id="overrides-toggle"
+            checked={showOverridesOnly}
+            onCheckedChange={setShowOverridesOnly}
+          />
+          <Label htmlFor="overrides-toggle" className="text-sm whitespace-nowrap">
+            Show overrides only
+          </Label>
+        </div>
+      </div>
       {hasNoResults ? (
         <p className="text-muted-foreground py-8 text-center">
           No weapons match '{searchQuery}'
         </p>
       ) : (
-        <WeaponAccordion weapons={filteredWeapons!} />
+        <WeaponAccordion weapons={filteredWeapons!} showOverridesOnly={showOverridesOnly} />
       )}
     </div>
   );
