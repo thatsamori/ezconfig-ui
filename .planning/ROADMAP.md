@@ -63,10 +63,11 @@ See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full details.
 **Goal:** Read-only preset files that ship with the app, UI to browse and load them
 **Depends on:** v1.0 complete
 **Research:** Unlikely (extends existing filesystem patterns)
-**Plans:** TBD (run /gsd:plan-phase 11 to break down)
+**Plans:** 2
 
 Plans:
-- [ ] 11-01: TBD
+- [ ] 11-01: Preset service layer and API endpoints
+- [ ] 11-02: Preset gallery UI and load flow
 
 #### Phase 12: User Presets
 
@@ -102,6 +103,6 @@ Plans:
 | 8. Polish | v1.0 | 2/2 | Complete | 2026-01-26 |
 | 9. Overrides View | v1.0 | 2/2 | Complete | 2026-01-26 |
 | 10. Bulk Weapon Update | v1.0 | 1/1 | Complete | 2026-01-26 |
-| 11. Static Presets | v1.1 | 0/? | Not started | - |
+| 11. Static Presets | v1.1 | 0/2 | Planned | - |
 | 12. User Presets | v1.1 | 0/? | Not started | - |
 | 13. Preset Polish | v1.1 | 0/? | Not started | - |
