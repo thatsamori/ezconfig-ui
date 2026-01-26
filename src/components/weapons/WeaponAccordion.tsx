@@ -158,7 +158,7 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
 
   // Format value for display in confirmation dialog
   const formatValue = (value: ConfigValue): string => {
-    if (value === null) return "null";
+    if (value === null) return "Game Default";
     if (typeof value === "boolean") return value ? "true" : "false";
     if (typeof value === "number") return String(value);
     if (Array.isArray(value)) return `[${value.join(", ")}]`;
@@ -208,10 +208,12 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
                 onReset={() =>
                   removeWorkingValue(weaponName, category, configEntry.configKey)
                 }
-                onApplyToAll={
-                  effectiveValue !== undefined
-                    ? () => handleApplyToAll(category, configEntry.configKey, effectiveValue)
-                    : undefined
+                onApplyToAll={() =>
+                  handleApplyToAll(
+                    category,
+                    configEntry.configKey,
+                    effectiveValue !== undefined ? effectiveValue : null
+                  )
                 }
               />
             );
@@ -272,7 +274,11 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Apply to all weapons?</AlertDialogTitle>
+              <AlertDialogTitle>
+                {pendingBulkAction?.value === null
+                  ? "Reset all weapons to default?"
+                  : "Apply to all weapons?"}
+              </AlertDialogTitle>
               <AlertDialogDescription>
                 This will set <strong>{pendingBulkAction?.key}</strong> to{" "}
                 <strong>{pendingBulkAction ? formatValue(pendingBulkAction.value) : ""}</strong>{" "}

@@ -137,10 +137,10 @@ export function ConfigRow({
           </div>
         </div>
       </ContextMenuTrigger>
-      {isCustomized && onApplyToAll && (
+      {onApplyToAll && (
         <ContextMenuContent>
           <ContextMenuItem onClick={onApplyToAll}>
-            Apply to all weapons
+            {isCustomized ? "Apply to all weapons" : "Reset all to default"}
           </ContextMenuItem>
         </ContextMenuContent>
       )}
