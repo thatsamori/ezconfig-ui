@@ -2,17 +2,17 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-25)
+See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
-**Current focus:** v1.0 — Database-Driven Config
+**Current focus:** None — v1.0 complete, planning next milestone
 
 ## Current Position
 
-Phase: 10 of 10 (Bulk Weapon Update complete)
-Plan: 1 of 1 complete
-Status: Milestone complete
-Last activity: 2026-01-26 — Completed 10-01-PLAN.md
+Phase: None active
+Plan: None
+Status: Milestone v1.0 shipped
+Last activity: 2026-01-26 — v1.0 milestone complete
 
 Progress: ██████████ 100% (v1.0)
 
@@ -20,6 +20,8 @@ Progress: ██████████ 100% (v1.0)
 
 - v0.1 Game.ini Integration: SUPERSEDED (Phases 1-3, 7 plans)
   - See: .planning/milestones/v0.1-ROADMAP.md
+- v1.0 Database-Driven Config: SHIPPED (Phases 5-10, 10 plans)
+  - See: .planning/milestones/v1.0-ROADMAP.md
 
 ## Performance Metrics
 
@@ -28,39 +30,38 @@ Progress: ██████████ 100% (v1.0)
 - Average duration: 7 min
 - Total execution time: 0.8 hours
 
+**v1.0 (shipped):**
+- Total plans completed: 10
+- Timeline: 2 days (2026-01-25 → 2026-01-26)
+- Files modified: 55 (+6,332 / -543 lines)
+
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
-Relevant for v1.0:
-- new-york style for Shadcn (keeping)
-- tw-animate-css copied locally (keeping)
-- Input component API: { value, onChange, disabled } (keeping)
-
-Superseded:
-- Staged state per config key
-- Multi-weapon bulk editing
-- Game.ini as source of truth
+All v1.0 decisions validated as Good:
+- Web app JSON as source of truth
+- Accordion-based weapon selection
+- Working → Save → Apply flow
+- Context menu on all rows
 
 ### Deferred Issues
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-None yet.
+None.
 
 ### Roadmap Evolution
 
 - v0.1 superseded 2026-01-25: Architectural pivot to database-driven configuration
-- Phases 1-4 archived, continuing with Phase 5+ for v1.0
-- Phase 9 added 2026-01-26: Overrides View — toggle to show only modified config values
-- Phase 10 added 2026-01-26: Bulk Weapon Update — context menu "Apply to all weapons" with batch API
+- v1.0 shipped 2026-01-26: All 6 phases (5-10) complete
 
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 10-01-PLAN.md, milestone v1.0 complete
+Stopped at: v1.0 milestone complete
 Resume file: None

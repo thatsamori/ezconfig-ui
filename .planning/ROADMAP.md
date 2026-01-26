@@ -11,7 +11,7 @@ None
 ## Milestones
 
 - **v0.1 Game.ini Integration** — Phases 1-3 (SUPERSEDED 2026-01-25) — [Archive](milestones/v0.1-ROADMAP.md)
-- **v1.0 Database-Driven Config** — Phases 5+ (planned)
+- **v1.0 Database-Driven Config** — Phases 5-10 (SHIPPED 2026-01-26) — [Archive](milestones/v1.0-ROADMAP.md)
 
 ## Completed Milestones
 
@@ -29,34 +29,25 @@ See [v0.1-ROADMAP.md](milestones/v0.1-ROADMAP.md) for full details.
 
 </details>
 
-## Current Milestone: v1.0 Database-Driven Config
+<details>
+<summary>v1.0 Database-Driven Config (Phases 5-10) — SHIPPED 2026-01-26</summary>
 
-**Goal:** Web app as source of truth with JSON database, lazy loading, and mod startup integration
+Web app as source of truth with JSON database, lazy loading, and mod startup integration.
 
-**Architecture:** See `architecture_update.md`
+- [x] Phase 5: Database Layer (2/2 plans) — completed 2026-01-25
+- [x] Phase 6: UI Refactor (2/2 plans) — completed 2026-01-25
+- [x] Phase 7: Apply Flow (1/1 plans) — completed 2026-01-26
+- [x] Phase 8: Polish (2/2 plans) — completed 2026-01-26
+- [x] Phase 9: Overrides View (2/2 plans) — completed 2026-01-26
+- [x] Phase 10: Bulk Weapon Update (1/1 plans) — completed 2026-01-26
 
-### Phases
+See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full details.
 
-- [x] **Phase 5: Database Layer** — JSON file storage, API endpoints, schema validation — COMPLETE 2026-01-25
-  - [x] Plan 01: Database service layer (2026-01-25)
-  - [x] Plan 02: Databases structure & apply endpoints (2026-01-25)
-- [x] **Phase 6: UI Refactor** — Accordion-based weapon list, lazy loading, working state — COMPLETE 2026-01-25
-  - [x] Plan 01: Store refactor for working state model (2026-01-25)
-  - [x] Plan 02: Weapon accordion UI (2026-01-25)
-- [x] **Phase 7: Apply Flow** — Save/Reset/Apply buttons, WipeDatabases + batch RCON — COMPLETE 2026-01-26
-  - [x] Plan 01: Action buttons (Save/Reset/Apply) (2026-01-26)
-- [x] **Phase 8: Polish** — Search/filter, cleanup, error handling — COMPLETE 2026-01-26
-  - [x] Plan 01: Search/filter for weapons (2026-01-26)
-  - [x] Plan 02: Cleanup & error handling (2026-01-26)
-- [x] **Phase 9: Overrides View** — Toggle to show only config values that override game defaults — COMPLETE 2026-01-26
-  - [x] Plan 01: Basic toggle with per-category filtering (2026-01-26)
-  - [x] Plan 02: Enhanced filtering with API (2026-01-26)
-- [x] **Phase 10: Bulk Weapon Update** — Context menu "Apply to all weapons" with batch API — COMPLETE 2026-01-26
-  - [x] Plan 01: Context menu, batch API, confirmation dialog (2026-01-26)
+</details>
 
-**Phase Numbering:**
-- Phases 1-4: v0.1 (superseded)
-- Phases 5+: v1.0 (current milestone)
+## Current Milestone: None
+
+No active milestone. Run `/gsd:discuss-milestone` or `/gsd:new-milestone` to plan the next version.
 
 ## Progress
 
