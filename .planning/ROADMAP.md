@@ -12,7 +12,7 @@ None
 
 - **v0.1 Game.ini Integration** — Phases 1-3 (SUPERSEDED 2026-01-25) — [Archive](milestones/v0.1-ROADMAP.md)
 - **v1.0 Database-Driven Config** — Phases 5-10 (SHIPPED 2026-01-26) — [Archive](milestones/v1.0-ROADMAP.md)
-- 🚧 **v1.1 Presets** — Phases 11-13 (in progress)
+- **v1.1 Presets** — Phases 11-13 (SHIPPED 2026-01-26)
 
 ## Completed Milestones
 
@@ -46,15 +46,21 @@ See [v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full details.
 
 </details>
 
-## Current Milestone: v1.1 Presets
+## Milestone Complete: v1.1 Presets (SHIPPED 2026-01-26)
 
 **Goal:** Full preset system with static read-only presets and user-defined presets for saving/loading configurations
+
+**Delivered:**
+- Static presets (read-only) with folder structure
+- User presets (save/load/delete)
+- Preview before load with diff view
+- Import/export via ZIP files
 
 ### Phases
 
 - [x] **Phase 11: Static Presets** — Read-only preset files, UI to browse and load (2/2 plans) ✓
 - [x] **Phase 12: User Presets** — Save current config as preset, manage user presets (2/2 plans) ✓
-- [ ] **Phase 13: Preset Polish** — Preview before load, import/export, UX refinements
+- [x] **Phase 13: Preset Polish** — Preview before load, import/export, UX refinements (2/2 plans) ✓
 
 ### Phase Details
 
@@ -89,7 +95,7 @@ Plans:
 
 Plans:
 - [x] 13-01: Preset preview before load ✓
-- [ ] 13-02: Import/export with ZIP files
+- [x] 13-02: Import/export with ZIP files ✓
 
 ## Progress
 
@@ -107,4 +113,4 @@ Plans:
 | 10. Bulk Weapon Update | v1.0 | 1/1 | Complete | 2026-01-26 |
 | 11. Static Presets | v1.1 | 2/2 | Complete | 2026-01-26 |
 | 12. User Presets | v1.1 | 2/2 | Complete | 2026-01-26 |
-| 13. Preset Polish | v1.1 | 1/2 | In progress | - |
+| 13. Preset Polish | v1.1 | 2/2 | Complete | 2026-01-26 |

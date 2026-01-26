@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
-**Current focus:** v1.1 Presets — Full preset system with static and user-defined presets
+**Current focus:** v1.1 Presets — SHIPPED
 
 ## Current Position
 
 Phase: 13 of 13 (Preset Polish)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-01-26 — Completed 13-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Milestone complete
+Last activity: 2026-01-26 — Completed 13-02-PLAN.md
 
-Progress: ██████████░ 93% (v1.1: 5/6 plans complete)
+Progress: ███████████ 100% (v1.1: 6/6 plans complete)
 
 ## Milestone History
 
@@ -22,6 +22,8 @@ Progress: ██████████░ 93% (v1.1: 5/6 plans complete)
   - See: .planning/milestones/v0.1-ROADMAP.md
 - v1.0 Database-Driven Config: SHIPPED (Phases 5-10, 10 plans)
   - See: .planning/milestones/v1.0-ROADMAP.md
+- v1.1 Presets: SHIPPED (Phases 11-13, 6 plans)
+  - See: .planning/ROADMAP.md (to be archived)
 
 ## Performance Metrics
 
@@ -59,10 +61,10 @@ None.
 
 - v0.1 superseded 2026-01-25: Architectural pivot to database-driven configuration
 - v1.0 shipped 2026-01-26: All 6 phases (5-10) complete
-- v1.1 created 2026-01-26: Presets milestone, 3 phases (11-13)
+- v1.1 shipped 2026-01-26: All 3 phases (11-13) complete
 
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 13-01-PLAN.md
+Stopped at: Completed 13-02-PLAN.md — Milestone v1.1 complete
 Resume file: None
