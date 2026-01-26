@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { ConfigRow } from "./ConfigRow";
 import { useConfigStore, type ConfigValue } from "@/lib/store/configStore";
@@ -16,6 +26,13 @@ import {
 } from "@/lib/config/weaponConfigSchema";
 import type { GroupedDatabase } from "@/lib/database/structure";
 import type { ConfigEntry } from "@/lib/config/types";
+
+// Type for pending bulk action
+interface PendingBulkAction {
+  category: string;
+  key: string;
+  value: ConfigValue;
+}
 
 interface WeaponAccordionProps {
   weapons: GroupedDatabase; // { Greatsword: ["General", "Strike", ...], ... }
@@ -67,6 +84,13 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
     undefined
   );
   const [loadingWeapon, setLoadingWeapon] = useState<string | null>(null);
+  const [pendingBulkAction, setPendingBulkAction] = useState<PendingBulkAction | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Wait for client mount to avoid Radix UI hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Subscribe to actual state values to trigger re-renders
   const workingValues = useConfigStore((state) => state.workingValues);
@@ -76,6 +100,7 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
   // Get action functions (these don't need to trigger re-renders)
   const setWorkingValue = useConfigStore((state) => state.setWorkingValue);
   const removeWorkingValue = useConfigStore((state) => state.removeWorkingValue);
+  const setBulkWeaponValue = useConfigStore((state) => state.setBulkWeaponValue);
 
   // Helper to get effective value (working ?? saved)
   // null is a tombstone meaning "reset to game default"
@@ -113,6 +138,39 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
 
   const weaponNames = Object.keys(weapons).sort();
 
+  // Handler to initiate bulk apply action
+  const handleApplyToAll = (category: string, key: string, value: ConfigValue) => {
+    setPendingBulkAction({ category, key, value });
+  };
+
+  // Confirm bulk apply action
+  const confirmBulkApply = () => {
+    if (pendingBulkAction) {
+      setBulkWeaponValue(
+        pendingBulkAction.category,
+        pendingBulkAction.key,
+        pendingBulkAction.value,
+        weaponNames
+      );
+      setPendingBulkAction(null);
+    }
+  };
+
+  // Format value for display in confirmation dialog
+  const formatValue = (value: ConfigValue): string => {
+    if (value === null) return "null";
+    if (typeof value === "boolean") return value ? "true" : "false";
+    if (typeof value === "number") return String(value);
+    if (Array.isArray(value)) return `[${value.join(", ")}]`;
+    if (typeof value === "object") {
+      if ("z" in value) {
+        return `{x: ${value.x}, y: ${value.y}, z: ${value.z}}`;
+      }
+      return `{x: ${value.x}, y: ${value.y}}`;
+    }
+    return String(value);
+  };
+
   const renderConfigSection = (
     weaponName: string,
     category: string,
@@ -137,19 +195,27 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
             No overrides in {category}
           </p>
         ) : (
-          filteredOptions.map((configEntry) => (
-            <ConfigRow
-              key={`${weaponName}-${category}-${configEntry.configKey}`}
-              configEntry={configEntry}
-              value={getEffectiveValue(weaponName, category, configEntry.configKey)}
-              onChange={(value) =>
-                setWorkingValue(weaponName, category, configEntry.configKey, value)
-              }
-              onReset={() =>
-                removeWorkingValue(weaponName, category, configEntry.configKey)
-              }
-            />
-          ))
+          filteredOptions.map((configEntry) => {
+            const effectiveValue = getEffectiveValue(weaponName, category, configEntry.configKey);
+            return (
+              <ConfigRow
+                key={`${weaponName}-${category}-${configEntry.configKey}`}
+                configEntry={configEntry}
+                value={effectiveValue}
+                onChange={(value) =>
+                  setWorkingValue(weaponName, category, configEntry.configKey, value)
+                }
+                onReset={() =>
+                  removeWorkingValue(weaponName, category, configEntry.configKey)
+                }
+                onApplyToAll={
+                  effectiveValue !== undefined
+                    ? () => handleApplyToAll(category, configEntry.configKey, effectiveValue)
+                    : undefined
+                }
+              />
+            );
+          })
         )}
       </CollapsibleSection>
     );
@@ -197,6 +263,31 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
           </AccordionItem>
         );
       })}
+
+      {/* Bulk apply confirmation dialog */}
+      {mounted && (
+        <AlertDialog
+          open={pendingBulkAction !== null}
+          onOpenChange={(open) => !open && setPendingBulkAction(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Apply to all weapons?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will set <strong>{pendingBulkAction?.key}</strong> to{" "}
+                <strong>{pendingBulkAction ? formatValue(pendingBulkAction.value) : ""}</strong>{" "}
+                for all {weaponNames.length} weapons. This change will be saved to your working state.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmBulkApply}>
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </Accordion>
   );
 }

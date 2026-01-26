@@ -27,6 +27,7 @@ export interface ConfigState {
   // Actions
   setSavedValue: (database: string, category: string, key: string, value: ConfigValue) => void;
   setWorkingValue: (database: string, category: string, key: string, value: ConfigValue) => void;
+  setBulkWeaponValue: (category: string, key: string, value: ConfigValue, weaponNames: string[]) => void;
   getEffectiveValue: (database: string, category: string, key: string) => ConfigValue | undefined;
   markCategoryLoaded: (path: string) => void;
   isCategoryLoaded: (path: string) => boolean;
@@ -204,6 +205,32 @@ export const useConfigStore = create<ConfigState>()(
               hasUnsavedChanges: calculateHasUnsavedChanges(newWorkingValues, state.savedValues),
             };
           }
+        }),
+
+      setBulkWeaponValue: (category, key, value, weaponNames) =>
+        set((state) => {
+          // Batch update all weapons in a single state update for performance
+          const newWeapons = { ...state.workingValues.weapons };
+
+          for (const weaponName of weaponNames) {
+            newWeapons[weaponName] = {
+              ...newWeapons[weaponName],
+              [category]: {
+                ...newWeapons[weaponName]?.[category],
+                [key]: value,
+              },
+            };
+          }
+
+          const newWorkingValues = {
+            ...state.workingValues,
+            weapons: newWeapons,
+          };
+
+          return {
+            workingValues: newWorkingValues,
+            hasUnsavedChanges: calculateHasUnsavedChanges(newWorkingValues, state.savedValues),
+          };
         }),
 
       getEffectiveValue: (database, category, key) => {
