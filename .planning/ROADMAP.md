@@ -45,8 +45,9 @@ See [v0.1-ROADMAP.md](milestones/v0.1-ROADMAP.md) for full details.
   - [x] Plan 02: Weapon accordion UI (2026-01-25)
 - [x] **Phase 7: Apply Flow** — Save/Reset/Apply buttons, WipeDatabases + batch RCON — COMPLETE 2026-01-26
   - [x] Plan 01: Action buttons (Save/Reset/Apply) (2026-01-26)
-- [ ] **Phase 8: Polish** — Search/filter, auth, error handling — IN PROGRESS
+- [x] **Phase 8: Polish** — Search/filter, cleanup, error handling — COMPLETE 2026-01-26
   - [x] Plan 01: Search/filter for weapons (2026-01-26)
+  - [x] Plan 02: Cleanup & error handling (2026-01-26)
 
 **Phase Numbering:**
 - Phases 1-4: v0.1 (superseded)
@@ -63,4 +64,4 @@ See [v0.1-ROADMAP.md](milestones/v0.1-ROADMAP.md) for full details.
 | 5. Database Layer | v1.0 | 2/2 | Complete | 2026-01-25 |
 | 6. UI Refactor | v1.0 | 2/2 | Complete | 2026-01-25 |
 | 7. Apply Flow | v1.0 | 1/1 | Complete | 2026-01-26 |
-| 8. Polish | v1.0 | 1/? | In progress | - |
+| 8. Polish | v1.0 | 2/2 | Complete | 2026-01-26 |
