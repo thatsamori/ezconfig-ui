@@ -6,6 +6,7 @@ export const env = {
     password: process.env.RCON_PASSWORD || '',
   },
   databasesPath: process.env.DATABASES_PATH || './Databases',
+  presetsPath: process.env.PRESETS_PATH || './Presets',
   ezconfigPassword: process.env.EZCONFIG_PASSWORD || '',
 } as const;
 
