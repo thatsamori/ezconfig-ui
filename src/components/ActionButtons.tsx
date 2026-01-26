@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -19,6 +19,12 @@ import { toast } from 'sonner';
 export function ActionButtons() {
   const [isSaving, setIsSaving] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Wait for client mount to avoid Radix UI hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const hasUnsavedChanges = useConfigStore((state) => state.hasUnsavedChanges);
   const workingValues = useConfigStore((state) => state.workingValues);
@@ -156,28 +162,34 @@ export function ActionButtons() {
         {isSaving ? 'Saving...' : 'Save Changes'}
       </Button>
 
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button
-            disabled={!hasUnsavedChanges}
-            variant="destructive"
-          >
-            Reset Working Changes
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will discard all working changes that haven't been saved. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReset}>Discard Changes</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {mounted ? (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              disabled={!hasUnsavedChanges}
+              variant="destructive"
+            >
+              Reset Working Changes
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will discard all working changes that haven't been saved. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleReset}>Discard Changes</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : (
+        <Button disabled variant="destructive">
+          Reset Working Changes
+        </Button>
+      )}
 
       <Button
         onClick={handleApply}
