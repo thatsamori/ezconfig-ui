@@ -69,10 +69,10 @@ See [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full details.
 **Goal**: Convert JSON storage from array format to single object format
 **Depends on**: Previous milestone complete
 **Research**: Unlikely (internal refactor)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 14-01: TBD (run /gsd:plan-phase 14 to break down)
+- [x] 14-01: Object format migration — completed 2026-01-26
 
 #### Phase 15: On-Demand Storage
 
@@ -101,5 +101,5 @@ Plans:
 | 11. Static Presets | v1.1 | 2/2 | Complete | 2026-01-26 |
 | 12. User Presets | v1.1 | 2/2 | Complete | 2026-01-26 |
 | 13. Preset Polish | v1.1 | 2/2 | Complete | 2026-01-26 |
-| 14. Object Format | v1.2 | 0/? | Not started | - |
+| 14. Object Format | v1.2 | 1/1 | Complete | 2026-01-26 |
 | 15. On-Demand Storage | v1.2 | 0/? | Not started | - |
