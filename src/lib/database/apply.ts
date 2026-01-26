@@ -51,7 +51,8 @@ function convertEntryToRcon(
 /**
  * Build RCON commands for all non-empty category files
  *
- * Command format: string ezconfig {database} {category} {JSON array of converted entries}
+ * Command format: string ezconfig {database} {category} {JSON object of converted entries}
+ * Example: string ezconfig Character Movement {"CanDodge":"True","TimeToMaxSprint":"0.94"}
  *
  * For flat databases (Character): database = "Character"
  * For grouped databases (Weapon/Greatsword): database = "Greatsword"
@@ -129,21 +130,21 @@ async function buildCommandForCategory(
     return null;
   }
 
-  // Convert each entry to RCON format
-  const convertedEntries: Record<string, string>[] = [];
+  // Convert each entry to RCON format and merge into single object
+  const convertedEntries: Record<string, string> = {};
 
   for (const entry of entries) {
     const converted = convertEntryToRcon(entry, schemaDatabase, category);
     if (converted) {
-      convertedEntries.push(converted);
+      Object.assign(convertedEntries, converted);
     }
   }
 
-  if (convertedEntries.length === 0) {
+  if (Object.keys(convertedEntries).length === 0) {
     return null;
   }
 
-  // Build command: string ezconfig {database} {category} [{entries}]
+  // Build command: string ezconfig {database} {category} {entries}
   const entriesJson = JSON.stringify(convertedEntries);
   return `string ezconfig ${rconDatabase} ${category} ${entriesJson}`;
 }
