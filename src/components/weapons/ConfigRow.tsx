@@ -4,6 +4,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   BooleanInput,
   FloatInput,
   VectorInput,
@@ -19,6 +25,7 @@ export interface ConfigRowProps {
   value: ConfigValue | undefined;
   onChange: (value: ConfigValue) => void;
   onReset?: () => void;
+  onApplyToAll?: () => void;
   disabled?: boolean;
 }
 
@@ -27,6 +34,7 @@ export function ConfigRow({
   value,
   onChange,
   onReset,
+  onApplyToAll,
   disabled,
 }: ConfigRowProps) {
   const isCustomized = value !== undefined;
@@ -88,43 +96,54 @@ export function ConfigRow({
   };
 
   return (
-    <div className="flex items-center gap-4 py-2 border-b border-border last:border-b-0">
-      <Label className="min-w-[200px] font-medium">{configEntry.configKey}</Label>
-      <div className="flex-1 flex items-center gap-2">
-        {isCustomized ? (
-          <>
-            {renderInput()}
-            {onReset && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onReset}
-                disabled={disabled}
-                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                title="Reset to game default"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div className="flex items-center gap-4 py-2 border-b border-border last:border-b-0">
+          <Label className="min-w-[200px] font-medium">{configEntry.configKey}</Label>
+          <div className="flex-1 flex items-center gap-2">
+            {isCustomized ? (
+              <>
+                {renderInput()}
+                {onReset && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onReset}
+                    disabled={disabled}
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    title="Reset to game default"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </>
+            ) : (
+              <>
+                <Badge variant="secondary" className="text-xs">
+                  Game Default
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleEdit}
+                  disabled={disabled}
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  title="Customize value"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </>
             )}
-          </>
-        ) : (
-          <>
-            <Badge variant="secondary" className="text-xs">
-              Game Default
-            </Badge>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleEdit}
-              disabled={disabled}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              title="Customize value"
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          </>
-        )}
-      </div>
-    </div>
+          </div>
+        </div>
+      </ContextMenuTrigger>
+      {isCustomized && onApplyToAll && (
+        <ContextMenuContent>
+          <ContextMenuItem onClick={onApplyToAll}>
+            Apply to all weapons
+          </ContextMenuItem>
+        </ContextMenuContent>
+      )}
+    </ContextMenu>
   );
 }
