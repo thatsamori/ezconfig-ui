@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
-**Current focus:** Planning next milestone
+**Current focus:** v1.2 Database Simplification - Object format and on-demand storage
 
 ## Current Position
 
-Phase: 13 of 13 complete
-Plan: N/A
-Status: Ready to plan next milestone
-Last activity: 2026-01-26 — v1.1 milestone complete
+Phase: 14 of 15 (Object Format)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-01-26 — Milestone v1.2 created
 
-Progress: ███████████ 100% (all milestones shipped)
+Progress: ░░░░░░░░░░ 0%
 
 ## Milestone History
 
@@ -70,9 +70,10 @@ None.
 - v0.1 superseded 2026-01-25: Architectural pivot to database-driven configuration
 - v1.0 shipped 2026-01-26: All 6 phases (5-10) complete
 - v1.1 shipped 2026-01-26: All 3 phases (11-13) complete
+- Milestone v1.2 created: Database simplification, 2 phases (Phase 14-15)
 
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Milestone v1.1 complete, archived
+Stopped at: Milestone v1.2 initialization
 Resume file: None
