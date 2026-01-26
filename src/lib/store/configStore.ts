@@ -479,18 +479,78 @@ export const useConfigStore = create<ConfigState>()(
         }),
 
       loadPreset: (presetData) =>
-        set(() => ({
-          savedValues: {
-            character: presetData.character,
-            weapons: presetData.weapons,
-          },
-          workingValues: {
+        set((state) => {
+          // Build workingValues that represents the delta from saved to preset
+          // For keys in saved but not in preset: add null tombstone (delete)
+          // For keys in preset: add the preset value (even if same as saved, to ensure consistency)
+          const newWorkingValues: ConfigState['workingValues'] = {
             character: {},
             weapons: {},
-          },
-          loadedCategories: new Set<string>(),
-          hasUnsavedChanges: false,
-        })),
+          };
+
+          // Process character categories
+          // First, add tombstones for all saved character keys not in preset
+          for (const [category, savedEntries] of Object.entries(state.savedValues.character)) {
+            const presetCategory = presetData.character[category] || {};
+            for (const key of Object.keys(savedEntries)) {
+              if (!(key in presetCategory)) {
+                // Key exists in saved but not in preset - tombstone it
+                if (!newWorkingValues.character[category]) {
+                  newWorkingValues.character[category] = {};
+                }
+                newWorkingValues.character[category][key] = null;
+              }
+            }
+          }
+          // Then, add preset values (will override saved when displayed/saved)
+          for (const [category, presetEntries] of Object.entries(presetData.character)) {
+            if (!newWorkingValues.character[category]) {
+              newWorkingValues.character[category] = {};
+            }
+            for (const [key, value] of Object.entries(presetEntries)) {
+              newWorkingValues.character[category][key] = value;
+            }
+          }
+
+          // Process weapon categories
+          // First, add tombstones for all saved weapon keys not in preset
+          for (const [weapon, savedCategories] of Object.entries(state.savedValues.weapons)) {
+            for (const [category, savedEntries] of Object.entries(savedCategories)) {
+              const presetCategory = presetData.weapons[weapon]?.[category] || {};
+              for (const key of Object.keys(savedEntries)) {
+                if (!(key in presetCategory)) {
+                  // Key exists in saved but not in preset - tombstone it
+                  if (!newWorkingValues.weapons[weapon]) {
+                    newWorkingValues.weapons[weapon] = {};
+                  }
+                  if (!newWorkingValues.weapons[weapon][category]) {
+                    newWorkingValues.weapons[weapon][category] = {};
+                  }
+                  newWorkingValues.weapons[weapon][category][key] = null;
+                }
+              }
+            }
+          }
+          // Then, add preset values
+          for (const [weapon, presetCategories] of Object.entries(presetData.weapons)) {
+            if (!newWorkingValues.weapons[weapon]) {
+              newWorkingValues.weapons[weapon] = {};
+            }
+            for (const [category, presetEntries] of Object.entries(presetCategories)) {
+              if (!newWorkingValues.weapons[weapon][category]) {
+                newWorkingValues.weapons[weapon][category] = {};
+              }
+              for (const [key, value] of Object.entries(presetEntries)) {
+                newWorkingValues.weapons[weapon][category][key] = value;
+              }
+            }
+          }
+
+          return {
+            workingValues: newWorkingValues,
+            hasUnsavedChanges: calculateHasUnsavedChanges(newWorkingValues, state.savedValues),
+          };
+        }),
     }),
     {
       name: 'ezconfig-working',

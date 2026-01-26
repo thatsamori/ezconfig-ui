@@ -46,7 +46,7 @@ export function PresetsTab() {
           throw new Error("Failed to fetch presets");
         }
         const data = await res.json();
-        setPresets(data.presets || []);
+        setPresets(data.data || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load presets");
       } finally {
@@ -75,8 +75,8 @@ export function PresetsTab() {
       if (!res.ok) {
         throw new Error("Failed to fetch preset data");
       }
-      const data: PresetData = await res.json();
-      loadPreset(data);
+      const response = await res.json();
+      loadPreset(response.data as PresetData);
       toast.success(`Loaded preset: ${selectedPreset.manifest.title}`, {
         position: "bottom-right",
       });
