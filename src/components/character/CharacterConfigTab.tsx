@@ -8,11 +8,15 @@ import {
 import { ConfigRow } from "@/components/weapons/ConfigRow";
 import { CollapsibleSection } from "@/components/weapons/CollapsibleSection";
 
+/**
+ * CharacterConfigTab - Temporary v0.1 compatibility implementation
+ *
+ * This component uses deprecated store API (characterValues, setCharacterValue).
+ * Will be refactored to use new store model in Phase 6 Plan 03.
+ */
 export function CharacterConfigTab() {
   const characterValues = useConfigStore((state) => state.characterValues);
-  const characterStaged = useConfigStore((state) => state.characterStaged);
   const setCharacterValue = useConfigStore((state) => state.setCharacterValue);
-  const setCharacterStaged = useConfigStore((state) => state.setCharacterStaged);
 
   return (
     <div className="space-y-4 mt-4">
@@ -22,12 +26,8 @@ export function CharacterConfigTab() {
             key={configEntry.configKey}
             configEntry={configEntry}
             value={characterValues[configEntry.configKey]}
-            staged={characterStaged[configEntry.configKey] ?? false}
-            onValueChange={(value) =>
+            onChange={(value) =>
               setCharacterValue(configEntry.configKey, value)
-            }
-            onStagedChange={(staged) =>
-              setCharacterStaged(configEntry.configKey, staged)
             }
           />
         ))}
@@ -39,12 +39,8 @@ export function CharacterConfigTab() {
             key={configEntry.configKey}
             configEntry={configEntry}
             value={characterValues[configEntry.configKey]}
-            staged={characterStaged[configEntry.configKey] ?? false}
-            onValueChange={(value) =>
+            onChange={(value) =>
               setCharacterValue(configEntry.configKey, value)
-            }
-            onStagedChange={(staged) =>
-              setCharacterStaged(configEntry.configKey, staged)
             }
           />
         ))}
@@ -56,12 +52,8 @@ export function CharacterConfigTab() {
             key={configEntry.configKey}
             configEntry={configEntry}
             value={characterValues[configEntry.configKey]}
-            staged={characterStaged[configEntry.configKey] ?? false}
-            onValueChange={(value) =>
+            onChange={(value) =>
               setCharacterValue(configEntry.configKey, value)
-            }
-            onStagedChange={(staged) =>
-              setCharacterStaged(configEntry.configKey, staged)
             }
           />
         ))}

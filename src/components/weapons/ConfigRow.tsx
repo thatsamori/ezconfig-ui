@@ -1,6 +1,5 @@
 "use client";
 
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   BooleanInput,
@@ -10,22 +9,19 @@ import {
   FloatArrayInput,
 } from "@/components/config";
 import { ConfigEntry, DataType } from "@/lib/config/types";
+import type { ConfigValue } from "@/lib/store/configStore";
 
 export interface ConfigRowProps {
   configEntry: ConfigEntry;
-  value: any;
-  staged: boolean;
-  onValueChange: (value: any) => void;
-  onStagedChange: (staged: boolean) => void;
+  value: ConfigValue | undefined;
+  onChange: (value: ConfigValue) => void;
   disabled?: boolean;
 }
 
 export function ConfigRow({
   configEntry,
   value,
-  staged,
-  onValueChange,
-  onStagedChange,
+  onChange,
   disabled,
 }: ConfigRowProps) {
   const renderInput = () => {
@@ -37,7 +33,7 @@ export function ConfigRow({
         return (
           <BooleanInput
             value={currentValue ?? false}
-            onChange={onValueChange}
+            onChange={onChange}
             disabled={disabled}
           />
         );
@@ -45,7 +41,7 @@ export function ConfigRow({
         return (
           <FloatInput
             value={currentValue ?? 0}
-            onChange={onValueChange}
+            onChange={onChange}
             disabled={disabled}
           />
         );
@@ -53,7 +49,7 @@ export function ConfigRow({
         return (
           <VectorInput
             value={currentValue ?? { x: 0, y: 0, z: 0 }}
-            onChange={onValueChange}
+            onChange={onChange}
             disabled={disabled}
           />
         );
@@ -61,7 +57,7 @@ export function ConfigRow({
         return (
           <Vector2DInput
             value={currentValue ?? { x: 0, y: 0 }}
-            onChange={onValueChange}
+            onChange={onChange}
             disabled={disabled}
           />
         );
@@ -69,7 +65,7 @@ export function ConfigRow({
         return (
           <FloatArrayInput
             value={currentValue ?? [0]}
-            onChange={onValueChange}
+            onChange={onChange}
             disabled={disabled}
           />
         );
@@ -80,11 +76,6 @@ export function ConfigRow({
 
   return (
     <div className="flex items-center gap-4 py-2 border-b border-border last:border-b-0">
-      <Checkbox
-        checked={staged}
-        onCheckedChange={(checked) => onStagedChange(checked === true)}
-        disabled={disabled}
-      />
       <Label className="min-w-[200px] font-medium">{configEntry.configKey}</Label>
       <div className="flex-1">{renderInput()}</div>
     </div>
