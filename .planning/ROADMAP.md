@@ -48,6 +48,7 @@ See [v0.1-ROADMAP.md](milestones/v0.1-ROADMAP.md) for full details.
 - [x] **Phase 8: Polish** — Search/filter, cleanup, error handling — COMPLETE 2026-01-26
   - [x] Plan 01: Search/filter for weapons (2026-01-26)
   - [x] Plan 02: Cleanup & error handling (2026-01-26)
+- [ ] **Phase 9: Overrides View** — Toggle to show only config values that override game defaults
 
 **Phase Numbering:**
 - Phases 1-4: v0.1 (superseded)
@@ -65,3 +66,4 @@ See [v0.1-ROADMAP.md](milestones/v0.1-ROADMAP.md) for full details.
 | 6. UI Refactor | v1.0 | 2/2 | Complete | 2026-01-25 |
 | 7. Apply Flow | v1.0 | 1/1 | Complete | 2026-01-26 |
 | 8. Polish | v1.0 | 2/2 | Complete | 2026-01-26 |
+| 9. Overrides View | v1.0 | 0/? | Not started | - |

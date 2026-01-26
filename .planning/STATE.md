@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 
 ## Current Position
 
-Phase: 8 of 8 (Polish) — COMPLETE
-Plan: 2 of 2 complete
-Status: Milestone v1.0 complete
-Last activity: 2026-01-26 — Completed 08-02-PLAN.md (Cleanup & Error Handling)
+Phase: 9 of 9 (Overrides View)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-01-26 — Added Phase 9 (Overrides View)
 
-Progress: ██████████ 100% (v1.0)
+Progress: ████████░░ 80% (v1.0)
 
 ## Milestone History
 
@@ -56,9 +56,10 @@ None yet.
 
 - v0.1 superseded 2026-01-25: Architectural pivot to database-driven configuration
 - Phases 1-4 archived, continuing with Phase 5+ for v1.0
+- Phase 9 added 2026-01-26: Overrides View — toggle to show only modified config values
 
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Milestone v1.0 complete, ready for /gsd:complete-milestone
+Stopped at: Phase 9 added, ready for /gsd:plan-phase 9
 Resume file: None
