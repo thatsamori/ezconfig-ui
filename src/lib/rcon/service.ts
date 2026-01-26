@@ -34,7 +34,11 @@ export async function executeBatchCommands(
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
   } finally {
-    await rcon.end();
+    // End connection with timeout to prevent hanging
+    await Promise.race([
+      rcon.end(),
+      new Promise((resolve) => setTimeout(resolve, 1000)),
+    ]);
   }
 
   return responses;
@@ -57,6 +61,10 @@ export async function executeCommand(command: string): Promise<string> {
   try {
     return await rcon.send(command);
   } finally {
-    await rcon.end();
+    // End connection with timeout to prevent hanging
+    await Promise.race([
+      rcon.end(),
+      new Promise((resolve) => setTimeout(resolve, 1000)),
+    ]);
   }
 }
