@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useConfigStore, type ConfigValue } from "@/lib/store/configStore";
 import {
   CHARACTER_CONFIG_OPTIONS,
@@ -45,6 +45,19 @@ export function CharacterConfigTab() {
   const workingValues = useConfigStore((state) => state.workingValues);
   const savedValues = useConfigStore((state) => state.savedValues);
   const loadedCategories = useConfigStore((state) => state.loadedCategories);
+
+  // Load Movement category on mount since it's defaultOpen
+  useEffect(() => {
+    const loadInitialCategory = async () => {
+      const category = CharacterConfigGroupName.Movement;
+      if (!loadedCategories.has(`Character/${category}`)) {
+        setLoadingCategory(category);
+        await loadCharacterConfig(category);
+        setLoadingCategory(null);
+      }
+    };
+    loadInitialCategory();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get action functions
   const setWorkingValue = useConfigStore((state) => state.setWorkingValue);
