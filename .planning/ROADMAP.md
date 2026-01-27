@@ -99,7 +99,7 @@ See [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
 **Plans**: TBD
 
 Plans:
-- [ ] 19-01: TBD (run /gsd:plan-phase 19 to break down)
+- [x] 19-01: Selective Apply Dialog
 
 #### Phase 20: Overrides Filter
 
@@ -133,5 +133,5 @@ Plans:
 | 16. Auth Setup | v1.3 | 2/2 | Complete | 2026-01-27 |
 | 17. User Management | v1.3 | 2/2 | Complete | 2026-01-27 |
 | 18. Access Control | v1.3 | 1/1 | Complete | 2026-01-27 |
-| 19. Selective Apply | v1.4 | 0/? | Not started | - |
+| 19. Selective Apply | v1.4 | 1/1 | Complete | 2026-01-27 |
 | 20. Overrides Filter | v1.4 | 0/? | Not started | - |
