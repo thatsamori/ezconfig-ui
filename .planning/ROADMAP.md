@@ -104,7 +104,7 @@ Plans:
 **Goal**: Role enforcement - hide/disable UI actions based on user role
 **Depends on**: Phase 17
 **Research**: Unlikely (internal patterns, role checks)
-**Plans**: TBD
+**Plans**: 1
 
 Roles:
 - viewer: View only, no actions
@@ -113,7 +113,7 @@ Roles:
 - global_admin: Full access
 
 Plans:
-- [ ] 18-01: TBD (run /gsd:plan-phase 18 to break down)
+- [ ] 18-01: Role Enforcement UI — permissions helper, ActionButtons/ConfigRow/PresetsTab restrictions
 
 ## Progress
 
