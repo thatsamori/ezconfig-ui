@@ -191,18 +191,41 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
   },
 
   setBulkWeaponValue: (category, key, value, weaponNames) => {
+    // When value is null, remove the key (reset to game default)
+    const isRemoval = value === null;
+
     // Optimistic update - update local state immediately
     set((state) => {
       const newWeapons = { ...state.values.weapons };
 
       for (const weaponName of weaponNames) {
-        newWeapons[weaponName] = {
-          ...newWeapons[weaponName],
-          [category]: {
-            ...newWeapons[weaponName]?.[category],
-            [key]: value,
-          },
-        };
+        if (isRemoval) {
+          // Remove key from category
+          const categoryValues = newWeapons[weaponName]?.[category] || {};
+          const { [key]: _, ...remainingKeys } = categoryValues;
+          newWeapons[weaponName] = {
+            ...newWeapons[weaponName],
+            [category]: remainingKeys,
+          };
+          // Clean up empty category objects
+          if (Object.keys(remainingKeys).length === 0) {
+            const { [category]: __, ...remainingCategories } = newWeapons[weaponName];
+            newWeapons[weaponName] = remainingCategories;
+          }
+          // Clean up empty weapon objects
+          if (Object.keys(newWeapons[weaponName] || {}).length === 0) {
+            delete newWeapons[weaponName];
+          }
+        } else {
+          // Set the value
+          newWeapons[weaponName] = {
+            ...newWeapons[weaponName],
+            [category]: {
+              ...newWeapons[weaponName]?.[category],
+              [key]: value,
+            },
+          };
+        }
       }
 
       const newValues = {
