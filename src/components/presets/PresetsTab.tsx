@@ -36,7 +36,7 @@ export function PresetsTab() {
   // Dialog state for loading presets
   const [selectedPreset, setSelectedPreset] = useState<PresetInfo | null>(null);
   const [presetType, setPresetType] = useState<"static" | "user" | null>(null);
-  const [dialogType, setDialogType] = useState<"unsaved" | "delete" | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [isLoadingPreset, setIsLoadingPreset] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -54,15 +54,13 @@ export function PresetsTab() {
   const [importManifest, setImportManifest] = useState<PresetManifest | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
-  const hasUnsavedChanges = useConfigStore((state) => state.hasUnsavedChanges);
-  const savedValues = useConfigStore((state) => state.savedValues);
-  const resetWorkingValues = useConfigStore((state) => state.resetWorkingValues);
+  const values = useConfigStore((state) => state.values);
   const loadPreset = useConfigStore((state) => state.loadPreset);
 
-  // Check if there's anything to save (savedValues has content)
+  // Check if there's anything to save (values has content)
   const hasSavedContent =
-    Object.keys(savedValues.character).length > 0 ||
-    Object.keys(savedValues.weapons).length > 0;
+    Object.keys(values.character).length > 0 ||
+    Object.keys(values.weapons).length > 0;
 
   // Wait for client mount to avoid hydration mismatch
   useEffect(() => {
@@ -95,18 +93,13 @@ export function PresetsTab() {
   const handleLoadClick = (preset: PresetInfo, type: "static" | "user") => {
     setSelectedPreset(preset);
     setPresetType(type);
-    if (hasUnsavedChanges) {
-      setDialogType("unsaved");
-    } else {
-      // No unsaved changes, go directly to preview
-      setPreviewOpen(true);
-    }
+    setPreviewOpen(true);
   };
 
   const handleDeleteClick = (preset: PresetInfo) => {
     setSelectedPreset(preset);
     setPresetType("user");
-    setDialogType("delete");
+    setDeleteDialogOpen(true);
   };
 
   const handleConfirmLoad = async () => {
@@ -135,7 +128,6 @@ export function PresetsTab() {
     } finally {
       setIsLoadingPreset(false);
       setPreviewOpen(false);
-      setDialogType(null);
       setSelectedPreset(null);
       setPresetType(null);
     }
@@ -167,26 +159,14 @@ export function PresetsTab() {
       });
     } finally {
       setIsDeleting(false);
-      setDialogType(null);
+      setDeleteDialogOpen(false);
       setSelectedPreset(null);
       setPresetType(null);
     }
   };
 
-  const handleResetChanges = () => {
-    resetWorkingValues();
-    // Close dialog and clear selection - user must click Load again
-    setDialogType(null);
-    setSelectedPreset(null);
-    setPresetType(null);
-    toast.info("Changes reset. You can now load a preset.", {
-      position: "bottom-right",
-    });
-  };
-
-  const handleCloseDialog = () => {
-    setDialogType(null);
-    setPreviewOpen(false);
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
     setSelectedPreset(null);
     setPresetType(null);
   };
@@ -484,27 +464,6 @@ export function PresetsTab() {
         isImporting={isImporting}
       />
 
-      {/* Unsaved changes blocking dialog */}
-      {mounted && (
-        <AlertDialog open={dialogType === "unsaved"} onOpenChange={(open) => !open && handleCloseDialog()}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-              <AlertDialogDescription>
-                You have unsaved changes that must be resolved before loading a preset.
-                Save your current configuration or reset your changes first.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-              <AlertDialogCancel onClick={handleCloseDialog}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleResetChanges} variant="outline">
-                Reset Changes
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
-
       {/* Preview dialog */}
       {mounted && (
         <PresetPreviewDialog
@@ -519,7 +478,7 @@ export function PresetsTab() {
 
       {/* Confirm delete dialog */}
       {mounted && (
-        <AlertDialog open={dialogType === "delete"} onOpenChange={(open) => !open && handleCloseDialog()}>
+        <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => !open && handleCloseDeleteDialog()}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Preset</AlertDialogTitle>
@@ -528,7 +487,7 @@ export function PresetsTab() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={handleCloseDialog}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel onClick={handleCloseDeleteDialog}>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmDelete}
                 disabled={isDeleting}
