@@ -174,7 +174,7 @@ export function SelectiveApplyDialog({
         <DialogHeader>
           <DialogTitle>Apply to Game</DialogTitle>
           <DialogDescription>
-            Select which configuration changes to send to the game server.
+            Select which configuration to send to the game server.
           </DialogDescription>
         </DialogHeader>
 
@@ -245,7 +245,7 @@ export function SelectiveApplyDialog({
             {!isLoading && !fetchError && filteredCommands.length === 0 && (
               <p className="text-muted-foreground py-4 text-center text-sm">
                 {commands.length === 0
-                  ? "No commands to apply. Save some configuration first."
+                  ? "No configuration to apply. Customize some settings first."
                   : "No commands match your search."}
               </p>
             )}
