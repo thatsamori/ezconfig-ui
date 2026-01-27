@@ -93,10 +93,11 @@ Plans:
 **Goal**: Users tab for global_admin to create/edit/delete users
 **Depends on**: Phase 16
 **Research**: Unlikely (CRUD patterns, existing tab UI)
-**Plans**: TBD
+**Plans**: 2
 
 Plans:
-- [ ] 17-01: TBD (run /gsd:plan-phase 17 to break down)
+- [ ] 17-01: User API — CRUD endpoints with role-based access
+- [ ] 17-02: Users Tab UI — user table, create/edit/delete dialogs
 
 #### Phase 18: Access Control
 
