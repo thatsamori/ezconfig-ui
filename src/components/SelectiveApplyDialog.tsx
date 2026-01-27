@@ -125,7 +125,8 @@ export function SelectiveApplyDialog({
       return;
     }
 
-    if (selectedCommands.size === 0) {
+    // Allow proceeding with 0 commands if wipeDatabase is checked (wipe-only operation)
+    if (selectedCommands.size === 0 && !wipeDatabase) {
       toast.error("No commands selected", { position: "bottom-right" });
       return;
     }
@@ -301,12 +302,14 @@ export function SelectiveApplyDialog({
           <Button
             onClick={handleApply}
             disabled={
-              isApplying || isLoading || selectedCommands.size === 0 || !!fetchError
+              isApplying || isLoading || (selectedCommands.size === 0 && !wipeDatabase) || !!fetchError
             }
           >
             {isApplying
               ? "Applying..."
-              : `Apply ${selectedCommands.size} Command${selectedCommands.size === 1 ? "" : "s"}`}
+              : selectedCommands.size === 0
+                ? "Wipe Database"
+                : `Apply ${selectedCommands.size} Command${selectedCommands.size === 1 ? "" : "s"}`}
           </Button>
         </DialogFooter>
       </DialogContent>
