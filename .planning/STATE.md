@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-01-26)
 
 ## Current Position
 
-Phase: 24 of 27 (State Model Removal) — COMPLETE
-Plan: 2 of 2 in current phase
+Phase: 25 of 27 (UI Simplification)
+Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-01-27 — Completed 24-02-PLAN.md
+Last activity: 2026-01-27 — Completed 25-01-PLAN.md
 
-Progress: ██░░░░░░░░ 20%
+Progress: ███░░░░░░░ 30%
 
 ## Milestone History
 
@@ -89,5 +89,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed Phase 24 (State Model Removal)
+Stopped at: Completed Phase 25 (UI Simplification)
 Resume file: None

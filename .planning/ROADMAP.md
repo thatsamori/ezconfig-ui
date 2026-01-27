@@ -146,10 +146,10 @@ Plans:
 **Goal**: Remove Save/Reset buttons, update status indicators to reflect immediate persistence
 **Depends on**: Phase 24
 **Research**: Unlikely (internal UI changes)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 25-01: TBD
+- [x] 25-01: Remove Save/Reset buttons, update store method names — completed 2026-01-27
 
 #### Phase 26: Preset Flow Update
 
@@ -200,6 +200,6 @@ Plans:
 | 22. Notes UI | v1.5 | 0/? | Superseded | - |
 | 23. Notes Integration | v1.5 | 0/? | Superseded | - |
 | 24. State Model Removal | v2.0 | 2/2 | Complete | 2026-01-27 |
-| 25. UI Simplification | v2.0 | 0/? | Not started | - |
+| 25. UI Simplification | v2.0 | 1/1 | Complete | 2026-01-27 |
 | 26. Preset Flow Update | v2.0 | 0/? | Not started | - |
 | 27. Apply Flow Streamline | v2.0 | 0/? | Not started | - |
