@@ -130,10 +130,8 @@ export function UsersTab() {
 
   const getRoleLabel = (role: UserRole): string => {
     const labels: Record<UserRole, string> = {
-      viewer: "Viewer",
-      preset_creator: "Preset Creator",
       config_editor: "Config Editor",
-      global_admin: "Global Admin",
+      admin: "Admin",
     };
     return labels[role] || role;
   };

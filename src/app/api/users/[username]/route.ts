@@ -5,7 +5,7 @@
  * PUT /api/users/[username] - Update user
  * DELETE /api/users/[username] - Delete user
  *
- * Requires global_admin role.
+ * Requires admin role.
  */
 
 import { NextResponse } from 'next/server';
@@ -13,7 +13,7 @@ import { requireRole } from '@/lib/auth';
 import { getUsers, saveUsers } from '@/lib/auth/service';
 import type { UserRole } from '@/lib/auth/types';
 
-const VALID_ROLES: UserRole[] = ['viewer', 'preset_creator', 'config_editor', 'global_admin'];
+const VALID_ROLES: UserRole[] = ['config_editor', 'admin'];
 
 interface RouteContext {
   params: Promise<{ username: string }>;
@@ -28,7 +28,7 @@ export async function GET(request: Request, context: RouteContext) {
     const { username } = await context.params;
 
     // Check auth
-    const auth = requireRole(request, ['global_admin']);
+    const auth = requireRole(request, ['admin']);
     if (!auth.authorized) {
       return NextResponse.json({ error: auth.error!.message }, { status: auth.error!.status });
     }
@@ -62,7 +62,7 @@ export async function PUT(request: Request, context: RouteContext) {
     const { username } = await context.params;
 
     // Check auth
-    const auth = requireRole(request, ['global_admin']);
+    const auth = requireRole(request, ['admin']);
     if (!auth.authorized) {
       return NextResponse.json({ error: auth.error!.message }, { status: auth.error!.status });
     }
@@ -123,7 +123,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     const { username } = await context.params;
 
     // Check auth
-    const auth = requireRole(request, ['global_admin']);
+    const auth = requireRole(request, ['admin']);
     if (!auth.authorized) {
       return NextResponse.json({ error: auth.error!.message }, { status: auth.error!.status });
     }

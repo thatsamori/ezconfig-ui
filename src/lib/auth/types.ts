@@ -3,13 +3,11 @@
  */
 
 /**
- * Available user roles with increasing privilege levels
- * - viewer: Can view configs but not modify
- * - preset_creator: Can create/manage user presets
- * - config_editor: Can edit and save configs
- * - global_admin: Full access including user management
+ * Available user roles
+ * - config_editor: Can edit configs, manage presets, but not manage users
+ * - admin: Full access including user management
  */
-export type UserRole = 'viewer' | 'preset_creator' | 'config_editor' | 'global_admin';
+export type UserRole = 'config_editor' | 'admin';
 
 /**
  * User record stored in users.json

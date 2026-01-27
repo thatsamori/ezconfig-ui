@@ -44,7 +44,7 @@ export async function saveUsers(users: User[]): Promise<void> {
  * Bootstrap admin user from environment variables
  *
  * If users.json is empty or missing AND ADMIN_USERNAME + ADMIN_PASSWORD
- * are set in environment, creates an admin user with global_admin role.
+ * are set in environment, creates an admin user with admin role.
  */
 export async function bootstrapAdmin(): Promise<void> {
   const users = await getUsers();
@@ -66,7 +66,7 @@ export async function bootstrapAdmin(): Promise<void> {
   const adminUser: User = {
     username: adminUsername,
     password: adminPassword,
-    role: 'global_admin',
+    role: 'admin',
   };
 
   await saveUsers([adminUser]);

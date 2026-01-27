@@ -4,7 +4,7 @@
  * GET /api/users - List all users (without passwords)
  * POST /api/users - Create new user
  *
- * Requires global_admin role.
+ * Requires admin role.
  */
 
 import { NextResponse } from 'next/server';
@@ -12,7 +12,7 @@ import { requireRole } from '@/lib/auth';
 import { getUsers, saveUsers } from '@/lib/auth/service';
 import type { UserRole } from '@/lib/auth/types';
 
-const VALID_ROLES: UserRole[] = ['viewer', 'preset_creator', 'config_editor', 'global_admin'];
+const VALID_ROLES: UserRole[] = ['config_editor', 'admin'];
 
 /**
  * GET /api/users
@@ -21,7 +21,7 @@ const VALID_ROLES: UserRole[] = ['viewer', 'preset_creator', 'config_editor', 'g
 export async function GET(request: Request) {
   try {
     // Check auth
-    const auth = requireRole(request, ['global_admin']);
+    const auth = requireRole(request, ['admin']);
     if (!auth.authorized) {
       return NextResponse.json({ error: auth.error!.message }, { status: auth.error!.status });
     }
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     // Check auth
-    const auth = requireRole(request, ['global_admin']);
+    const auth = requireRole(request, ['admin']);
     if (!auth.authorized) {
       return NextResponse.json({ error: auth.error!.message }, { status: auth.error!.status });
     }

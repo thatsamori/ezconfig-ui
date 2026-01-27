@@ -34,7 +34,7 @@ function AppContent() {
           <TabsTrigger value="weapons">Weapons</TabsTrigger>
           <TabsTrigger value="character">Character</TabsTrigger>
           <TabsTrigger value="presets">Presets</TabsTrigger>
-          {user?.role === 'global_admin' && (
+          {user?.role === 'admin' && (
             <TabsTrigger value="users">Users</TabsTrigger>
           )}
         </TabsList>
@@ -47,7 +47,7 @@ function AppContent() {
         <TabsContent value="presets">
           <PresetsTab />
         </TabsContent>
-        {user?.role === 'global_admin' && (
+        {user?.role === 'admin' && (
           <TabsContent value="users">
             <UsersTab />
           </TabsContent>

@@ -36,16 +36,14 @@ interface UserDialogProps {
 }
 
 const ROLES: { value: UserRole; label: string }[] = [
-  { value: "viewer", label: "Viewer" },
-  { value: "preset_creator", label: "Preset Creator" },
   { value: "config_editor", label: "Config Editor" },
-  { value: "global_admin", label: "Global Admin" },
+  { value: "admin", label: "Admin" },
 ];
 
 export function UserDialog({ open, onOpenChange, user, onSaved }: UserDialogProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("viewer");
+  const [role, setRole] = useState<UserRole>("config_editor");
   const [isSaving, setIsSaving] = useState(false);
 
   const token = useAuthStore((state) => state.token);
@@ -61,7 +59,7 @@ export function UserDialog({ open, onOpenChange, user, onSaved }: UserDialogProp
       } else {
         setUsername("");
         setPassword("");
-        setRole("viewer");
+        setRole("config_editor");
       }
     }
   }, [open, user]);
