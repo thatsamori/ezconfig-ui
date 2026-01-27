@@ -15,6 +15,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useConfigStore } from "@/lib/store/configStore";
+import { useAuthStore } from "@/lib/store/authStore";
+import { canManagePresets } from "@/lib/auth";
 import { toast } from "sonner";
 import { SavePresetDialog } from "./SavePresetDialog";
 import { PresetPreviewDialog } from "./PresetPreviewDialog";
@@ -58,6 +60,10 @@ export function PresetsTab() {
   const savedValues = useConfigStore((state) => state.savedValues);
   const resetWorkingValues = useConfigStore((state) => state.resetWorkingValues);
   const loadPreset = useConfigStore((state) => state.loadPreset);
+
+  // Get user for role-based access control
+  const user = useAuthStore((state) => state.user);
+  const canManage = canManagePresets(user?.role);
 
   // Check if there's anything to save (savedValues has content)
   const hasSavedContent =
@@ -369,31 +375,33 @@ export function PresetsTab() {
   return (
     <>
       <div className="space-y-8 py-4">
-        {/* Header with Save and Import buttons */}
-        <div className="flex justify-end gap-2">
-          <input
-            ref={importInputRef}
-            type="file"
-            accept=".zip"
-            onChange={handleImportFileSelect}
-            className="hidden"
-            aria-label="Import preset ZIP file"
-          />
-          <Button
-            onClick={() => importInputRef.current?.click()}
-            disabled={isImporting}
-            variant="outline"
-          >
-            {isImporting ? "Importing..." : "Import Preset"}
-          </Button>
-          <Button
-            onClick={() => setSaveDialogOpen(true)}
-            disabled={!hasSavedContent}
-            variant="outline"
-          >
-            Save Current Config as Preset
-          </Button>
-        </div>
+        {/* Header with Save and Import buttons - only visible if user can manage presets */}
+        {canManage && (
+          <div className="flex justify-end gap-2">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".zip"
+              onChange={handleImportFileSelect}
+              className="hidden"
+              aria-label="Import preset ZIP file"
+            />
+            <Button
+              onClick={() => importInputRef.current?.click()}
+              disabled={isImporting}
+              variant="outline"
+            >
+              {isImporting ? "Importing..." : "Import Preset"}
+            </Button>
+            <Button
+              onClick={() => setSaveDialogOpen(true)}
+              disabled={!hasSavedContent}
+              variant="outline"
+            >
+              Save Current Config as Preset
+            </Button>
+          </div>
+        )}
 
         {/* User Presets Section */}
         <div className="space-y-4">
@@ -418,19 +426,23 @@ export function PresetsTab() {
                     >
                       Load
                     </Button>
-                    <Button
-                      onClick={() => handleExportPreset(preset)}
-                      disabled={exportingPreset === preset.name}
-                      variant="outline"
-                    >
-                      {exportingPreset === preset.name ? "Exporting..." : "Export"}
-                    </Button>
-                    <Button
-                      onClick={() => handleDeleteClick(preset)}
-                      variant="destructive"
-                    >
-                      Delete
-                    </Button>
+                    {canManage && (
+                      <>
+                        <Button
+                          onClick={() => handleExportPreset(preset)}
+                          disabled={exportingPreset === preset.name}
+                          variant="outline"
+                        >
+                          {exportingPreset === preset.name ? "Exporting..." : "Export"}
+                        </Button>
+                        <Button
+                          onClick={() => handleDeleteClick(preset)}
+                          variant="destructive"
+                        >
+                          Delete
+                        </Button>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               ))}
