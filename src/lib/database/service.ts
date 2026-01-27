@@ -5,7 +5,7 @@
  * The web app is the authoritative source for all user configuration.
  */
 
-import { mkdir, readFile, writeFile, stat, readdir, unlink, rmdir } from 'fs/promises';
+import { mkdir, readFile, writeFile, stat, readdir, unlink, rmdir, rm } from 'fs/promises';
 import { join, resolve, dirname } from 'path';
 import { env } from '@/lib/env';
 import type { ConfigData } from './types';
@@ -204,6 +204,30 @@ export async function categoryExists(database: string, category: string): Promis
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Clear all database files by removing all directories under Databases/
+ * Used when loading a preset to start fresh
+ */
+export async function clearAllDatabases(): Promise<void> {
+  const root = getDatabasesRoot();
+
+  try {
+    const entries = await readdir(root, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const dirPath = join(root, entry.name);
+        await rm(dirPath, { recursive: true, force: true });
+      }
+    }
+  } catch (error) {
+    // Root directory might not exist yet, which is fine
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
   }
 }
 
