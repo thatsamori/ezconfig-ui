@@ -30,7 +30,7 @@ export function SavePresetDialog({ open, onOpenChange, onSaved }: SavePresetDial
   const [nameError, setNameError] = useState<string | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
 
-  const savedValues = useConfigStore((state) => state.savedValues);
+  const values = useConfigStore((state) => state.values);
 
   const validateName = (value: string): boolean => {
     if (!value || value.length === 0) {
@@ -82,7 +82,7 @@ export function SavePresetDialog({ open, onOpenChange, onSaved }: SavePresetDial
           name,
           title: title.trim(),
           description: description.trim(),
-          data: savedValues,
+          data: values,
         }),
       });
 
@@ -131,7 +131,7 @@ export function SavePresetDialog({ open, onOpenChange, onSaved }: SavePresetDial
         <DialogHeader>
           <DialogTitle>Save as Preset</DialogTitle>
           <DialogDescription>
-            Save your current saved configuration as a reusable preset.
+            Save your current configuration as a reusable preset.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
