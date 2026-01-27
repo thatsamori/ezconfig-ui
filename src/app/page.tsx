@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WeaponConfigTab } from "@/components/weapons";
 import { CharacterConfigTab } from "@/components/character";
 import { PresetsTab } from "@/components/presets";
+import { UsersTab } from "@/components/users";
 import { ActionButtons } from "@/components/ActionButtons";
 import { AuthGate } from "@/components/auth";
 import { useAuthStore } from "@/lib/store";
@@ -33,6 +34,9 @@ function AppContent() {
           <TabsTrigger value="weapons">Weapons</TabsTrigger>
           <TabsTrigger value="character">Character</TabsTrigger>
           <TabsTrigger value="presets">Presets</TabsTrigger>
+          {user?.role === 'global_admin' && (
+            <TabsTrigger value="users">Users</TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="weapons">
           <WeaponConfigTab />
@@ -43,6 +47,11 @@ function AppContent() {
         <TabsContent value="presets">
           <PresetsTab />
         </TabsContent>
+        {user?.role === 'global_admin' && (
+          <TabsContent value="users">
+            <UsersTab />
+          </TabsContent>
+        )}
       </Tabs>
     </main>
   );
