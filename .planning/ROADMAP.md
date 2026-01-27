@@ -139,7 +139,7 @@ Superseded before implementation due to v2.0 architectural simplification (remov
 
 Plans:
 - [x] 24-01: Store refactor - single state model, async API writes — completed 2026-01-27
-- [ ] 24-02: Preset and bulk operations - direct API writes
+- [x] 24-02: Preset and bulk operations - direct API writes — completed 2026-01-27
 
 #### Phase 25: UI Simplification
 
@@ -199,7 +199,7 @@ Plans:
 | 21. Notes Database | v1.5 | 0/? | Superseded | - |
 | 22. Notes UI | v1.5 | 0/? | Superseded | - |
 | 23. Notes Integration | v1.5 | 0/? | Superseded | - |
-| 24. State Model Removal | v2.0 | 1/2 | In progress | - |
+| 24. State Model Removal | v2.0 | 2/2 | Complete | 2026-01-27 |
 | 25. UI Simplification | v2.0 | 0/? | Not started | - |
 | 26. Preset Flow Update | v2.0 | 0/? | Not started | - |
 | 27. Apply Flow Streamline | v2.0 | 0/? | Not started | - |
