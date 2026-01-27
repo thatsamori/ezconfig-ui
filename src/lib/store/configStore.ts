@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import type { PresetData } from '@/lib/presets/types';
 
 // Config values can be various types from the schema
@@ -38,6 +39,27 @@ export interface ConfigState {
   clearSavedCategory: (database: string, category: string) => void;
 }
 
+/**
+ * Helper to save category entries to API
+ * Fire-and-forget pattern - returns promise but callers don't need to await
+ */
+async function saveToApi(
+  database: string,
+  category: string,
+  entries: Record<string, ConfigValue>
+): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/config/${database}/${category}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entries }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 const initialState = {
   values: {
     character: {},
@@ -58,10 +80,11 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
     return get().values;
   },
 
-  setValue: (database, category, key, value) =>
-    set((state) => {
-      const isCharacter = database === 'Character';
+  setValue: (database, category, key, value) => {
+    const isCharacter = database === 'Character';
 
+    // Optimistic update - update local state immediately
+    set((state) => {
       if (isCharacter) {
         return {
           values: {
@@ -93,12 +116,26 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
           },
         };
       }
-    }),
+    });
 
-  removeValue: (database, category, key) =>
+    // Fire-and-forget API write
+    const state = get();
+    const entries = isCharacter
+      ? state.values.character[category] || {}
+      : state.values.weapons[database]?.[category] || {};
+
+    saveToApi(database, category, entries).then((success) => {
+      if (!success) {
+        toast.error(`Failed to save ${database}/${category}`);
+      }
+    });
+  },
+
+  removeValue: (database, category, key) => {
+    const isCharacter = database === 'Character';
+
+    // Optimistic update - update local state immediately
     set((state) => {
-      const isCharacter = database === 'Character';
-
       if (isCharacter) {
         const categoryValues = state.values.character[category] || {};
         const { [key]: _, ...remainingKeys } = categoryValues;
@@ -143,9 +180,23 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
           },
         };
       }
-    }),
+    });
 
-  setBulkWeaponValue: (category, key, value, weaponNames) =>
+    // Fire-and-forget API write with updated entries (excluding removed key)
+    const state = get();
+    const entries = isCharacter
+      ? state.values.character[category] || {}
+      : state.values.weapons[database]?.[category] || {};
+
+    saveToApi(database, category, entries).then((success) => {
+      if (!success) {
+        toast.error(`Failed to save ${database}/${category}`);
+      }
+    });
+  },
+
+  setBulkWeaponValue: (category, key, value, weaponNames) => {
+    // Optimistic update - update local state immediately
     set((state) => {
       const newWeapons = { ...state.values.weapons };
 
@@ -165,7 +216,19 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
           weapons: newWeapons,
         },
       };
-    }),
+    });
+
+    // Fire-and-forget API writes for each weapon
+    const state = get();
+    for (const weaponName of weaponNames) {
+      const entries = state.values.weapons[weaponName]?.[category] || {};
+      saveToApi(weaponName, category, entries).then((success) => {
+        if (!success) {
+          toast.error(`Failed to save ${weaponName}/${category}`);
+        }
+      });
+    }
+  },
 
   getValue: (database, category, key) => {
     const state = get();
