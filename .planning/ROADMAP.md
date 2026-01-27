@@ -15,7 +15,7 @@ None
 - **v1.1 Presets** — Phases 11-13 (SHIPPED 2026-01-26) — [Archive](milestones/v1.1-ROADMAP.md)
 - **v1.2 Database Simplification** — Phases 14-15 (SHIPPED 2026-01-26) — [Archive](milestones/v1.2-ROADMAP.md)
 - **v1.3 Users & Auth** — Phases 16-18 (SHIPPED 2026-01-27) — [Archive](milestones/v1.3-ROADMAP.md)
-- 🚧 **v1.4 UX Improvements** — Phases 19-20 (in progress)
+- **v1.4 UX Improvements** — Phases 19-20 (SHIPPED 2026-01-27)
 
 ## Completed Milestones
 
@@ -87,29 +87,15 @@ See [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
 
 </details>
 
-### 🚧 v1.4 UX Improvements (In Progress)
+<details>
+<summary>v1.4 UX Improvements (Phases 19-20) — SHIPPED 2026-01-27</summary>
 
-**Milestone Goal:** Improve user experience with selective apply and override filtering
+Selective apply dialog and overrides filter fix.
 
-#### Phase 19: Selective Apply
+- [x] Phase 19: Selective Apply (1/1 plans) — completed 2026-01-27
+- [x] Phase 20: Overrides Filter (1/1 plans) — completed 2026-01-27
 
-**Goal**: Dialog with selectable command list for granular control over which changes are sent to the game server
-**Depends on**: Phase 18
-**Research**: Unlikely (internal UI patterns)
-**Plans**: TBD
-
-Plans:
-- [x] 19-01: Selective Apply Dialog
-
-#### Phase 20: Overrides Filter
-
-**Goal**: Filter weapons and categories to show only those with overrides
-**Depends on**: Phase 19
-**Research**: Unlikely (internal filtering patterns)
-**Plans**: TBD
-
-Plans:
-- [ ] 20-01: TBD (run /gsd:plan-phase 20 to break down)
+</details>
 
 ## Progress
 
@@ -134,4 +120,4 @@ Plans:
 | 17. User Management | v1.3 | 2/2 | Complete | 2026-01-27 |
 | 18. Access Control | v1.3 | 1/1 | Complete | 2026-01-27 |
 | 19. Selective Apply | v1.4 | 1/1 | Complete | 2026-01-27 |
-| 20. Overrides Filter | v1.4 | 0/? | Not started | - |
+| 20. Overrides Filter | v1.4 | 1/1 | Complete | 2026-01-27 |

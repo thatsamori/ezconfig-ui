@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
-**Current focus:** v1.4 UX Improvements — In Progress
+**Current focus:** v1.4 UX Improvements — Complete
 
 ## Current Position
 
-Phase: 19 of 20 (Selective Apply)
+Phase: 20 of 20 (Overrides Filter)
 Plan: 1 of 1 in current phase
-Status: Phase complete
-Last activity: 2026-01-27 — Completed 19-01-PLAN.md
+Status: Milestone complete
+Last activity: 2026-01-27 — Completed 20-01-PLAN.md
 
-Progress: █████░░░░░ 50%
+Progress: ██████████ 100%
 
 ## Milestone History
 
@@ -79,5 +79,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 19-01-PLAN.md
+Stopped at: Completed 20-01-PLAN.md (milestone complete)
 Resume file: None
