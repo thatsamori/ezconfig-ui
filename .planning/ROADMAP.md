@@ -79,10 +79,9 @@ See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 
 #### Phase 16: Auth Setup
 
-**Goal**: User authentication with login/logout
+**Goal**: Login/logout with users.json storage, env bootstrap, simple localStorage token
 **Depends on**: Previous milestone complete
-**Research**: Likely (authentication architectural decision)
-**Research topics**: Next.js auth patterns (NextAuth vs custom), session management, credential storage
+**Research**: Unlikely (simple file-based auth, no external libraries)
 **Plans**: TBD
 
 Plans:
@@ -90,9 +89,9 @@ Plans:
 
 #### Phase 17: User Management
 
-**Goal**: User profiles and settings
+**Goal**: Users tab for global_admin to create/edit/delete users
 **Depends on**: Phase 16
-**Research**: Unlikely (internal CRUD patterns)
+**Research**: Unlikely (CRUD patterns, existing tab UI)
 **Plans**: TBD
 
 Plans:
@@ -100,10 +99,16 @@ Plans:
 
 #### Phase 18: Access Control
 
-**Goal**: Role-based permissions for config editing
+**Goal**: Role enforcement - hide/disable UI actions based on user role
 **Depends on**: Phase 17
 **Research**: Unlikely (internal patterns, role checks)
 **Plans**: TBD
+
+Roles:
+- viewer: View only, no actions
+- preset_creator: Can create new presets only
+- config_editor: Full config control except user management
+- global_admin: Full access
 
 Plans:
 - [ ] 18-01: TBD (run /gsd:plan-phase 18 to break down)
