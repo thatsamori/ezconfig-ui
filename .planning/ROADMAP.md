@@ -96,7 +96,7 @@ Plans:
 **Plans**: 2
 
 Plans:
-- [ ] 17-01: User API — CRUD endpoints with role-based access
+- [x] 17-01: User API — CRUD endpoints with role-based access — completed 2026-01-27
 - [ ] 17-02: Users Tab UI — user table, create/edit/delete dialogs
 
 #### Phase 18: Access Control
@@ -135,5 +135,5 @@ Plans:
 | 14. Object Format | v1.2 | 1/1 | Complete | 2026-01-26 |
 | 15. On-Demand Storage | v1.2 | 1/1 | Complete | 2026-01-26 |
 | 16. Auth Setup | v1.3 | 2/2 | Complete | 2026-01-27 |
-| 17. User Management | v1.3 | 0/? | Not started | - |
+| 17. User Management | v1.3 | 1/2 | In progress | - |
 | 18. Access Control | v1.3 | 0/? | Not started | - |
