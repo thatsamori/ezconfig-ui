@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
-**Current focus:** v1.3 Users & Auth — SHIPPED
+**Current focus:** v1.4 UX Improvements — In Progress
 
 ## Current Position
 
-Phase: 18 of 18 (Access Control)
-Plan: 1 of 1 in current phase
-Status: Milestone complete
-Last activity: 2026-01-27 — Completed 18-01-PLAN.md, v1.3 shipped
+Phase: 19 of 20 (Selective Apply)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-01-27 — Milestone v1.4 created
 
-Progress: ██████████ 100%
+Progress: ░░░░░░░░░░ 0%
 
 ## Milestone History
 
@@ -24,6 +24,8 @@ Progress: ██████████ 100%
   - See: .planning/milestones/v1.0-ROADMAP.md
 - v1.1 Presets: SHIPPED (Phases 11-13, 6 plans)
   - See: .planning/milestones/v1.1-ROADMAP.md
+- v1.3 Users & Auth: SHIPPED (Phases 16-18, 5 plans)
+  - See: .planning/milestones/v1.3-ROADMAP.md
 
 ## Performance Metrics
 
@@ -71,10 +73,11 @@ None.
 - v1.0 shipped 2026-01-26: All 6 phases (5-10) complete
 - v1.1 shipped 2026-01-26: All 3 phases (11-13) complete
 - v1.2 shipped 2026-01-26: All 2 phases (14-15) complete
-- Milestone v1.3 created: Users & Auth, 3 phases (Phase 16-18)
+- v1.3 shipped 2026-01-27: All 3 phases (16-18) complete
+- Milestone v1.4 created: UX Improvements, 2 phases (Phase 19-20)
 
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 17-02-PLAN.md
+Stopped at: Milestone v1.4 initialization
 Resume file: None
