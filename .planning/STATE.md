@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
-**Current focus:** v1.4 UX Improvements — Complete
+**Current focus:** None — v1.4 shipped
 
 ## Current Position
 
-Phase: 20 of 20 (Overrides Filter)
-Plan: 1 of 1 in current phase
-Status: Milestone complete
-Last activity: 2026-01-27 — Completed 20-01-PLAN.md
+Phase: None — between milestones
+Plan: N/A
+Status: v1.4 shipped, awaiting next milestone
+Last activity: 2026-01-27 — Completed milestone v1.4
 
-Progress: ██████████ 100%
+Progress: N/A (no active milestone)
 
 ## Milestone History
 
@@ -26,6 +26,8 @@ Progress: ██████████ 100%
   - See: .planning/milestones/v1.1-ROADMAP.md
 - v1.3 Users & Auth: SHIPPED (Phases 16-18, 5 plans)
   - See: .planning/milestones/v1.3-ROADMAP.md
+- v1.4 UX Improvements: SHIPPED (Phases 19-20, 2 plans)
+  - See: .planning/milestones/v1.4-ROADMAP.md
 
 ## Performance Metrics
 
@@ -79,5 +81,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 20-01-PLAN.md (milestone complete)
+Stopped at: Completed v1.4 milestone
 Resume file: None

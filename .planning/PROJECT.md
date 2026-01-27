@@ -10,17 +10,28 @@ Database-driven configuration with working state persistence: edit freely, save 
 
 ## Current State
 
-**Version:** v1.3 shipped 2026-01-27
-**LOC:** ~11,400 TypeScript
+**Version:** v1.4 shipped 2026-01-27
+**LOC:** ~11,500 TypeScript
 **Tech stack:** Next.js 16, React 19, Tailwind CSS 4, Shadcn UI, Zustand, JSZip
 
-**What shipped in v1.3:**
+**What shipped in v1.4:**
+- Selective apply dialog with command list and checkboxes
+- Search filter for RCON commands in apply dialog
+- Select All / Deselect All for quick command selection
+- Fixed "Show overrides only" toggle to actually filter empty items
+- Context-aware empty state messages (search vs filter)
+
+<details>
+<summary>v1.3 (shipped 2026-01-27)</summary>
+
 - User authentication with file-based users.json storage
 - Environment-based admin bootstrap (ADMIN_USERNAME, ADMIN_PASSWORD)
 - Login/logout flow with localStorage token persistence
 - User management (create/edit/delete users) for admin role
 - Simplified 2-role system: config_editor (full access except users) and admin (full access)
 - Users tab visible only to admin role
+
+</details>
 
 <details>
 <summary>v1.2 (shipped 2026-01-26)</summary>
@@ -89,6 +100,9 @@ Database-driven configuration with working state persistence: edit freely, save 
 - ✓ Environment-based admin bootstrap — v1.3
 - ✓ User management (CRUD) for admin role — v1.3
 - ✓ Two-role access control (admin, config_editor) — v1.3
+- ✓ Selective apply dialog with command checkboxes — v1.4
+- ✓ Command search filter in apply dialog — v1.4
+- ✓ Fixed overrides filter to hide empty items — v1.4
 
 ### Active
 
@@ -160,4 +174,4 @@ See `architecture_update.md` for full details.
 | Environment-based admin bootstrap | Easy first-time setup | ✓ Good |
 
 ---
-*Last updated: 2026-01-27 after v1.3 milestone*
+*Last updated: 2026-01-27 after v1.4 milestone*

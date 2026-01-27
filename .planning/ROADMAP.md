@@ -15,7 +15,7 @@ None
 - **v1.1 Presets** — Phases 11-13 (SHIPPED 2026-01-26) — [Archive](milestones/v1.1-ROADMAP.md)
 - **v1.2 Database Simplification** — Phases 14-15 (SHIPPED 2026-01-26) — [Archive](milestones/v1.2-ROADMAP.md)
 - **v1.3 Users & Auth** — Phases 16-18 (SHIPPED 2026-01-27) — [Archive](milestones/v1.3-ROADMAP.md)
-- **v1.4 UX Improvements** — Phases 19-20 (SHIPPED 2026-01-27)
+- **v1.4 UX Improvements** — Phases 19-20 (SHIPPED 2026-01-27) — [Archive](milestones/v1.4-ROADMAP.md)
 
 ## Completed Milestones
 
@@ -94,6 +94,8 @@ Selective apply dialog and overrides filter fix.
 
 - [x] Phase 19: Selective Apply (1/1 plans) — completed 2026-01-27
 - [x] Phase 20: Overrides Filter (1/1 plans) — completed 2026-01-27
+
+See [v1.4-ROADMAP.md](milestones/v1.4-ROADMAP.md) for full details.
 
 </details>
 
