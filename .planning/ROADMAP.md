@@ -82,10 +82,11 @@ See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 **Goal**: Login/logout with users.json storage, env bootstrap, simple localStorage token
 **Depends on**: Previous milestone complete
 **Research**: Unlikely (simple file-based auth, no external libraries)
-**Plans**: TBD
+**Plans**: 2
 
 Plans:
-- [ ] 16-01: TBD (run /gsd:plan-phase 16 to break down)
+- [x] 16-01: Auth Backend — users service, login/logout/me API endpoints — completed 2026-01-27
+- [ ] 16-02: Auth Frontend — auth store, login UI, app gate
 
 #### Phase 17: User Management
 
@@ -132,6 +133,6 @@ Plans:
 | 13. Preset Polish | v1.1 | 2/2 | Complete | 2026-01-26 |
 | 14. Object Format | v1.2 | 1/1 | Complete | 2026-01-26 |
 | 15. On-Demand Storage | v1.2 | 1/1 | Complete | 2026-01-26 |
-| 16. Auth Setup | v1.3 | 0/? | Not started | - |
+| 16. Auth Setup | v1.3 | 1/2 | In progress | - |
 | 17. User Management | v1.3 | 0/? | Not started | - |
 | 18. Access Control | v1.3 | 0/? | Not started | - |
