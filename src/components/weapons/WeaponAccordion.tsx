@@ -51,7 +51,7 @@ function getConfigOptions(category: string): ConfigEntry[] {
 
 // Lazy load weapon config from API
 async function loadWeaponConfig(weaponName: string, categories: string[]) {
-  const { setSavedValue, markCategoryLoaded, isCategoryLoaded } =
+  const { setValue, markCategoryLoaded, isCategoryLoaded } =
     useConfigStore.getState();
 
   for (const category of categories) {
@@ -65,7 +65,7 @@ async function loadWeaponConfig(weaponName: string, categories: string[]) {
       if (json.success && json.data) {
         // json.data is object: { "CanCombo": true, "Windup": 0.675 }
         for (const [key, value] of Object.entries(json.data)) {
-          setSavedValue(weaponName, category, key, value as ConfigValue);
+          setValue(weaponName, category, key, value as ConfigValue);
         }
       }
 
@@ -92,22 +92,17 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
   }, []);
 
   // Subscribe to actual state values to trigger re-renders
-  const workingValues = useConfigStore((state) => state.workingValues);
-  const savedValues = useConfigStore((state) => state.savedValues);
+  const values = useConfigStore((state) => state.values);
   const loadedCategories = useConfigStore((state) => state.loadedCategories);
 
   // Get action functions (these don't need to trigger re-renders)
-  const setWorkingValue = useConfigStore((state) => state.setWorkingValue);
-  const removeWorkingValue = useConfigStore((state) => state.removeWorkingValue);
+  const setValue = useConfigStore((state) => state.setValue);
+  const removeValue = useConfigStore((state) => state.removeValue);
   const setBulkWeaponValue = useConfigStore((state) => state.setBulkWeaponValue);
 
-  // Helper to get effective value (working ?? saved)
-  // null is a tombstone meaning "reset to game default"
+  // Helper to get value from store
   const getEffectiveValue = (weaponName: string, category: string, key: string) => {
-    const workingVal = workingValues.weapons[weaponName]?.[category]?.[key];
-    if (workingVal === null) return undefined; // Tombstone = game default
-    if (workingVal !== undefined) return workingVal;
-    return savedValues.weapons[weaponName]?.[category]?.[key];
+    return values.weapons[weaponName]?.[category]?.[key];
   };
 
   // Helper to check if category is loaded
@@ -202,10 +197,10 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
                 configEntry={configEntry}
                 value={effectiveValue}
                 onChange={(value) =>
-                  setWorkingValue(weaponName, category, configEntry.configKey, value)
+                  setValue(weaponName, category, configEntry.configKey, value)
                 }
                 onReset={() =>
-                  removeWorkingValue(weaponName, category, configEntry.configKey)
+                  removeValue(weaponName, category, configEntry.configKey)
                 }
                 onApplyToAll={() =>
                   handleApplyToAll(
@@ -281,7 +276,7 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
               <AlertDialogDescription>
                 This will set <strong>{pendingBulkAction?.key}</strong> to{" "}
                 <strong>{pendingBulkAction ? formatValue(pendingBulkAction.value) : ""}</strong>{" "}
-                for all {weaponNames.length} weapons. This change will be saved to your working state.
+                for all {weaponNames.length} weapons.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
