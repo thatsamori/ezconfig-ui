@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
-**Current focus:** User notes system for documenting config options
+**Current focus:** Simplify architecture by removing working state, direct database writes
 
 ## Current Position
 
-Phase: 21 of 23 (Notes Database)
+Phase: 24 of 27 (State Model Removal)
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-01-27 — Milestone v1.5 created
+Last activity: 2026-01-27 — Milestone v2.0 created
 
 Progress: ░░░░░░░░░░ 0%
 
@@ -28,7 +28,8 @@ Progress: ░░░░░░░░░░ 0%
   - See: .planning/milestones/v1.3-ROADMAP.md
 - v1.4 UX Improvements: SHIPPED (Phases 19-20, 2 plans)
   - See: .planning/milestones/v1.4-ROADMAP.md
-- v1.5 User Notes: IN PROGRESS (Phases 21-23)
+- v1.5 User Notes: SUPERSEDED (Phases 21-23)
+- v2.0 Simplification: IN PROGRESS (Phases 24-27)
 
 ## Performance Metrics
 
@@ -64,7 +65,7 @@ All v1.0 and v1.1 decisions validated as Good:
 
 ### Deferred Issues
 
-None.
+None (cleared for v2.0 - working state removal will resolve lazy loading issues)
 
 ### Blockers/Concerns
 
@@ -80,9 +81,13 @@ None.
 - Milestone v1.4 created: UX Improvements, 2 phases (Phase 19-20)
 - v1.4 shipped 2026-01-27: All 2 phases (19-20) complete
 - Milestone v1.5 created: User Notes, 3 phases (Phase 21-23)
+- Phase 20.1 inserted after Phase 20: Game Default Preset Fix (URGENT)
+- Phase 20.1 completed: 2026-01-27
+- v1.5 superseded 2026-01-27: Architectural change in v2.0 removes working state
+- Milestone v2.0 created: Simplification, 4 phases (Phase 24-27)
 
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Milestone v1.5 initialization
+Stopped at: Milestone v2.0 initialization
 Resume file: None

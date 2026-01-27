@@ -16,7 +16,8 @@ None
 - **v1.2 Database Simplification** — Phases 14-15 (SHIPPED 2026-01-26) — [Archive](milestones/v1.2-ROADMAP.md)
 - **v1.3 Users & Auth** — Phases 16-18 (SHIPPED 2026-01-27) — [Archive](milestones/v1.3-ROADMAP.md)
 - **v1.4 UX Improvements** — Phases 19-20 (SHIPPED 2026-01-27) — [Archive](milestones/v1.4-ROADMAP.md)
-- 🚧 **v1.5 User Notes** — Phases 21-23 (in progress)
+- **v1.5 User Notes** — Phases 21-23 (SUPERSEDED 2026-01-27)
+- 🚧 **v2.0 Simplification** — Phases 24-27 (in progress)
 
 ## Completed Milestones
 
@@ -100,39 +101,74 @@ See [v1.4-ROADMAP.md](milestones/v1.4-ROADMAP.md) for full details.
 
 </details>
 
-### 🚧 v1.5 User Notes (In Progress)
+#### Phase 20.1: Game Default Preset Fix (INSERTED)
 
-**Milestone Goal:** Add per-config-option notes system allowing users to document their discoveries and share knowledge.
+**Goal**: Fix bug where loading game default preset does not properly reset all values to game defaults
+**Depends on**: Phase 20
+**Research**: Unlikely (bug fix)
+**Plans**: 1 plan
 
-#### Phase 21: Notes Database
+Plans:
+- [x] 20.1-01: Fix loadPreset to tombstone all values — completed 2026-01-27
 
-**Goal**: Create notes database layer with same structure as config database
+---
+
+<details>
+<summary>v1.5 User Notes (Phases 21-23) — SUPERSEDED 2026-01-27</summary>
+
+Superseded before implementation due to v2.0 architectural simplification (removing working state).
+
+- [ ] ~~Phase 21: Notes Database~~ — not started, superseded
+- [ ] ~~Phase 22: Notes UI~~ — not started, superseded
+- [ ] ~~Phase 23: Notes Integration~~ — not started, superseded
+
+</details>
+
+---
+
+### 🚧 v2.0 Simplification (In Progress)
+
+**Milestone Goal:** Remove working state model for direct database writes. All UI changes immediately persist to database, presets immediately replace database, no Save/Reset buttons needed.
+
+#### Phase 24: State Model Removal
+
+**Goal**: Remove working state and localStorage persistence, all changes write directly to database
 **Depends on**: Previous milestone complete
-**Research**: Unlikely (following existing database patterns)
+**Research**: Unlikely (internal refactoring)
 **Plans**: TBD
 
 Plans:
-- [ ] 21-01: TBD (run /gsd:plan-phase 21 to break down)
+- [ ] 24-01: TBD (run /gsd:plan-phase 24 to break down)
 
-#### Phase 22: Notes UI
+#### Phase 25: UI Simplification
 
-**Goal**: Build notes drawer/popover component with add/edit/delete functionality
-**Depends on**: Phase 21
-**Research**: Unlikely (internal UI patterns)
+**Goal**: Remove Save/Reset buttons, update status indicators to reflect immediate persistence
+**Depends on**: Phase 24
+**Research**: Unlikely (internal UI changes)
 **Plans**: TBD
 
 Plans:
-- [ ] 22-01: TBD
+- [ ] 25-01: TBD
 
-#### Phase 23: Notes Integration
+#### Phase 26: Preset Flow Update
 
-**Goal**: Integrate notes into ConfigRow with visual indicators showing note count
-**Depends on**: Phase 22
+**Goal**: Update preset loading to immediately replace database instead of merging into working state
+**Depends on**: Phase 25
 **Research**: Unlikely (internal patterns)
 **Plans**: TBD
 
 Plans:
-- [ ] 23-01: TBD
+- [ ] 26-01: TBD
+
+#### Phase 27: Apply Flow Streamline
+
+**Goal**: Simplify Apply dialog since there's no working vs saved distinction
+**Depends on**: Phase 26
+**Research**: Unlikely (internal patterns)
+**Plans**: TBD
+
+Plans:
+- [ ] 27-01: TBD
 
 ## Progress
 
@@ -158,6 +194,11 @@ Plans:
 | 18. Access Control | v1.3 | 1/1 | Complete | 2026-01-27 |
 | 19. Selective Apply | v1.4 | 1/1 | Complete | 2026-01-27 |
 | 20. Overrides Filter | v1.4 | 1/1 | Complete | 2026-01-27 |
-| 21. Notes Database | v1.5 | 0/? | Not started | - |
-| 22. Notes UI | v1.5 | 0/? | Not started | - |
-| 23. Notes Integration | v1.5 | 0/? | Not started | - |
+| 20.1 Game Default Fix | v1.4 | 1/1 | Complete | 2026-01-27 |
+| 21. Notes Database | v1.5 | 0/? | Superseded | - |
+| 22. Notes UI | v1.5 | 0/? | Superseded | - |
+| 23. Notes Integration | v1.5 | 0/? | Superseded | - |
+| 24. State Model Removal | v2.0 | 0/? | Not started | - |
+| 25. UI Simplification | v2.0 | 0/? | Not started | - |
+| 26. Preset Flow Update | v2.0 | 0/? | Not started | - |
+| 27. Apply Flow Streamline | v2.0 | 0/? | Not started | - |
