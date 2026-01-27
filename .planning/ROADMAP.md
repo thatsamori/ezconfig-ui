@@ -156,10 +156,10 @@ Plans:
 **Goal**: Update preset loading to immediately replace database instead of merging into working state
 **Depends on**: Phase 25
 **Research**: Unlikely (internal patterns)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 26-01: TBD
+- [x] 26-01: Remove deprecated store methods from preset components — completed 2026-01-27
 
 #### Phase 27: Apply Flow Streamline
 
@@ -201,5 +201,5 @@ Plans:
 | 23. Notes Integration | v1.5 | 0/? | Superseded | - |
 | 24. State Model Removal | v2.0 | 2/2 | Complete | 2026-01-27 |
 | 25. UI Simplification | v2.0 | 1/1 | Complete | 2026-01-27 |
-| 26. Preset Flow Update | v2.0 | 0/? | Not started | - |
+| 26. Preset Flow Update | v2.0 | 1/1 | Complete | 2026-01-27 |
 | 27. Apply Flow Streamline | v2.0 | 0/? | Not started | - |
