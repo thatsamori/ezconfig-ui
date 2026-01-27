@@ -86,7 +86,7 @@ See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 
 Plans:
 - [x] 16-01: Auth Backend — users service, login/logout/me API endpoints — completed 2026-01-27
-- [ ] 16-02: Auth Frontend — auth store, login UI, app gate
+- [x] 16-02: Auth Frontend — auth store, login UI, app gate — completed 2026-01-27
 
 #### Phase 17: User Management
 
@@ -133,6 +133,6 @@ Plans:
 | 13. Preset Polish | v1.1 | 2/2 | Complete | 2026-01-26 |
 | 14. Object Format | v1.2 | 1/1 | Complete | 2026-01-26 |
 | 15. On-Demand Storage | v1.2 | 1/1 | Complete | 2026-01-26 |
-| 16. Auth Setup | v1.3 | 1/2 | In progress | - |
+| 16. Auth Setup | v1.3 | 2/2 | Complete | 2026-01-27 |
 | 17. User Management | v1.3 | 0/? | Not started | - |
 | 18. Access Control | v1.3 | 0/? | Not started | - |
