@@ -166,10 +166,10 @@ Plans:
 **Goal**: Simplify Apply dialog since there's no working vs saved distinction
 **Depends on**: Phase 26
 **Research**: Unlikely (internal patterns)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 27-01: TBD
+- [x] 27-01: Update apply flow terminology for v2.0 model — completed 2026-01-27
 
 ## Progress
 
@@ -202,4 +202,4 @@ Plans:
 | 24. State Model Removal | v2.0 | 2/2 | Complete | 2026-01-27 |
 | 25. UI Simplification | v2.0 | 1/1 | Complete | 2026-01-27 |
 | 26. Preset Flow Update | v2.0 | 1/1 | Complete | 2026-01-27 |
-| 27. Apply Flow Streamline | v2.0 | 0/? | Not started | - |
+| 27. Apply Flow Streamline | v2.0 | 1/1 | Complete | 2026-01-27 |
