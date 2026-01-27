@@ -124,7 +124,7 @@ export function PresetsTab() {
         throw new Error("Failed to fetch preset data");
       }
       const response = await res.json();
-      loadPreset(response.data as PresetData);
+      await loadPreset(response.data as PresetData);
       toast.success(`Loaded preset: ${selectedPreset.manifest.title}`, {
         position: "bottom-right",
       });
