@@ -35,6 +35,7 @@ export function SelectiveApplyDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [wipeDatabase, setWipeDatabase] = useState(true);
 
   // Fetch commands when dialog opens
   useEffect(() => {
@@ -77,6 +78,7 @@ export function SelectiveApplyDialog({
       setSearchQuery("");
       setPassword("");
       setFetchError(null);
+      setWipeDatabase(true);
     }
   }, [open]);
 
@@ -134,6 +136,7 @@ export function SelectiveApplyDialog({
         body: JSON.stringify({
           password,
           commands: Array.from(selectedCommands),
+          wipeDatabase,
         }),
       });
 
@@ -205,8 +208,23 @@ export function SelectiveApplyDialog({
             </span>
           </div>
 
+          {/* Wipe database option */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="wipe-database"
+              checked={wipeDatabase}
+              onCheckedChange={(checked) => setWipeDatabase(checked === true)}
+            />
+            <label
+              htmlFor="wipe-database"
+              className="cursor-pointer text-sm"
+            >
+              Wipe mod database before applying (removes previously applied settings)
+            </label>
+          </div>
+
           {/* Command list */}
-          <div className="max-h-[300px] overflow-y-auto rounded-md border p-2">
+          <div className="max-h-[300px] overflow-y-auto overflow-x-hidden rounded-md border p-2">
             {isLoading && (
               <p className="text-muted-foreground py-4 text-center text-sm">
                 Loading commands...
@@ -232,17 +250,17 @@ export function SelectiveApplyDialog({
               filteredCommands.map((command) => (
                 <div
                   key={command}
-                  className="hover:bg-muted flex items-start gap-2 rounded px-2 py-1.5"
+                  className="hover:bg-muted flex items-start gap-2 rounded px-2 py-1.5 min-w-0"
                 >
                   <Checkbox
                     id={command}
                     checked={selectedCommands.has(command)}
                     onCheckedChange={() => handleToggleCommand(command)}
-                    className="mt-0.5"
+                    className="mt-0.5 shrink-0"
                   />
                   <label
                     htmlFor={command}
-                    className="flex-1 cursor-pointer truncate font-mono text-xs"
+                    className="min-w-0 flex-1 cursor-pointer truncate font-mono text-xs"
                     title={command}
                   >
                     {command}

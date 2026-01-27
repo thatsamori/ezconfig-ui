@@ -19,6 +19,7 @@ import { executeBatchCommands } from "@/lib/rcon/service";
 interface ApplyRequest {
   password: string;
   commands?: string[];
+  wipeDatabase?: boolean;
 }
 
 export async function POST(request: Request) {
@@ -54,8 +55,12 @@ export async function POST(request: Request) {
       categoryCommands = await buildRconCommands();
     }
 
-    // Build full command list: WipeDatabases first, then all category commands
-    const commands = ["string ezconfig WipeDatabases", ...categoryCommands];
+    // Build full command list: optionally WipeDatabases first, then all category commands
+    // wipeDatabase defaults to true if not specified (backwards compatible)
+    const shouldWipe = body.wipeDatabase !== false;
+    const commands = shouldWipe
+      ? ["string ezconfig WipeDatabases", ...categoryCommands]
+      : categoryCommands;
 
     console.log(`Applying config: ${commands.length} commands to send`);
     for (const cmd of commands) {
