@@ -169,7 +169,7 @@ export function SelectiveApplyDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Apply to Game</DialogTitle>
           <DialogDescription>
@@ -177,17 +177,18 @@ export function SelectiveApplyDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
           {/* Search input */}
           <Input
             type="text"
             placeholder="Search commands..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            className="shrink-0"
           />
 
           {/* Select All / Deselect All buttons */}
-          <div className="flex gap-2">
+          <div className="flex shrink-0 gap-2">
             <Button
               type="button"
               variant="outline"
@@ -212,7 +213,7 @@ export function SelectiveApplyDialog({
           </div>
 
           {/* Wipe database option */}
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <Checkbox
               id="wipe-database"
               checked={wipeDatabase}
@@ -227,7 +228,7 @@ export function SelectiveApplyDialog({
           </div>
 
           {/* Command list */}
-          <div className="max-h-[300px] overflow-y-auto overflow-x-hidden rounded-md border p-2">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-md border p-2">
             {isLoading && (
               <p className="text-muted-foreground py-4 text-center text-sm">
                 Loading commands...
@@ -276,7 +277,7 @@ export function SelectiveApplyDialog({
           </div>
 
           {/* Password input */}
-          <div className="space-y-2">
+          <div className="shrink-0 space-y-2">
             <Label htmlFor="apply-password">EZCONFIG_PASSWORD</Label>
             <Input
               id="apply-password"
@@ -293,7 +294,7 @@ export function SelectiveApplyDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
