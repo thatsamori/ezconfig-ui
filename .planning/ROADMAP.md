@@ -14,7 +14,7 @@ None
 - **v1.0 Database-Driven Config** — Phases 5-10 (SHIPPED 2026-01-26) — [Archive](milestones/v1.0-ROADMAP.md)
 - **v1.1 Presets** — Phases 11-13 (SHIPPED 2026-01-26) — [Archive](milestones/v1.1-ROADMAP.md)
 - **v1.2 Database Simplification** — Phases 14-15 (SHIPPED 2026-01-26) — [Archive](milestones/v1.2-ROADMAP.md)
-- 🚧 **v1.3 Users & Auth** — Phases 16-18 (in progress)
+- **v1.3 Users & Auth** — Phases 16-18 (SHIPPED 2026-01-27)
 
 ## Completed Milestones
 
@@ -73,7 +73,7 @@ See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 
 </details>
 
-### 🚧 v1.3 Users & Auth (In Progress)
+### v1.3 Users & Auth (SHIPPED 2026-01-27)
 
 **Milestone Goal:** Add user authentication and access control for multi-user configuration management.
 
@@ -90,7 +90,7 @@ Plans:
 
 #### Phase 17: User Management
 
-**Goal**: Users tab for global_admin to create/edit/delete users
+**Goal**: Users tab for admin to create/edit/delete users
 **Depends on**: Phase 16
 **Research**: Unlikely (CRUD patterns, existing tab UI)
 **Plans**: 2
@@ -101,19 +101,17 @@ Plans:
 
 #### Phase 18: Access Control
 
-**Goal**: Role enforcement - hide/disable UI actions based on user role
+**Goal**: Role enforcement - Users tab only visible to admin
 **Depends on**: Phase 17
 **Research**: Unlikely (internal patterns, role checks)
 **Plans**: 1
 
-Roles:
-- viewer: View only, no actions
-- preset_creator: Can create new presets only
+Roles (simplified):
 - config_editor: Full config control except user management
-- global_admin: Full access
+- admin: Full access
 
 Plans:
-- [ ] 18-01: Role Enforcement UI — permissions helper, ActionButtons/ConfigRow/PresetsTab restrictions
+- [x] 18-01: Role Enforcement UI — simplified to 2 roles, admin-only Users tab — completed 2026-01-27
 
 ## Progress
 
@@ -136,4 +134,4 @@ Plans:
 | 15. On-Demand Storage | v1.2 | 1/1 | Complete | 2026-01-26 |
 | 16. Auth Setup | v1.3 | 2/2 | Complete | 2026-01-27 |
 | 17. User Management | v1.3 | 2/2 | Complete | 2026-01-27 |
-| 18. Access Control | v1.3 | 0/? | Not started | - |
+| 18. Access Control | v1.3 | 1/1 | Complete | 2026-01-27 |

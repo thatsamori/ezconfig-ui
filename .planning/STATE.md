@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
-**Current focus:** v1.3 Users & Auth — Authentication and access control
+**Current focus:** v1.3 Users & Auth — SHIPPED
 
 ## Current Position
 
-Phase: 17 of 18 (User Management)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-01-27 — Completed 17-02-PLAN.md
+Phase: 18 of 18 (Access Control)
+Plan: 1 of 1 in current phase
+Status: Milestone complete
+Last activity: 2026-01-27 — Completed 18-01-PLAN.md, v1.3 shipped
 
-Progress: ████░░░░░░ 40%
+Progress: ██████████ 100%
 
 ## Milestone History
 
