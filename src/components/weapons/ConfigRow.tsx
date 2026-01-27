@@ -27,6 +27,7 @@ export interface ConfigRowProps {
   onReset?: () => void;
   onApplyToAll?: () => void;
   disabled?: boolean;
+  readonly?: boolean;
 }
 
 export function ConfigRow({
@@ -36,6 +37,7 @@ export function ConfigRow({
   onReset,
   onApplyToAll,
   disabled,
+  readonly,
 }: ConfigRowProps) {
   const isCustomized = value !== undefined;
 
@@ -104,7 +106,7 @@ export function ConfigRow({
             {isCustomized ? (
               <>
                 {renderInput()}
-                {onReset && (
+                {onReset && !readonly && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -122,22 +124,24 @@ export function ConfigRow({
                 <Badge variant="secondary" className="text-xs">
                   Game Default
                 </Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleEdit}
-                  disabled={disabled}
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                  title="Customize value"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
+                {!readonly && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleEdit}
+                    disabled={disabled}
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    title="Customize value"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
               </>
             )}
           </div>
         </div>
       </ContextMenuTrigger>
-      {onApplyToAll && (
+      {onApplyToAll && !readonly && (
         <ContextMenuContent>
           <ContextMenuItem onClick={onApplyToAll}>
             {isCustomized ? "Apply to all weapons" : "Reset all to default"}

@@ -4,6 +4,7 @@
 
 export * from './types';
 export * from './middleware';
+export * from './permissions';
 
 /**
  * Get auth header for API requests

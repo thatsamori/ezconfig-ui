@@ -20,6 +20,8 @@ import {
 import { CollapsibleSection } from "./CollapsibleSection";
 import { ConfigRow } from "./ConfigRow";
 import { useConfigStore, type ConfigValue } from "@/lib/store/configStore";
+import { useAuthStore } from "@/lib/store/authStore";
+import { canEditConfig } from "@/lib/auth";
 import {
   WEAPON_CONFIG_OPTIONS,
   WeaponConfigGroupName,
@@ -95,6 +97,10 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
   const workingValues = useConfigStore((state) => state.workingValues);
   const savedValues = useConfigStore((state) => state.savedValues);
   const loadedCategories = useConfigStore((state) => state.loadedCategories);
+
+  // Get user for role-based access control
+  const user = useAuthStore((state) => state.user);
+  const isReadonly = !canEditConfig(user?.role);
 
   // Get action functions (these don't need to trigger re-renders)
   const setWorkingValue = useConfigStore((state) => state.setWorkingValue);
@@ -214,6 +220,7 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
                     effectiveValue !== undefined ? effectiveValue : null
                   )
                 }
+                readonly={isReadonly}
               />
             );
           })

@@ -14,6 +14,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useConfigStore, type ConfigValue } from "@/lib/store/configStore";
+import { useAuthStore } from "@/lib/store/authStore";
+import { canEditConfig } from "@/lib/auth";
 import { toast } from "sonner";
 
 export function ActionButtons() {
@@ -26,6 +28,7 @@ export function ActionButtons() {
     setMounted(true);
   }, []);
 
+  const user = useAuthStore((state) => state.user);
   const hasUnsavedChanges = useConfigStore((state) => state.hasUnsavedChanges);
   const workingValues = useConfigStore((state) => state.workingValues);
   const savedValues = useConfigStore((state) => state.savedValues);
@@ -181,6 +184,11 @@ export function ActionButtons() {
       setIsApplying(false);
     }
   };
+
+  // Hide all buttons if user can't edit config
+  if (!canEditConfig(user?.role)) {
+    return null;
+  }
 
   return (
     <div className="flex items-center gap-2">

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useConfigStore, type ConfigValue } from "@/lib/store/configStore";
+import { useAuthStore } from "@/lib/store/authStore";
+import { canEditConfig } from "@/lib/auth";
 import {
   CHARACTER_CONFIG_OPTIONS,
   CharacterConfigGroupName,
@@ -65,6 +67,10 @@ export function CharacterConfigTab() {
   const setWorkingValue = useConfigStore((state) => state.setWorkingValue);
   const removeWorkingValue = useConfigStore((state) => state.removeWorkingValue);
 
+  // Get user for role-based access control
+  const user = useAuthStore((state) => state.user);
+  const isReadonly = !canEditConfig(user?.role);
+
   // Helper to check if category is loaded
   const isCategoryLoaded = (category: string) =>
     loadedCategories.has(`Character/${category}`);
@@ -127,6 +133,7 @@ export function CharacterConfigTab() {
               onReset={() =>
                 removeWorkingValue("Character", categoryName, configEntry.configKey)
               }
+              readonly={isReadonly}
             />
           ))
         )}
