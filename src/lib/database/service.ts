@@ -5,7 +5,7 @@
  * The web app is the authoritative source for all user configuration.
  */
 
-import { mkdir, readFile, writeFile, stat, readdir } from 'fs/promises';
+import { mkdir, readFile, writeFile, stat, readdir, unlink, rmdir } from 'fs/promises';
 import { join, resolve, dirname } from 'path';
 import { env } from '@/lib/env';
 import type { ConfigData } from './types';
@@ -105,6 +105,34 @@ export async function resolveCategoryPath(database: string, category: string): P
 }
 
 /**
+ * Clean up empty directories after file deletion
+ * Walks up the directory tree and removes empty directories
+ * Stops at the databases root to avoid deleting it
+ */
+async function cleanupEmptyDirectories(dirPath: string): Promise<void> {
+  const root = getDatabasesRoot();
+  const resolvedRoot = resolve(root);
+  let currentDir = resolve(dirPath);
+
+  // Walk up the directory tree
+  while (currentDir !== resolvedRoot && currentDir.startsWith(resolvedRoot)) {
+    try {
+      const entries = await readdir(currentDir);
+      if (entries.length === 0) {
+        await rmdir(currentDir);
+        currentDir = dirname(currentDir);
+      } else {
+        // Directory not empty, stop cleanup
+        break;
+      }
+    } catch {
+      // Directory doesn't exist or can't be read, stop cleanup
+      break;
+    }
+  }
+}
+
+/**
  * Read config data from a category file
  * Returns an empty object if the file doesn't exist
  */
@@ -132,6 +160,7 @@ export async function readCategory(database: string, category: string): Promise<
 /**
  * Write config data to a category file
  * Creates parent directories if they don't exist
+ * Deletes the file if data is empty (on-demand storage)
  */
 export async function writeCategory(
   database: string,
@@ -139,9 +168,24 @@ export async function writeCategory(
   data: ConfigData
 ): Promise<void> {
   const filePath = await resolveCategoryPath(database, category);
+  const dir = dirname(filePath);
+
+  // On-demand storage: delete file if data is empty
+  if (Object.keys(data).length === 0) {
+    try {
+      await unlink(filePath);
+      // Clean up empty parent directories
+      await cleanupEmptyDirectories(dir);
+    } catch (error) {
+      // Ignore ENOENT - file already doesn't exist
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error;
+      }
+    }
+    return;
+  }
 
   // Create parent directories if needed
-  const dir = dirname(filePath);
   await mkdir(dir, { recursive: true });
 
   // Write with pretty formatting (2-space indent)
@@ -226,11 +270,70 @@ if (import.meta.main) {
       }
     }
 
-    // Cleanup: Delete test file and directory
-    console.log('Cleanup: Removing test files...');
-    const filePath = await resolveCategoryPath(testDatabase, testCategory);
-    await unlink(filePath);
-    await rm(dirname(filePath), { recursive: true });
+    // Test 6: Writing empty object deletes file (on-demand storage)
+    console.log('Test 6: Writing empty object deletes file...');
+    // First verify file still exists from Test 1
+    if (!(await categoryExists(testDatabase, testCategory))) {
+      console.log('  FAIL: Test file should still exist');
+      process.exit(1);
+    }
+    // Write empty object - should delete the file
+    await writeCategory(testDatabase, testCategory, {});
+    if (await categoryExists(testDatabase, testCategory)) {
+      console.log('  FAIL: File should be deleted after writing empty object');
+      process.exit(1);
+    }
+    // Read should still return empty object
+    const afterDelete = await readCategory(testDatabase, testCategory);
+    if (Object.keys(afterDelete).length !== 0) {
+      console.log('  FAIL: Read after delete should return empty object');
+      process.exit(1);
+    }
+    console.log('  PASS: Empty write deletes file, read returns {}\n');
+
+    // Test 7: Empty directory cleanup
+    console.log('Test 7: Empty directory cleanup...');
+    const nestedDatabase = 'TestWeapon';
+    const nestedCategory = 'General';
+    const nestedData: ConfigData = { TestKey: true };
+    // Write to create nested directory structure
+    await writeCategory(nestedDatabase, nestedCategory, nestedData);
+    const nestedFilePath = await resolveCategoryPath(nestedDatabase, nestedCategory);
+    const nestedDir = dirname(nestedFilePath);
+    // Verify file exists
+    if (!(await categoryExists(nestedDatabase, nestedCategory))) {
+      console.log('  FAIL: Nested file should exist');
+      process.exit(1);
+    }
+    // Write empty object to delete file and trigger directory cleanup
+    await writeCategory(nestedDatabase, nestedCategory, {});
+    // Verify file is deleted
+    if (await categoryExists(nestedDatabase, nestedCategory)) {
+      console.log('  FAIL: Nested file should be deleted');
+      process.exit(1);
+    }
+    // Verify parent directory is also deleted
+    try {
+      await stat(nestedDir);
+      console.log('  FAIL: Empty parent directory should be deleted');
+      process.exit(1);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        console.log('  PASS: Empty directories cleaned up\n');
+      } else {
+        console.log('  FAIL: Unexpected error checking directory:', (error as Error).message);
+        process.exit(1);
+      }
+    }
+
+    // Cleanup: Remove any leftover test directories
+    console.log('Cleanup: Removing any leftover test files...');
+    try {
+      await rm(join(getDatabasesRoot(), testDatabase), { recursive: true, force: true });
+    } catch { /* ignore */ }
+    try {
+      await rm(join(getDatabasesRoot(), nestedDatabase), { recursive: true, force: true });
+    } catch { /* ignore */ }
     console.log('  Cleanup complete\n');
 
     console.log('All tests passed!');

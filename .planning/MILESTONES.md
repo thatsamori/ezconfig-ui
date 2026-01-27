@@ -1,5 +1,53 @@
 # Project Milestones: EZConfig UI
 
+## v1.2 Database Simplification (Shipped: 2026-01-26)
+
+**Delivered:** Simplified database layer with object format and on-demand file management.
+
+**Phases completed:** 14-15 (2 plans total)
+
+**Key accomplishments:**
+- Converted JSON storage from array format `[{key: value}]` to object format `{key: value}`
+- Renamed `ConfigEntry` to `ConfigData` for semantic clarity
+- Implemented on-demand file storage (files deleted when data is empty)
+- Added automatic empty directory cleanup
+- Net code simplification (-23 lines)
+
+**Stats:**
+- 13 files modified (+198 / -221 lines)
+- 2 phases, 2 plans, 5 tasks
+- Same day implementation
+
+**Git range:** `3cc4ea0` → current HEAD
+
+**What's next:** TBD - milestone complete, planning next features
+
+---
+
+## v1.1 Presets (Shipped: 2026-01-26)
+
+**Delivered:** Full preset system with static read-only presets and user-defined presets with import/export.
+
+**Phases completed:** 11-13 (6 plans total)
+
+**Key accomplishments:**
+- Static presets (read-only) with folder structure
+- User presets (save/load/delete)
+- Preview before load with content summary
+- Import/export via ZIP files with name validation
+- Two-stage dialog pattern protecting unsaved changes
+
+**Stats:**
+- 20 files created/modified (+2,425 lines)
+- 3 phases, 6 plans
+- Same day implementation
+
+**Git range:** `feat(11-01)` → `chore: complete v1.1 milestone`
+
+**What's next:** v1.2 Database Simplification
+
+---
+
 ## v1.0 Database-Driven Config (Shipped: 2026-01-26)
 
 **Delivered:** Complete web-based configuration interface with JSON database, working state persistence, and bulk weapon update features.

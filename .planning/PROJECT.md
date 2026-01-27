@@ -10,15 +10,25 @@ Database-driven configuration with working state persistence: edit freely, save 
 
 ## Current State
 
-**Version:** v1.1 shipped 2026-01-26
+**Version:** v1.2 shipped 2026-01-26
 **LOC:** ~8,600 TypeScript
 **Tech stack:** Next.js 16, React 19, Tailwind CSS 4, Shadcn UI, Zustand, JSZip
 
-**What shipped in v1.1:**
+**What shipped in v1.2:**
+- Object format for JSON storage (`{key: value}` instead of `[{key: value}]`)
+- On-demand file storage (files deleted when data is empty)
+- Automatic empty directory cleanup
+- Net code simplification (-23 lines)
+
+<details>
+<summary>v1.1 (shipped 2026-01-26)</summary>
+
 - Static presets (read-only) with folder structure
 - User presets (save/load/delete)
 - Preview before load with content summary
 - Import/export via ZIP files with name validation
+
+</details>
 
 <details>
 <summary>v1.0 (shipped 2026-01-26)</summary>
@@ -61,6 +71,8 @@ Database-driven configuration with working state persistence: edit freely, save 
 - ✓ User presets (save/load/delete) — v1.1
 - ✓ Preset preview before loading — v1.1
 - ✓ Import/export presets via ZIP — v1.1
+- ✓ Object format for JSON storage — v1.2
+- ✓ On-demand file storage (delete empty files) — v1.2
 
 ### Active
 
@@ -124,6 +136,8 @@ See `architecture_update.md` for full details.
 | Two-stage dialog for preset loading | Protect unsaved changes before loading | ✓ Good |
 | Preview-before-action pattern | Show preset contents before destructive operation | ✓ Good |
 | ZIP import with dialog | Let user customize name/title/description on import | ✓ Good |
+| Object format for JSON | Single object `{key: value}` instead of array `[{key: value}]` | ✓ Good |
+| On-demand file storage | Delete files when data is empty, cleanup empty dirs | ✓ Good |
 
 ---
-*Last updated: 2026-01-26 after v1.1 milestone*
+*Last updated: 2026-01-26 after v1.2 milestone*
