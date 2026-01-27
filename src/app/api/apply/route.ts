@@ -1,12 +1,12 @@
 /**
  * POST /api/apply
  *
- * Apply saved config to game via RCON.
+ * Apply config to game via RCON.
  * Requires password authentication.
  *
  * Request body: { password: string, commands?: string[] }
  * - If commands provided: use those commands directly (selective apply)
- * - If commands not provided: build from saved config (full apply)
+ * - If commands not provided: build from config (full apply)
  *
  * Response: { success: boolean, commandsSent?: number, error?: string, failedAt?: string }
  */
@@ -45,13 +45,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get commands: use provided commands or build from saved config
+    // Get commands: use provided commands or build from config
     let categoryCommands: string[];
     if (body.commands && body.commands.length > 0) {
       // Selective apply: use provided commands
       categoryCommands = body.commands;
     } else {
-      // Full apply: build from saved config
+      // Full apply: build from config
       categoryCommands = await buildRconCommands();
     }
 
