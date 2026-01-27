@@ -100,6 +100,11 @@ export function CharacterConfigTab() {
         )
       : options;
 
+    // Hide empty sections when filter is ON
+    if (showOverridesOnly && filteredOptions.length === 0) {
+      return null;
+    }
+
     return (
       <CollapsibleSection
         key={categoryName}
@@ -110,10 +115,6 @@ export function CharacterConfigTab() {
         {isLoading ? (
           <p className="text-muted-foreground py-4 text-center">
             Loading {categoryName} configuration...
-          </p>
-        ) : filteredOptions.length === 0 ? (
-          <p className="text-muted-foreground py-2 text-sm italic">
-            No overrides in {categoryName}
           </p>
         ) : (
           filteredOptions.map((configEntry) => (
