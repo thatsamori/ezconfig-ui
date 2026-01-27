@@ -6,30 +6,25 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import type { GroupedDatabase, GroupedOverrideMap } from "@/lib/database/structure";
+import { CategoryName, WeaponConfigGroupName } from "@/lib/config/weaponConfigSchema";
+
+// Build weapon list from schema - all weapons have the same categories
+const ALL_CATEGORIES = [
+  WeaponConfigGroupName.General,
+  WeaponConfigGroupName.Strike,
+  WeaponConfigGroupName.AltStrike,
+  WeaponConfigGroupName.Stab,
+  WeaponConfigGroupName.AltStab,
+];
+
+const SCHEMA_WEAPONS: GroupedDatabase = Object.fromEntries(
+  Object.values(CategoryName).map((weaponName) => [weaponName, ALL_CATEGORIES])
+);
 
 export function WeaponConfigTab() {
-  const [weapons, setWeapons] = useState<GroupedDatabase | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showOverridesOnly, setShowOverridesOnly] = useState(false);
   const [overrideMap, setOverrideMap] = useState<GroupedOverrideMap | null>(null);
-
-  useEffect(() => {
-    async function loadStructure() {
-      try {
-        const res = await fetch("/api/databases");
-        const json = await res.json();
-        if (json.success && json.data?.Weapon) {
-          setWeapons(json.data.Weapon as GroupedDatabase);
-        } else {
-          setError("Failed to load weapon list");
-        }
-      } catch (e) {
-        setError("Failed to load weapon list");
-      }
-    }
-    loadStructure();
-  }, []);
 
   // Fetch override map when showOverridesOnly becomes true
   useEffect(() => {
@@ -47,9 +42,7 @@ export function WeaponConfigTab() {
 
   // Filter weapons based on search query and override presence
   const filteredWeapons = useMemo(() => {
-    if (!weapons) return null;
-
-    let result = weapons;
+    let result = SCHEMA_WEAPONS;
 
     // Filter by search query
     if (searchQuery.trim()) {
@@ -71,18 +64,10 @@ export function WeaponConfigTab() {
     }
 
     return result;
-  }, [weapons, searchQuery, showOverridesOnly, overrideMap]);
+  }, [searchQuery, showOverridesOnly, overrideMap]);
 
-  if (error) {
-    return <p className="text-destructive py-8 text-center">{error}</p>;
-  }
-
-  if (!weapons) {
-    return <p className="text-muted-foreground py-8 text-center">Loading weapons...</p>;
-  }
-
-  // Check if search yielded no results (only when weapons are loaded but none match)
-  const hasNoResults = filteredWeapons && Object.keys(filteredWeapons).length === 0;
+  // Check if search yielded no results
+  const hasNoResults = Object.keys(filteredWeapons).length === 0;
 
   return (
     <div className="space-y-4">
@@ -110,7 +95,7 @@ export function WeaponConfigTab() {
         </p>
       ) : (
         <WeaponAccordion
-          weapons={filteredWeapons!}
+          weapons={filteredWeapons}
           showOverridesOnly={showOverridesOnly}
           overrideMap={showOverridesOnly && overrideMap ? overrideMap : undefined}
         />
