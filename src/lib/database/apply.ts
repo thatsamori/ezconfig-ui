@@ -1,5 +1,5 @@
 /**
- * Apply service - Send saved config to game via RCON
+ * Apply service - Send config to game via RCON
  *
  * Builds RCON commands from all non-empty category files and executes them
  * in sequence: WipeDatabases first, then each category's config.
@@ -147,7 +147,7 @@ async function buildCommandForCategory(
 }
 
 /**
- * Apply all saved config to the game via RCON
+ * Apply all config to the game via RCON
  *
  * Sequence:
  * 1. Send WipeDatabases command
