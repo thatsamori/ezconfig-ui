@@ -93,7 +93,10 @@ export function SelectiveApplyDialog({
     }
 
     const query = searchQuery.toLowerCase();
-    return sorted.filter((cmd) => cmd.toLowerCase().includes(query));
+    // Search against display version (without "string ezconfig " prefix)
+    return sorted.filter((cmd) =>
+      cmd.replace(/^string ezconfig /i, "").toLowerCase().includes(query)
+    );
   }, [commands, searchQuery]);
 
   const handleToggleCommand = (command: string) => {
@@ -247,26 +250,29 @@ export function SelectiveApplyDialog({
 
             {!isLoading &&
               !fetchError &&
-              filteredCommands.map((command) => (
-                <div
-                  key={command}
-                  className="hover:bg-muted flex items-start gap-2 rounded px-2 py-1.5 min-w-0"
-                >
-                  <Checkbox
-                    id={command}
-                    checked={selectedCommands.has(command)}
-                    onCheckedChange={() => handleToggleCommand(command)}
-                    className="mt-0.5 shrink-0"
-                  />
-                  <label
-                    htmlFor={command}
-                    className="min-w-0 flex-1 cursor-pointer truncate font-mono text-xs"
-                    title={command}
+              filteredCommands.map((command) => {
+                const displayCommand = command.replace(/^string ezconfig /, "");
+                return (
+                  <div
+                    key={command}
+                    className="hover:bg-muted flex items-start gap-2 rounded px-2 py-1.5 min-w-0"
                   >
-                    {command}
-                  </label>
-                </div>
-              ))}
+                    <Checkbox
+                      id={command}
+                      checked={selectedCommands.has(command)}
+                      onCheckedChange={() => handleToggleCommand(command)}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <label
+                      htmlFor={command}
+                      className="min-w-0 flex-1 cursor-pointer truncate font-mono text-xs"
+                      title={displayCommand}
+                    >
+                      {displayCommand}
+                    </label>
+                  </div>
+                );
+              })}
           </div>
 
           {/* Password input */}
