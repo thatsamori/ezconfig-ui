@@ -222,15 +222,13 @@ export function PresetsTab() {
 
       // Add Character configs
       for (const [category, values] of Object.entries(data.character)) {
-        const entries = Object.entries(values).map(([k, v]) => ({ [k]: v }));
-        zip.file(`Character/${category}.json`, JSON.stringify(entries, null, 2));
+        zip.file(`Character/${category}.json`, JSON.stringify(values, null, 2));
       }
 
       // Add Weapon configs
       for (const [weaponName, categories] of Object.entries(data.weapons)) {
         for (const [category, values] of Object.entries(categories)) {
-          const entries = Object.entries(values).map(([k, v]) => ({ [k]: v }));
-          zip.file(`Weapon/${weaponName}/${category}.json`, JSON.stringify(entries, null, 2));
+          zip.file(`Weapon/${weaponName}/${category}.json`, JSON.stringify(values, null, 2));
         }
       }
 

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,9 +12,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { useConfigStore, type ConfigValue } from '@/lib/store/configStore';
-import { toast } from 'sonner';
+} from "@/components/ui/alert-dialog";
+import { useConfigStore, type ConfigValue } from "@/lib/store/configStore";
+import { toast } from "sonner";
 
 export function ActionButtons() {
   const [isSaving, setIsSaving] = useState(false);
@@ -29,14 +29,18 @@ export function ActionButtons() {
   const hasUnsavedChanges = useConfigStore((state) => state.hasUnsavedChanges);
   const workingValues = useConfigStore((state) => state.workingValues);
   const savedValues = useConfigStore((state) => state.savedValues);
-  const resetWorkingValues = useConfigStore((state) => state.resetWorkingValues);
-  const commitWorkingToSaved = useConfigStore((state) => state.commitWorkingToSaved);
+  const resetWorkingValues = useConfigStore(
+    (state) => state.resetWorkingValues,
+  );
+  const commitWorkingToSaved = useConfigStore(
+    (state) => state.commitWorkingToSaved,
+  );
 
   // Build merged entries for a category (saved + working, with null tombstones removing entries)
   const buildMergedEntries = (
     saved: Record<string, ConfigValue> | undefined,
-    working: Record<string, ConfigValue>
-  ): Array<{ [key: string]: ConfigValue }> => {
+    working: Record<string, ConfigValue>,
+  ): Record<string, ConfigValue> => {
     // Start with saved values
     const merged: Record<string, ConfigValue> = { ...saved };
 
@@ -50,10 +54,7 @@ export function ActionButtons() {
       }
     }
 
-    // Convert to array format, filtering out any null values (shouldn't happen, but be safe)
-    return Object.entries(merged)
-      .filter(([, value]) => value !== null)
-      .map(([key, value]) => ({ [key]: value }));
+    return merged;
   };
 
   const handleSave = async () => {
@@ -64,14 +65,16 @@ export function ActionButtons() {
       const errors: string[] = [];
 
       // Save character config changes
-      for (const [category, workingEntries] of Object.entries(workingValues.character)) {
+      for (const [category, workingEntries] of Object.entries(
+        workingValues.character,
+      )) {
         const savedEntries = savedValues.character[category];
         const configEntries = buildMergedEntries(savedEntries, workingEntries);
 
         // Send even if empty (to clear the category file)
         const res = await fetch(`/api/config/Character/${category}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ entries: configEntries }),
         });
 
@@ -79,20 +82,27 @@ export function ActionButtons() {
           savedCount++;
         } else {
           const data = await res.json();
-          errors.push(`Character/${category}: ${data.error || 'Unknown error'}`);
+          errors.push(
+            `Character/${category}: ${data.error || "Unknown error"}`,
+          );
         }
       }
 
       // Save weapon config changes
-      for (const [weapon, categories] of Object.entries(workingValues.weapons)) {
+      for (const [weapon, categories] of Object.entries(
+        workingValues.weapons,
+      )) {
         for (const [category, workingEntries] of Object.entries(categories)) {
           const savedEntries = savedValues.weapons[weapon]?.[category];
-          const configEntries = buildMergedEntries(savedEntries, workingEntries);
+          const configEntries = buildMergedEntries(
+            savedEntries,
+            workingEntries,
+          );
 
           // Send even if empty (to clear the category file)
           const res = await fetch(`/api/config/${weapon}/${category}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ entries: configEntries }),
           });
 
@@ -100,21 +110,31 @@ export function ActionButtons() {
             savedCount++;
           } else {
             const data = await res.json();
-            errors.push(`${weapon}/${category}: ${data.error || 'Unknown error'}`);
+            errors.push(
+              `${weapon}/${category}: ${data.error || "Unknown error"}`,
+            );
           }
         }
       }
 
       if (errors.length > 0) {
-        toast.error(`Failed to save some changes: ${errors.join(', ')}`);
+        toast.error(`Failed to save some changes: ${errors.join(", ")}`, {
+          position: "bottom-right",
+        });
       } else if (savedCount > 0) {
         commitWorkingToSaved();
-        toast.success(`Saved ${savedCount} ${savedCount === 1 ? 'category' : 'categories'}`);
+        toast.success(
+          `Saved ${savedCount} ${savedCount === 1 ? "category" : "categories"}`,
+          { position: "bottom-right" },
+        );
       } else {
-        toast.info('No changes to save');
+        toast.info("No changes to save", { position: "bottom-right" });
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save changes');
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save changes",
+        { position: "bottom-right" },
+      );
     } finally {
       setIsSaving(false);
     }
@@ -122,31 +142,41 @@ export function ActionButtons() {
 
   const handleReset = () => {
     resetWorkingValues();
-    toast.success('Working changes discarded');
+    toast.success("Working changes discarded", { position: "bottom-right" });
   };
 
   const handleApply = async () => {
-    const password = window.prompt('Enter EZCONFIG_PASSWORD to apply config to game:');
+    const password = window.prompt(
+      "Enter EZCONFIG_PASSWORD to apply config to game:",
+    );
     if (!password) return;
 
     setIsApplying(true);
 
     try {
-      const res = await fetch('/api/apply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
 
       const data = await res.json();
 
       if (data.success) {
-        toast.success(`Applied config to game (${data.commandsSent} commands sent)`);
+        toast.success(
+          `Applied config to game (${data.commandsSent} commands sent)`,
+          { position: "bottom-right" },
+        );
       } else {
-        toast.error(`Failed to apply: ${data.error || 'Unknown error'}`);
+        toast.error(`Failed to apply: ${data.error || "Unknown error"}`, {
+          position: "bottom-right",
+        });
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to apply config');
+      toast.error(
+        error instanceof Error ? error.message : "Failed to apply config",
+        { position: "bottom-right" },
+      );
     } finally {
       setIsApplying(false);
     }
@@ -159,16 +189,13 @@ export function ActionButtons() {
         disabled={!hasUnsavedChanges || isSaving}
         variant="default"
       >
-        {isSaving ? 'Saving...' : 'Save Changes'}
+        {isSaving ? "Saving..." : "Save Changes"}
       </Button>
 
       {mounted ? (
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button
-              disabled={!hasUnsavedChanges}
-              variant="destructive"
-            >
+            <Button disabled={!hasUnsavedChanges} variant="destructive">
               Reset Working Changes
             </Button>
           </AlertDialogTrigger>
@@ -176,12 +203,15 @@ export function ActionButtons() {
             <AlertDialogHeader>
               <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will discard all working changes that haven't been saved. This action cannot be undone.
+                This will discard all working changes that haven't been saved.
+                This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleReset}>Discard Changes</AlertDialogAction>
+              <AlertDialogAction onClick={handleReset}>
+                Discard Changes
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -196,7 +226,7 @@ export function ActionButtons() {
         disabled={hasUnsavedChanges || isApplying}
         variant="outline"
       >
-        {isApplying ? 'Applying...' : 'Apply to Game'}
+        {isApplying ? "Applying..." : "Apply to Game"}
       </Button>
     </div>
   );

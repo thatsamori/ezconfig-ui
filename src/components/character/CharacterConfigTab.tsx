@@ -25,9 +25,8 @@ async function loadCharacterConfig(category: string) {
     const json = await res.json();
 
     if (json.success && json.data) {
-      // json.data is array of single-key objects: [{ "CanCombo": true }, { "Windup": 0.675 }]
-      for (const entry of json.data) {
-        const [key, value] = Object.entries(entry)[0];
+      // json.data is object: { "CanCombo": true, "Windup": 0.675 }
+      for (const [key, value] of Object.entries(json.data)) {
         setSavedValue("Character", category, key, value as ConfigValue);
       }
     }
