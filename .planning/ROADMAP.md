@@ -16,6 +16,7 @@ None
 - **v1.2 Database Simplification** — Phases 14-15 (SHIPPED 2026-01-26) — [Archive](milestones/v1.2-ROADMAP.md)
 - **v1.3 Users & Auth** — Phases 16-18 (SHIPPED 2026-01-27) — [Archive](milestones/v1.3-ROADMAP.md)
 - **v1.4 UX Improvements** — Phases 19-20 (SHIPPED 2026-01-27) — [Archive](milestones/v1.4-ROADMAP.md)
+- 🚧 **v1.5 User Notes** — Phases 21-23 (in progress)
 
 ## Completed Milestones
 
@@ -99,6 +100,40 @@ See [v1.4-ROADMAP.md](milestones/v1.4-ROADMAP.md) for full details.
 
 </details>
 
+### 🚧 v1.5 User Notes (In Progress)
+
+**Milestone Goal:** Add per-config-option notes system allowing users to document their discoveries and share knowledge.
+
+#### Phase 21: Notes Database
+
+**Goal**: Create notes database layer with same structure as config database
+**Depends on**: Previous milestone complete
+**Research**: Unlikely (following existing database patterns)
+**Plans**: TBD
+
+Plans:
+- [ ] 21-01: TBD (run /gsd:plan-phase 21 to break down)
+
+#### Phase 22: Notes UI
+
+**Goal**: Build notes drawer/popover component with add/edit/delete functionality
+**Depends on**: Phase 21
+**Research**: Unlikely (internal UI patterns)
+**Plans**: TBD
+
+Plans:
+- [ ] 22-01: TBD
+
+#### Phase 23: Notes Integration
+
+**Goal**: Integrate notes into ConfigRow with visual indicators showing note count
+**Depends on**: Phase 22
+**Research**: Unlikely (internal patterns)
+**Plans**: TBD
+
+Plans:
+- [ ] 23-01: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -123,3 +158,6 @@ See [v1.4-ROADMAP.md](milestones/v1.4-ROADMAP.md) for full details.
 | 18. Access Control | v1.3 | 1/1 | Complete | 2026-01-27 |
 | 19. Selective Apply | v1.4 | 1/1 | Complete | 2026-01-27 |
 | 20. Overrides Filter | v1.4 | 1/1 | Complete | 2026-01-27 |
+| 21. Notes Database | v1.5 | 0/? | Not started | - |
+| 22. Notes UI | v1.5 | 0/? | Not started | - |
+| 23. Notes Integration | v1.5 | 0/? | Not started | - |

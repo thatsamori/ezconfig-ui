@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
-**Current focus:** None — v1.4 shipped
+**Current focus:** User notes system for documenting config options
 
 ## Current Position
 
-Phase: None — between milestones
-Plan: N/A
-Status: v1.4 shipped, awaiting next milestone
-Last activity: 2026-01-27 — Completed milestone v1.4
+Phase: 21 of 23 (Notes Database)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-01-27 — Milestone v1.5 created
 
-Progress: N/A (no active milestone)
+Progress: ░░░░░░░░░░ 0%
 
 ## Milestone History
 
@@ -28,6 +28,7 @@ Progress: N/A (no active milestone)
   - See: .planning/milestones/v1.3-ROADMAP.md
 - v1.4 UX Improvements: SHIPPED (Phases 19-20, 2 plans)
   - See: .planning/milestones/v1.4-ROADMAP.md
+- v1.5 User Notes: IN PROGRESS (Phases 21-23)
 
 ## Performance Metrics
 
@@ -77,9 +78,11 @@ None.
 - v1.2 shipped 2026-01-26: All 2 phases (14-15) complete
 - v1.3 shipped 2026-01-27: All 3 phases (16-18) complete
 - Milestone v1.4 created: UX Improvements, 2 phases (Phase 19-20)
+- v1.4 shipped 2026-01-27: All 2 phases (19-20) complete
+- Milestone v1.5 created: User Notes, 3 phases (Phase 21-23)
 
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed v1.4 milestone
+Stopped at: Milestone v1.5 initialization
 Resume file: None
