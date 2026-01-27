@@ -135,10 +135,11 @@ Superseded before implementation due to v2.0 architectural simplification (remov
 **Goal**: Remove working state and localStorage persistence, all changes write directly to database
 **Depends on**: Previous milestone complete
 **Research**: Unlikely (internal refactoring)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 24-01: TBD (run /gsd:plan-phase 24 to break down)
+- [ ] 24-01: Store refactor - single state model, async API writes
+- [ ] 24-02: Preset and bulk operations - direct API writes
 
 #### Phase 25: UI Simplification
 
@@ -198,7 +199,7 @@ Plans:
 | 21. Notes Database | v1.5 | 0/? | Superseded | - |
 | 22. Notes UI | v1.5 | 0/? | Superseded | - |
 | 23. Notes Integration | v1.5 | 0/? | Superseded | - |
-| 24. State Model Removal | v2.0 | 0/? | Not started | - |
+| 24. State Model Removal | v2.0 | 0/2 | Not started | - |
 | 25. UI Simplification | v2.0 | 0/? | Not started | - |
 | 26. Preset Flow Update | v2.0 | 0/? | Not started | - |
 | 27. Apply Flow Streamline | v2.0 | 0/? | Not started | - |
