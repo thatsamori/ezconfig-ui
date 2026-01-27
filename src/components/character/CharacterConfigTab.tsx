@@ -87,6 +87,19 @@ export function CharacterConfigTab() {
     }
   };
 
+  // Check if a category has any overrides
+  const categoryHasOverrides = (options: ConfigEntry[], categoryName: string) => {
+    return options.some(
+      (configEntry) => getEffectiveValue(categoryName, configEntry.configKey) !== undefined
+    );
+  };
+
+  // Check if any category has overrides (for empty state)
+  const hasAnyOverrides =
+    categoryHasOverrides(CHARACTER_CONFIG_OPTIONS.Movement, CharacterConfigGroupName.Movement) ||
+    categoryHasOverrides(CHARACTER_CONFIG_OPTIONS.Combat, CharacterConfigGroupName.Combat) ||
+    categoryHasOverrides(CHARACTER_CONFIG_OPTIONS.General, CharacterConfigGroupName.General);
+
   const renderSection = (
     categoryName: string,
     options: ConfigEntry[],
@@ -147,9 +160,17 @@ export function CharacterConfigTab() {
           Show overrides only
         </Label>
       </div>
-      {renderSection(CharacterConfigGroupName.Movement, CHARACTER_CONFIG_OPTIONS.Movement, true)}
-      {renderSection(CharacterConfigGroupName.Combat, CHARACTER_CONFIG_OPTIONS.Combat)}
-      {renderSection(CharacterConfigGroupName.General, CHARACTER_CONFIG_OPTIONS.General)}
+      {showOverridesOnly && !hasAnyOverrides ? (
+        <p className="text-muted-foreground py-8 text-center">
+          No character settings have overrides
+        </p>
+      ) : (
+        <>
+          {renderSection(CharacterConfigGroupName.Movement, CHARACTER_CONFIG_OPTIONS.Movement, true)}
+          {renderSection(CharacterConfigGroupName.Combat, CHARACTER_CONFIG_OPTIONS.Combat)}
+          {renderSection(CharacterConfigGroupName.General, CHARACTER_CONFIG_OPTIONS.General)}
+        </>
+      )}
     </div>
   );
 }

@@ -93,7 +93,11 @@ export function WeaponConfigTab() {
       </div>
       {hasNoResults ? (
         <p className="text-muted-foreground py-8 text-center">
-          No weapons match '{searchQuery}'
+          {searchQuery.trim()
+            ? `No weapons match '${searchQuery}'`
+            : showOverridesOnly
+              ? "No weapons have overrides"
+              : "No weapons found"}
         </p>
       ) : (
         <WeaponAccordion
