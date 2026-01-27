@@ -10,15 +10,27 @@ Database-driven configuration with working state persistence: edit freely, save 
 
 ## Current State
 
-**Version:** v1.2 shipped 2026-01-26
-**LOC:** ~8,600 TypeScript
+**Version:** v1.3 shipped 2026-01-27
+**LOC:** ~11,400 TypeScript
 **Tech stack:** Next.js 16, React 19, Tailwind CSS 4, Shadcn UI, Zustand, JSZip
 
-**What shipped in v1.2:**
+**What shipped in v1.3:**
+- User authentication with file-based users.json storage
+- Environment-based admin bootstrap (ADMIN_USERNAME, ADMIN_PASSWORD)
+- Login/logout flow with localStorage token persistence
+- User management (create/edit/delete users) for admin role
+- Simplified 2-role system: config_editor (full access except users) and admin (full access)
+- Users tab visible only to admin role
+
+<details>
+<summary>v1.2 (shipped 2026-01-26)</summary>
+
 - Object format for JSON storage (`{key: value}` instead of `[{key: value}]`)
 - On-demand file storage (files deleted when data is empty)
 - Automatic empty directory cleanup
 - Net code simplification (-23 lines)
+
+</details>
 
 <details>
 <summary>v1.1 (shipped 2026-01-26)</summary>
@@ -73,6 +85,10 @@ Database-driven configuration with working state persistence: edit freely, save 
 - ✓ Import/export presets via ZIP — v1.1
 - ✓ Object format for JSON storage — v1.2
 - ✓ On-demand file storage (delete empty files) — v1.2
+- ✓ User authentication with file-based storage — v1.3
+- ✓ Environment-based admin bootstrap — v1.3
+- ✓ User management (CRUD) for admin role — v1.3
+- ✓ Two-role access control (admin, config_editor) — v1.3
 
 ### Active
 
@@ -138,6 +154,10 @@ See `architecture_update.md` for full details.
 | ZIP import with dialog | Let user customize name/title/description on import | ✓ Good |
 | Object format for JSON | Single object `{key: value}` instead of array `[{key: value}]` | ✓ Good |
 | On-demand file storage | Delete files when data is empty, cleanup empty dirs | ✓ Good |
+| File-based users.json | Simple storage, no database needed | ✓ Good |
+| localStorage token persistence | Simple session management | ✓ Good |
+| Simplified 2-role system | admin + config_editor instead of 4 roles | ✓ Good |
+| Environment-based admin bootstrap | Easy first-time setup | ✓ Good |
 
 ---
-*Last updated: 2026-01-26 after v1.2 milestone*
+*Last updated: 2026-01-27 after v1.3 milestone*

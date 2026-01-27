@@ -14,7 +14,7 @@ None
 - **v1.0 Database-Driven Config** — Phases 5-10 (SHIPPED 2026-01-26) — [Archive](milestones/v1.0-ROADMAP.md)
 - **v1.1 Presets** — Phases 11-13 (SHIPPED 2026-01-26) — [Archive](milestones/v1.1-ROADMAP.md)
 - **v1.2 Database Simplification** — Phases 14-15 (SHIPPED 2026-01-26) — [Archive](milestones/v1.2-ROADMAP.md)
-- **v1.3 Users & Auth** — Phases 16-18 (SHIPPED 2026-01-27)
+- **v1.3 Users & Auth** — Phases 16-18 (SHIPPED 2026-01-27) — [Archive](milestones/v1.3-ROADMAP.md)
 
 ## Completed Milestones
 
@@ -73,45 +73,18 @@ See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 
 </details>
 
-### v1.3 Users & Auth (SHIPPED 2026-01-27)
+<details>
+<summary>v1.3 Users & Auth (Phases 16-18) — SHIPPED 2026-01-27</summary>
 
-**Milestone Goal:** Add user authentication and access control for multi-user configuration management.
+User authentication and role-based access control with simplified 2-role system.
 
-#### Phase 16: Auth Setup
+- [x] Phase 16: Auth Setup (2/2 plans) — completed 2026-01-27
+- [x] Phase 17: User Management (2/2 plans) — completed 2026-01-27
+- [x] Phase 18: Access Control (1/1 plan) — completed 2026-01-27
 
-**Goal**: Login/logout with users.json storage, env bootstrap, simple localStorage token
-**Depends on**: Previous milestone complete
-**Research**: Unlikely (simple file-based auth, no external libraries)
-**Plans**: 2
+See [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
 
-Plans:
-- [x] 16-01: Auth Backend — users service, login/logout/me API endpoints — completed 2026-01-27
-- [x] 16-02: Auth Frontend — auth store, login UI, app gate — completed 2026-01-27
-
-#### Phase 17: User Management
-
-**Goal**: Users tab for admin to create/edit/delete users
-**Depends on**: Phase 16
-**Research**: Unlikely (CRUD patterns, existing tab UI)
-**Plans**: 2
-
-Plans:
-- [x] 17-01: User API — CRUD endpoints with role-based access — completed 2026-01-27
-- [x] 17-02: Users Tab UI — user table, create/edit/delete dialogs — completed 2026-01-27
-
-#### Phase 18: Access Control
-
-**Goal**: Role enforcement - Users tab only visible to admin
-**Depends on**: Phase 17
-**Research**: Unlikely (internal patterns, role checks)
-**Plans**: 1
-
-Roles (simplified):
-- config_editor: Full config control except user management
-- admin: Full access
-
-Plans:
-- [x] 18-01: Role Enforcement UI — simplified to 2 roles, admin-only Users tab — completed 2026-01-27
+</details>
 
 ## Progress
 
