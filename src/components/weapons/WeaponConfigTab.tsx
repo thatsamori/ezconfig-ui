@@ -32,8 +32,10 @@ export function WeaponConfigTab() {
       fetch("/api/databases/overrides")
         .then((res) => res.json())
         .then((json) => {
-          if (json.success && json.data?.Weapon) {
-            setOverrideMap(json.data.Weapon as GroupedOverrideMap);
+          if (json.success) {
+            // Always set overrideMap, defaulting to empty object if no Weapon data
+            // This ensures filtering runs even when no saved weapon data exists
+            setOverrideMap((json.data?.Weapon as GroupedOverrideMap) ?? {});
           }
         })
         .catch(console.error);
