@@ -24,7 +24,7 @@ export interface ConfigState {
   markCategoryLoaded: (path: string) => void;
   isCategoryLoaded: (path: string) => boolean;
   clearCategory: (database: string, category: string) => void;
-  loadPreset: (presetData: PresetData) => void;
+  loadPreset: (presetData: PresetData) => Promise<void>;
 
   // Deprecated aliases - keep for Phase 25 UI cleanup
   hasUnsavedChanges: boolean; // Always false
@@ -278,31 +278,77 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
       };
     }),
 
-  loadPreset: (presetData) =>
-    set(() => {
-      // In the new model, loadPreset directly replaces values with preset data
-      // Tombstones for keys not in preset are handled by the API when saving
-      const newValues: ConfigState['values'] = {
-        character: {},
-        weapons: {},
-      };
+  loadPreset: async (presetData) => {
+    const state = get();
 
-      // Copy preset character values
-      for (const [category, entries] of Object.entries(presetData.character)) {
-        newValues.character[category] = { ...entries };
+    // Build new values from preset data
+    const newValues: ConfigState['values'] = {
+      character: {},
+      weapons: {},
+    };
+
+    // Copy preset character values
+    for (const [category, entries] of Object.entries(presetData.character)) {
+      newValues.character[category] = { ...entries };
+    }
+
+    // Copy preset weapon values
+    for (const [weapon, categories] of Object.entries(presetData.weapons)) {
+      newValues.weapons[weapon] = {};
+      for (const [category, entries] of Object.entries(categories)) {
+        newValues.weapons[weapon][category] = { ...entries };
       }
+    }
 
-      // Copy preset weapon values
-      for (const [weapon, categories] of Object.entries(presetData.weapons)) {
-        newValues.weapons[weapon] = {};
-        for (const [category, entries] of Object.entries(categories)) {
-          newValues.weapons[weapon][category] = { ...entries };
-        }
+    // Update local state immediately
+    set({
+      values: newValues,
+      workingValues: newValues,
+      savedValues: newValues,
+      // Clear loaded categories since we're replacing everything
+      loadedCategories: new Set<string>(),
+    });
+
+    // Write all preset data to API
+    // Character categories: clear existing + write preset values
+    const charCategoriesToUpdate = new Set([
+      ...Object.keys(state.values.character),
+      ...Object.keys(presetData.character),
+    ]);
+
+    const apiPromises: Promise<boolean>[] = [];
+
+    for (const category of charCategoriesToUpdate) {
+      const presetEntries = presetData.character[category] || {};
+      // POST preset entries (empty object clears the file)
+      apiPromises.push(saveToApi('Character', category, presetEntries));
+    }
+
+    // Weapon categories: clear existing + write preset values
+    const weaponsToUpdate = new Set([
+      ...Object.keys(state.values.weapons),
+      ...Object.keys(presetData.weapons),
+    ]);
+
+    for (const weapon of weaponsToUpdate) {
+      const existingCategories = Object.keys(state.values.weapons[weapon] || {});
+      const presetCategories = Object.keys(presetData.weapons[weapon] || {});
+      const allCategories = new Set([...existingCategories, ...presetCategories]);
+
+      for (const category of allCategories) {
+        const presetEntries = presetData.weapons[weapon]?.[category] || {};
+        apiPromises.push(saveToApi(weapon, category, presetEntries));
       }
+    }
 
-      // Update values and deprecated aliases together
-      return { values: newValues, workingValues: newValues, savedValues: newValues };
-    }),
+    // Wait for all API writes to complete
+    const results = await Promise.all(apiPromises);
+    const failures = results.filter((success) => !success).length;
+
+    if (failures > 0) {
+      toast.error(`Failed to save ${failures} config file(s)`);
+    }
+  },
 
   // Deprecated aliases - these are kept for backward compatibility with UI components
   // They will be removed in Phase 25 when UI is updated
