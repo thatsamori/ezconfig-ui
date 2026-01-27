@@ -489,12 +489,27 @@ export const useConfigStore = create<ConfigState>()(
           };
 
           // Process character categories
-          // First, add tombstones for all saved character keys not in preset
-          for (const [category, savedEntries] of Object.entries(state.savedValues.character)) {
+          // Collect all categories from BOTH saved and working values
+          const allCharacterCategories = new Set([
+            ...Object.keys(state.savedValues.character),
+            ...Object.keys(state.workingValues.character),
+          ]);
+
+          // For each category, tombstone keys not in preset
+          for (const category of allCharacterCategories) {
+            const savedEntries = state.savedValues.character[category] || {};
+            const workingEntries = state.workingValues.character[category] || {};
             const presetCategory = presetData.character[category] || {};
-            for (const key of Object.keys(savedEntries)) {
+
+            // Collect all keys from both saved and working
+            const allKeys = new Set([
+              ...Object.keys(savedEntries),
+              ...Object.keys(workingEntries),
+            ]);
+
+            for (const key of allKeys) {
               if (!(key in presetCategory)) {
-                // Key exists in saved but not in preset - tombstone it
+                // Key exists in saved or working but not in preset - tombstone it
                 if (!newWorkingValues.character[category]) {
                   newWorkingValues.character[category] = {};
                 }
@@ -513,13 +528,36 @@ export const useConfigStore = create<ConfigState>()(
           }
 
           // Process weapon categories
-          // First, add tombstones for all saved weapon keys not in preset
-          for (const [weapon, savedCategories] of Object.entries(state.savedValues.weapons)) {
-            for (const [category, savedEntries] of Object.entries(savedCategories)) {
+          // Collect all weapons from BOTH saved and working values
+          const allWeapons = new Set([
+            ...Object.keys(state.savedValues.weapons),
+            ...Object.keys(state.workingValues.weapons),
+          ]);
+
+          for (const weapon of allWeapons) {
+            const savedCategories = state.savedValues.weapons[weapon] || {};
+            const workingCategories = state.workingValues.weapons[weapon] || {};
+
+            // Collect all categories for this weapon
+            const allCategories = new Set([
+              ...Object.keys(savedCategories),
+              ...Object.keys(workingCategories),
+            ]);
+
+            for (const category of allCategories) {
+              const savedEntries = savedCategories[category] || {};
+              const workingEntries = workingCategories[category] || {};
               const presetCategory = presetData.weapons[weapon]?.[category] || {};
-              for (const key of Object.keys(savedEntries)) {
+
+              // Collect all keys from both
+              const allKeys = new Set([
+                ...Object.keys(savedEntries),
+                ...Object.keys(workingEntries),
+              ]);
+
+              for (const key of allKeys) {
                 if (!(key in presetCategory)) {
-                  // Key exists in saved but not in preset - tombstone it
+                  // Key exists in saved or working but not in preset - tombstone it
                   if (!newWorkingValues.weapons[weapon]) {
                     newWorkingValues.weapons[weapon] = {};
                   }
