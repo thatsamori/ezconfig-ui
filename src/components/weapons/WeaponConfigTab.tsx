@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { WeaponAccordion } from "./WeaponAccordion";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useConfigStore } from "@/lib/store/configStore";
 import type { GroupedDatabase, GroupedOverrideMap } from "@/lib/database/structure";
 import { CategoryName, WeaponConfigGroupName } from "@/lib/config/weaponConfigSchema";
 
@@ -24,23 +25,22 @@ const SCHEMA_WEAPONS: GroupedDatabase = Object.fromEntries(
 export function WeaponConfigTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showOverridesOnly, setShowOverridesOnly] = useState(false);
-  const [overrideMap, setOverrideMap] = useState<GroupedOverrideMap | null>(null);
 
-  // Fetch override map when showOverridesOnly becomes true
-  useEffect(() => {
-    if (showOverridesOnly && !overrideMap) {
-      fetch("/api/databases/overrides")
-        .then((res) => res.json())
-        .then((json) => {
-          if (json.success) {
-            // Always set overrideMap, defaulting to empty object if no Weapon data
-            // This ensures filtering runs even when no saved weapon data exists
-            setOverrideMap((json.data?.Weapon as GroupedOverrideMap) ?? {});
-          }
-        })
-        .catch(console.error);
+  // Get weapon values from store to compute override map
+  const storeValues = useConfigStore((state) => state.values);
+
+  // Compute override map directly from store state (reactive to changes)
+  const overrideMap = useMemo<GroupedOverrideMap>(() => {
+    const map: GroupedOverrideMap = {};
+    for (const [weapon, categories] of Object.entries(storeValues.weapons)) {
+      map[weapon] = {};
+      for (const [category, entries] of Object.entries(categories)) {
+        // Category has overrides if it has any entries
+        map[weapon][category] = Object.keys(entries).length > 0;
+      }
     }
-  }, [showOverridesOnly, overrideMap]);
+    return map;
+  }, [storeValues.weapons]);
 
   // Filter weapons based on search query and override presence
   const filteredWeapons = useMemo(() => {
@@ -54,8 +54,8 @@ export function WeaponConfigTab() {
       );
     }
 
-    // Filter by override presence when toggle is on and map is loaded
-    if (showOverridesOnly && overrideMap) {
+    // Filter by override presence when toggle is on
+    if (showOverridesOnly) {
       result = Object.fromEntries(
         Object.entries(result).filter(([weaponName]) => {
           const weaponOverrides = overrideMap[weaponName];
@@ -103,7 +103,7 @@ export function WeaponConfigTab() {
         <WeaponAccordion
           weapons={filteredWeapons}
           showOverridesOnly={showOverridesOnly}
-          overrideMap={showOverridesOnly && overrideMap ? overrideMap : undefined}
+          overrideMap={showOverridesOnly ? overrideMap : undefined}
         />
       )}
     </div>
