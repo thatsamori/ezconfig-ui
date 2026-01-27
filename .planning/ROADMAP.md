@@ -14,6 +14,7 @@ None
 - **v1.0 Database-Driven Config** — Phases 5-10 (SHIPPED 2026-01-26) — [Archive](milestones/v1.0-ROADMAP.md)
 - **v1.1 Presets** — Phases 11-13 (SHIPPED 2026-01-26) — [Archive](milestones/v1.1-ROADMAP.md)
 - **v1.2 Database Simplification** — Phases 14-15 (SHIPPED 2026-01-26) — [Archive](milestones/v1.2-ROADMAP.md)
+- 🚧 **v1.3 Users & Auth** — Phases 16-18 (in progress)
 
 ## Completed Milestones
 
@@ -72,6 +73,41 @@ See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 
 </details>
 
+### 🚧 v1.3 Users & Auth (In Progress)
+
+**Milestone Goal:** Add user authentication and access control for multi-user configuration management.
+
+#### Phase 16: Auth Setup
+
+**Goal**: User authentication with login/logout
+**Depends on**: Previous milestone complete
+**Research**: Likely (authentication architectural decision)
+**Research topics**: Next.js auth patterns (NextAuth vs custom), session management, credential storage
+**Plans**: TBD
+
+Plans:
+- [ ] 16-01: TBD (run /gsd:plan-phase 16 to break down)
+
+#### Phase 17: User Management
+
+**Goal**: User profiles and settings
+**Depends on**: Phase 16
+**Research**: Unlikely (internal CRUD patterns)
+**Plans**: TBD
+
+Plans:
+- [ ] 17-01: TBD (run /gsd:plan-phase 17 to break down)
+
+#### Phase 18: Access Control
+
+**Goal**: Role-based permissions for config editing
+**Depends on**: Phase 17
+**Research**: Unlikely (internal patterns, role checks)
+**Plans**: TBD
+
+Plans:
+- [ ] 18-01: TBD (run /gsd:plan-phase 18 to break down)
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -91,3 +127,6 @@ See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 | 13. Preset Polish | v1.1 | 2/2 | Complete | 2026-01-26 |
 | 14. Object Format | v1.2 | 1/1 | Complete | 2026-01-26 |
 | 15. On-Demand Storage | v1.2 | 1/1 | Complete | 2026-01-26 |
+| 16. Auth Setup | v1.3 | 0/? | Not started | - |
+| 17. User Management | v1.3 | 0/? | Not started | - |
+| 18. Access Control | v1.3 | 0/? | Not started | - |

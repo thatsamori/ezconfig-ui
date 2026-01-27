@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
-**Current focus:** No active milestone — planning next
+**Current focus:** v1.3 Users & Auth — Authentication and access control
 
 ## Current Position
 
-Phase: None active
-Plan: N/A
-Status: Ready to plan next milestone
-Last activity: 2026-01-26 — v1.2 milestone complete
+Phase: 16 of 18 (Auth Setup)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-01-26 — Milestone v1.3 created
 
-Progress: All milestones shipped
+Progress: ░░░░░░░░░░ 0%
 
 ## Milestone History
 
@@ -71,9 +71,10 @@ None.
 - v1.0 shipped 2026-01-26: All 6 phases (5-10) complete
 - v1.1 shipped 2026-01-26: All 3 phases (11-13) complete
 - v1.2 shipped 2026-01-26: All 2 phases (14-15) complete
+- Milestone v1.3 created: Users & Auth, 3 phases (Phase 16-18)
 
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: v1.2 milestone archived
+Stopped at: Milestone v1.3 initialization
 Resume file: None
