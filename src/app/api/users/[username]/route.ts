@@ -9,7 +9,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { validateToken } from '@/lib/auth/tokens';
+import { requireRole } from '@/lib/auth';
 import { getUsers, saveUsers } from '@/lib/auth/service';
 import type { UserRole } from '@/lib/auth/types';
 
@@ -27,22 +27,10 @@ export async function GET(request: Request, context: RouteContext) {
   try {
     const { username } = await context.params;
 
-    // Validate token
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const userData = validateToken(token);
-
-    if (!userData) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    // Check role
-    if (userData.role !== 'global_admin') {
-      return NextResponse.json({ error: 'Forbidden - admin access required' }, { status: 403 });
+    // Check auth
+    const auth = requireRole(request, ['global_admin']);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error!.message }, { status: auth.error!.status });
     }
 
     // Find user
@@ -73,22 +61,10 @@ export async function PUT(request: Request, context: RouteContext) {
   try {
     const { username } = await context.params;
 
-    // Validate token
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const userData = validateToken(token);
-
-    if (!userData) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    // Check role
-    if (userData.role !== 'global_admin') {
-      return NextResponse.json({ error: 'Forbidden - admin access required' }, { status: 403 });
+    // Check auth
+    const auth = requireRole(request, ['global_admin']);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error!.message }, { status: auth.error!.status });
     }
 
     // Parse body
@@ -146,26 +122,14 @@ export async function DELETE(request: Request, context: RouteContext) {
   try {
     const { username } = await context.params;
 
-    // Validate token
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const userData = validateToken(token);
-
-    if (!userData) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    // Check role
-    if (userData.role !== 'global_admin') {
-      return NextResponse.json({ error: 'Forbidden - admin access required' }, { status: 403 });
+    // Check auth
+    const auth = requireRole(request, ['global_admin']);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error!.message }, { status: auth.error!.status });
     }
 
     // Prevent self-deletion
-    if (userData.username === username) {
+    if (auth.user!.username === username) {
       return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 });
     }
 
