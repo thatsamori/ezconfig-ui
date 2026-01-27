@@ -60,11 +60,16 @@ async function saveToApi(
   }
 }
 
+const initialValues = {
+  character: {} as Record<string, Record<string, ConfigValue>>,
+  weapons: {} as Record<string, Record<string, Record<string, ConfigValue>>>,
+};
+
 const initialState = {
-  values: {
-    character: {},
-    weapons: {},
-  },
+  values: initialValues,
+  // Deprecated aliases - must be actual state properties (not getters) for Zustand subscriptions to work
+  workingValues: initialValues,
+  savedValues: initialValues,
   loadedCategories: new Set<string>(),
   hasUnsavedChanges: false, // Always false in new model
 };
@@ -72,50 +77,41 @@ const initialState = {
 export const useConfigStore = create<ConfigState>()((set, get) => ({
   ...initialState,
 
-  // Deprecated aliases that point to values
-  get workingValues() {
-    return get().values;
-  },
-  get savedValues() {
-    return get().values;
-  },
-
   setValue: (database, category, key, value) => {
     const isCharacter = database === 'Character';
 
     // Optimistic update - update local state immediately
     set((state) => {
+      let newValues: ConfigState['values'];
       if (isCharacter) {
-        return {
-          values: {
-            ...state.values,
-            character: {
-              ...state.values.character,
-              [category]: {
-                ...state.values.character[category],
-                [key]: value,
-              },
+        newValues = {
+          ...state.values,
+          character: {
+            ...state.values.character,
+            [category]: {
+              ...state.values.character[category],
+              [key]: value,
             },
           },
         };
       } else {
         // Weapon database (database is the weapon name)
-        return {
-          values: {
-            ...state.values,
-            weapons: {
-              ...state.values.weapons,
-              [database]: {
-                ...state.values.weapons[database],
-                [category]: {
-                  ...state.values.weapons[database]?.[category],
-                  [key]: value,
-                },
+        newValues = {
+          ...state.values,
+          weapons: {
+            ...state.values.weapons,
+            [database]: {
+              ...state.values.weapons[database],
+              [category]: {
+                ...state.values.weapons[database]?.[category],
+                [key]: value,
               },
             },
           },
         };
       }
+      // Update values and deprecated aliases together
+      return { values: newValues, workingValues: newValues, savedValues: newValues };
     });
 
     // Fire-and-forget API write
@@ -136,6 +132,7 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
 
     // Optimistic update - update local state immediately
     set((state) => {
+      let newValues: ConfigState['values'];
       if (isCharacter) {
         const categoryValues = state.values.character[category] || {};
         const { [key]: _, ...remainingKeys } = categoryValues;
@@ -147,11 +144,9 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
         if (Object.keys(remainingKeys).length === 0) {
           delete newCharacter[category];
         }
-        return {
-          values: {
-            ...state.values,
-            character: newCharacter,
-          },
+        newValues = {
+          ...state.values,
+          character: newCharacter,
         };
       } else {
         const weaponCategories = state.values.weapons[database] || {};
@@ -173,13 +168,13 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
         if (Object.keys(newWeaponCategories).length === 0) {
           delete newWeapons[database];
         }
-        return {
-          values: {
-            ...state.values,
-            weapons: newWeapons,
-          },
+        newValues = {
+          ...state.values,
+          weapons: newWeapons,
         };
       }
+      // Update values and deprecated aliases together
+      return { values: newValues, workingValues: newValues, savedValues: newValues };
     });
 
     // Fire-and-forget API write with updated entries (excluding removed key)
@@ -210,12 +205,12 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
         };
       }
 
-      return {
-        values: {
-          ...state.values,
-          weapons: newWeapons,
-        },
+      const newValues = {
+        ...state.values,
+        weapons: newWeapons,
       };
+      // Update values and deprecated aliases together
+      return { values: newValues, workingValues: newValues, savedValues: newValues };
     });
 
     // Fire-and-forget API writes for each weapon
@@ -253,38 +248,38 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
   clearCategory: (database, category) =>
     set((state) => {
       const isCharacter = database === 'Character';
+      let newValues: ConfigState['values'];
 
       if (isCharacter) {
         const { [category]: _, ...remainingCategories } = state.values.character;
-        return {
-          values: {
-            ...state.values,
-            character: remainingCategories,
-          },
-          loadedCategories: new Set(
-            [...state.loadedCategories].filter((p) => p !== `${database}/${category}`)
-          ),
+        newValues = {
+          ...state.values,
+          character: remainingCategories,
         };
       } else {
         const weaponCategories = state.values.weapons[database] || {};
         const { [category]: _, ...remainingCategories } = weaponCategories;
-        return {
-          values: {
-            ...state.values,
-            weapons: {
-              ...state.values.weapons,
-              [database]: remainingCategories,
-            },
+        newValues = {
+          ...state.values,
+          weapons: {
+            ...state.values.weapons,
+            [database]: remainingCategories,
           },
-          loadedCategories: new Set(
-            [...state.loadedCategories].filter((p) => p !== `${database}/${category}`)
-          ),
         };
       }
+
+      return {
+        values: newValues,
+        workingValues: newValues,
+        savedValues: newValues,
+        loadedCategories: new Set(
+          [...state.loadedCategories].filter((p) => p !== `${database}/${category}`)
+        ),
+      };
     }),
 
   loadPreset: (presetData) =>
-    set((state) => {
+    set(() => {
       // In the new model, loadPreset directly replaces values with preset data
       // Tombstones for keys not in preset are handled by the API when saving
       const newValues: ConfigState['values'] = {
@@ -305,7 +300,8 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
         }
       }
 
-      return { values: newValues };
+      // Update values and deprecated aliases together
+      return { values: newValues, workingValues: newValues, savedValues: newValues };
     }),
 
   // Deprecated aliases - these are kept for backward compatibility with UI components
