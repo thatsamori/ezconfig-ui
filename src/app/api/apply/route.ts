@@ -4,62 +4,78 @@
  * Apply saved config to game via RCON.
  * Requires password authentication.
  *
- * Request body: { password: string }
+ * Request body: { password: string, commands?: string[] }
+ * - If commands provided: use those commands directly (selective apply)
+ * - If commands not provided: build from saved config (full apply)
+ *
  * Response: { success: boolean, commandsSent?: number, error?: string, failedAt?: string }
  */
 
-import { NextResponse } from 'next/server';
-import { env } from '@/lib/env';
-import { applyConfig } from '@/lib/database/apply';
+import { NextResponse } from "next/server";
+import { env } from "@/lib/env";
+import { buildRconCommands } from "@/lib/database/apply";
+import { executeBatchCommands } from "@/lib/rcon/service";
 
 interface ApplyRequest {
   password: string;
+  commands?: string[];
 }
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as ApplyRequest;
 
-    // Validate password
-    if (!body.password || body.password !== env.ezconfigPassword) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
     // Check if EZCONFIG_PASSWORD is configured
     if (!env.ezconfigPassword) {
       return NextResponse.json(
         {
           success: false,
-          error: 'EZCONFIG_PASSWORD not configured on server',
+          error: "EZCONFIG_PASSWORD not configured on server",
         },
         { status: 500 }
       );
     }
 
-    const result = await applyConfig();
-
-    if (result.success) {
-      return NextResponse.json({
-        success: true,
-        commandsSent: result.commandsSent,
-      });
-    } else {
+    // Validate password
+    if (!body.password || body.password !== env.ezconfigPassword) {
       return NextResponse.json(
-        {
-          success: false,
-          error: result.error,
-          failedAt: result.failedAt,
-        },
-        { status: 500 }
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
       );
     }
+
+    // Get commands: use provided commands or build from saved config
+    let categoryCommands: string[];
+    if (body.commands && body.commands.length > 0) {
+      // Selective apply: use provided commands
+      categoryCommands = body.commands;
+    } else {
+      // Full apply: build from saved config
+      categoryCommands = await buildRconCommands();
+    }
+
+    // Build full command list: WipeDatabases first, then all category commands
+    const commands = ["string ezconfig WipeDatabases", ...categoryCommands];
+
+    console.log(`Applying config: ${commands.length} commands to send`);
+    for (const cmd of commands) {
+      console.log(`  - ${cmd.substring(0, 100)}${cmd.length > 100 ? "..." : ""}`);
+    }
+
+    await executeBatchCommands(commands);
+
+    return NextResponse.json({
+      success: true,
+      commandsSent: commands.length,
+    });
   } catch (error) {
-    console.error('Error in apply endpoint:', error);
+    console.error("Error in apply endpoint:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
+        failedAt: "RCON connection",
       },
       { status: 500 }
     );

@@ -15,10 +15,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useConfigStore, type ConfigValue } from "@/lib/store/configStore";
 import { toast } from "sonner";
+import { SelectiveApplyDialog } from "@/components/SelectiveApplyDialog";
 
 export function ActionButtons() {
   const [isSaving, setIsSaving] = useState(false);
-  const [isApplying, setIsApplying] = useState(false);
+  const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   // Wait for client mount to avoid Radix UI hydration mismatch
@@ -30,16 +31,16 @@ export function ActionButtons() {
   const workingValues = useConfigStore((state) => state.workingValues);
   const savedValues = useConfigStore((state) => state.savedValues);
   const resetWorkingValues = useConfigStore(
-    (state) => state.resetWorkingValues,
+    (state) => state.resetWorkingValues
   );
   const commitWorkingToSaved = useConfigStore(
-    (state) => state.commitWorkingToSaved,
+    (state) => state.commitWorkingToSaved
   );
 
   // Build merged entries for a category (saved + working, with null tombstones removing entries)
   const buildMergedEntries = (
     saved: Record<string, ConfigValue> | undefined,
-    working: Record<string, ConfigValue>,
+    working: Record<string, ConfigValue>
   ): Record<string, ConfigValue> => {
     // Start with saved values
     const merged: Record<string, ConfigValue> = { ...saved };
@@ -66,7 +67,7 @@ export function ActionButtons() {
 
       // Save character config changes
       for (const [category, workingEntries] of Object.entries(
-        workingValues.character,
+        workingValues.character
       )) {
         const savedEntries = savedValues.character[category];
         const configEntries = buildMergedEntries(savedEntries, workingEntries);
@@ -83,20 +84,20 @@ export function ActionButtons() {
         } else {
           const data = await res.json();
           errors.push(
-            `Character/${category}: ${data.error || "Unknown error"}`,
+            `Character/${category}: ${data.error || "Unknown error"}`
           );
         }
       }
 
       // Save weapon config changes
       for (const [weapon, categories] of Object.entries(
-        workingValues.weapons,
+        workingValues.weapons
       )) {
         for (const [category, workingEntries] of Object.entries(categories)) {
           const savedEntries = savedValues.weapons[weapon]?.[category];
           const configEntries = buildMergedEntries(
             savedEntries,
-            workingEntries,
+            workingEntries
           );
 
           // Send even if empty (to clear the category file)
@@ -111,7 +112,7 @@ export function ActionButtons() {
           } else {
             const data = await res.json();
             errors.push(
-              `${weapon}/${category}: ${data.error || "Unknown error"}`,
+              `${weapon}/${category}: ${data.error || "Unknown error"}`
             );
           }
         }
@@ -125,7 +126,7 @@ export function ActionButtons() {
         commitWorkingToSaved();
         toast.success(
           `Saved ${savedCount} ${savedCount === 1 ? "category" : "categories"}`,
-          { position: "bottom-right" },
+          { position: "bottom-right" }
         );
       } else {
         toast.info("No changes to save", { position: "bottom-right" });
@@ -133,7 +134,7 @@ export function ActionButtons() {
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to save changes",
-        { position: "bottom-right" },
+        { position: "bottom-right" }
       );
     } finally {
       setIsSaving(false);
@@ -145,41 +146,8 @@ export function ActionButtons() {
     toast.success("Working changes discarded", { position: "bottom-right" });
   };
 
-  const handleApply = async () => {
-    const password = window.prompt(
-      "Enter EZCONFIG_PASSWORD to apply config to game:",
-    );
-    if (!password) return;
-
-    setIsApplying(true);
-
-    try {
-      const res = await fetch("/api/apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        toast.success(
-          `Applied config to game (${data.commandsSent} commands sent)`,
-          { position: "bottom-right" },
-        );
-      } else {
-        toast.error(`Failed to apply: ${data.error || "Unknown error"}`, {
-          position: "bottom-right",
-        });
-      }
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to apply config",
-        { position: "bottom-right" },
-      );
-    } finally {
-      setIsApplying(false);
-    }
+  const handleApply = () => {
+    setShowApplyDialog(true);
   };
 
   return (
@@ -203,7 +171,7 @@ export function ActionButtons() {
             <AlertDialogHeader>
               <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will discard all working changes that haven't been saved.
+                This will discard all working changes that haven&apos;t been saved.
                 This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -223,11 +191,19 @@ export function ActionButtons() {
 
       <Button
         onClick={handleApply}
-        disabled={hasUnsavedChanges || isApplying}
+        disabled={hasUnsavedChanges}
         variant="outline"
       >
-        {isApplying ? "Applying..." : "Apply to Game"}
+        Apply to Game
       </Button>
+
+      <SelectiveApplyDialog
+        open={showApplyDialog}
+        onOpenChange={setShowApplyDialog}
+        onApplyComplete={() => {
+          // Dialog handles its own success toast
+        }}
+      />
     </div>
   );
 }
