@@ -8,6 +8,10 @@ export const env = {
   databasesPath: process.env.DATABASES_PATH || './Databases',
   presetsPath: process.env.PRESETS_PATH || './Presets',
   ezconfigPassword: process.env.EZCONFIG_PASSWORD || '',
+  // Auth settings
+  usersPath: process.env.USERS_PATH || './users.json',
+  adminUsername: process.env.ADMIN_USERNAME || '',
+  adminPassword: process.env.ADMIN_PASSWORD || '',
 } as const;
 
 // Validation - call this in server actions
