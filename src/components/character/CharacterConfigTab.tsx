@@ -14,7 +14,7 @@ import type { ConfigEntry } from "@/lib/config/types";
 
 // Lazy load character config from API
 async function loadCharacterConfig(category: string) {
-  const { setSavedValue, markCategoryLoaded, isCategoryLoaded } =
+  const { setValue, markCategoryLoaded, isCategoryLoaded } =
     useConfigStore.getState();
 
   const path = `Character/${category}`;
@@ -27,7 +27,7 @@ async function loadCharacterConfig(category: string) {
     if (json.success && json.data) {
       // json.data is object: { "CanCombo": true, "Windup": 0.675 }
       for (const [key, value] of Object.entries(json.data)) {
-        setSavedValue("Character", category, key, value as ConfigValue);
+        setValue("Character", category, key, value as ConfigValue);
       }
     }
 
@@ -44,8 +44,7 @@ export function CharacterConfigTab() {
   const [showOverridesOnly, setShowOverridesOnly] = useState(false);
 
   // Subscribe to actual state values for reactivity
-  const workingValues = useConfigStore((state) => state.workingValues);
-  const savedValues = useConfigStore((state) => state.savedValues);
+  const values = useConfigStore((state) => state.values);
   const loadedCategories = useConfigStore((state) => state.loadedCategories);
 
   // Load Movement category on mount since it's defaultOpen
@@ -62,20 +61,16 @@ export function CharacterConfigTab() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get action functions
-  const setWorkingValue = useConfigStore((state) => state.setWorkingValue);
-  const removeWorkingValue = useConfigStore((state) => state.removeWorkingValue);
+  const setValue = useConfigStore((state) => state.setValue);
+  const removeValue = useConfigStore((state) => state.removeValue);
 
   // Helper to check if category is loaded
   const isCategoryLoaded = (category: string) =>
     loadedCategories.has(`Character/${category}`);
 
-  // Helper to get effective value (working ?? saved)
-  // null is a tombstone meaning "reset to game default"
+  // Helper to get value from store
   const getEffectiveValue = (category: string, key: string) => {
-    const workingVal = workingValues.character[category]?.[key];
-    if (workingVal === null) return undefined; // Tombstone = game default
-    if (workingVal !== undefined) return workingVal;
-    return savedValues.character[category]?.[key];
+    return values.character[category]?.[key];
   };
 
   // Handle section expand - trigger lazy load if needed
@@ -136,10 +131,10 @@ export function CharacterConfigTab() {
               configEntry={configEntry}
               value={getEffectiveValue(categoryName, configEntry.configKey)}
               onChange={(value) =>
-                setWorkingValue("Character", categoryName, configEntry.configKey, value)
+                setValue("Character", categoryName, configEntry.configKey, value)
               }
               onReset={() =>
-                removeWorkingValue("Character", categoryName, configEntry.configKey)
+                removeValue("Character", categoryName, configEntry.configKey)
               }
             />
           ))
