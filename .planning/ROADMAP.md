@@ -152,10 +152,10 @@ See [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md) for full details.
 **Goal**: Create notes storage layer and API endpoints
 **Depends on**: v2.0 complete
 **Research**: Unlikely (follows existing database service patterns)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 28-01: TBD (run /gsd:plan-phase 28 to break down)
+- [x] 28-01: Create notes service and API endpoints — completed 2026-01-27
 
 #### Phase 29: Notes UI
 
@@ -211,6 +211,6 @@ Plans:
 | 25. UI Simplification | v2.0 | 1/1 | Complete | 2026-01-27 |
 | 26. Preset Flow Update | v2.0 | 1/1 | Complete | 2026-01-27 |
 | 27. Apply Flow Streamline | v2.0 | 1/1 | Complete | 2026-01-27 |
-| 28. Notes Database | v2.1 | 0/? | Not started | - |
+| 28. Notes Database | v2.1 | 1/1 | Complete | 2026-01-27 |
 | 29. Notes UI | v2.1 | 0/? | Not started | - |
 | 30. Notes Integration | v2.1 | 0/? | Not started | - |
