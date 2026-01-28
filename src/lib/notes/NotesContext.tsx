@@ -8,6 +8,8 @@ interface NotesContextValue {
   getNotes: (schema: string) => Promise<NotesData>;
   /** Get cached notes synchronously (returns empty object if not cached) */
   getCachedNotes: (schema: string) => NotesData;
+  /** Update cache directly (used after mutations return fresh data) */
+  updateCache: (schema: string, data: NotesData) => void;
   /** Invalidate cache and fetch fresh data */
   invalidateAndRefetch: (schema: string) => Promise<NotesData>;
   /** Check if schema is currently loading */
@@ -94,6 +96,11 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     return requestPromise;
   }, [fetchFromServer, notifySubscribers]);
 
+  const updateCache = useCallback((schema: string, data: NotesData) => {
+    cacheRef.current[schema] = data;
+    notifySubscribers();
+  }, [notifySubscribers]);
+
   const invalidateAndRefetch = useCallback(async (schema: string): Promise<NotesData> => {
     // Fetch fresh data from server
     const notesData = await fetchFromServer(schema);
@@ -107,6 +114,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     <NotesContext.Provider value={{
       getNotes,
       getCachedNotes,
+      updateCache,
       invalidateAndRefetch,
       isLoading,
       subscribeToLoading

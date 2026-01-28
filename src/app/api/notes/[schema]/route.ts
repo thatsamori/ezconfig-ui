@@ -25,7 +25,11 @@ function isValidNote(value: unknown): value is Note {
     return false;
   }
   const obj = value as Record<string, unknown>;
-  return typeof obj.createdBy === 'string' && typeof obj.note === 'string';
+  return (
+    typeof obj.id === 'string' &&
+    typeof obj.createdBy === 'string' &&
+    typeof obj.note === 'string'
+  );
 }
 
 /**

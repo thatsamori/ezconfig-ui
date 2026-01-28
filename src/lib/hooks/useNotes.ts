@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/lib/store/authStore";
 import { useNotesContext } from "@/lib/notes/NotesContext";
-import type { Note, NotesData } from "@/lib/notes/types";
+import type { Note } from "@/lib/notes/types";
 
 export interface UseNotesOptions {
   schema: string;
@@ -13,13 +13,13 @@ export interface UseNotesReturn {
   notes: Note[];
   loading: boolean;
   addNote: (note: string) => Promise<boolean>;
-  editNote: (index: number, note: string) => Promise<boolean>;
-  deleteNote: (index: number) => Promise<boolean>;
+  editNote: (noteId: string, note: string) => Promise<boolean>;
+  deleteNote: (noteId: string) => Promise<boolean>;
   currentUsername: string;
 }
 
 export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn {
-  const { getNotes, getCachedNotes, invalidateAndRefetch, isLoading, subscribeToLoading } = useNotesContext();
+  const { getNotes, getCachedNotes, updateCache, isLoading, subscribeToLoading } = useNotesContext();
   const [, setVersion] = useState(0);
   const user = useAuthStore((state) => state.user);
 
@@ -41,92 +41,103 @@ export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn
     });
   }, [schema, getNotes]);
 
-  // Save notes to server
-  const saveNotes = useCallback(
-    async (updatedData: NotesData): Promise<boolean> => {
-      try {
-        const response = await fetch(
-          `/api/notes/${encodeURIComponent(schema)}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ notes: updatedData }),
-          }
-        );
-        if (!response.ok) {
-          const data = await response.json();
-          console.error("Failed to save notes:", data.error);
-          return false;
-        }
-        return true;
-      } catch (error) {
-        console.error("Failed to save notes:", error);
-        return false;
-      }
-    },
-    [schema]
-  );
-
   const addNote = useCallback(
     async (note: string): Promise<boolean> => {
       if (!user) return false;
-      // Fetch fresh data to avoid overwriting other notes
-      const freshData = await invalidateAndRefetch(schema);
-      const currentNotes = freshData[configKey] || [];
-      const newNote: Note = { createdBy: user.username, note };
-      const updatedNotes = [...currentNotes, newNote];
-      const updatedData = { ...freshData, [configKey]: updatedNotes };
-      const success = await saveNotes(updatedData);
-      if (success) {
-        // Invalidate cache to get fresh data
-        await invalidateAndRefetch(schema);
-      } else {
+      try {
+        const response = await fetch(`/api/notes/${encodeURIComponent(schema)}/add`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            configKey,
+            note,
+            createdBy: user.username,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Update cache with server response
+          updateCache(schema, result.data);
+          setVersion((v) => v + 1);
+          return true;
+        } else {
+          toast.error(result.error || "Failed to save note", { position: "bottom-right" });
+          return false;
+        }
+      } catch (error) {
+        console.error("Failed to add note:", error);
         toast.error("Failed to save note", { position: "bottom-right" });
+        return false;
       }
-      return success;
     },
-    [user, configKey, schema, invalidateAndRefetch, saveNotes]
+    [user, schema, configKey, updateCache]
   );
 
   const editNote = useCallback(
-    async (index: number, note: string): Promise<boolean> => {
-      // Fetch fresh data to avoid overwriting other notes
-      const freshData = await invalidateAndRefetch(schema);
-      const currentNotes = freshData[configKey] || [];
-      const updatedNotes = currentNotes.map((n, i) => (i === index ? { ...n, note } : n));
-      const updatedData = { ...freshData, [configKey]: updatedNotes };
-      const success = await saveNotes(updatedData);
-      if (success) {
-        await invalidateAndRefetch(schema);
-      } else {
+    async (noteId: string, note: string): Promise<boolean> => {
+      try {
+        const response = await fetch(`/api/notes/${encodeURIComponent(schema)}/edit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            configKey,
+            noteId,
+            note,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Update cache with server response
+          updateCache(schema, result.data);
+          setVersion((v) => v + 1);
+          return true;
+        } else {
+          toast.error(result.error || "Failed to update note", { position: "bottom-right" });
+          return false;
+        }
+      } catch (error) {
+        console.error("Failed to edit note:", error);
         toast.error("Failed to update note", { position: "bottom-right" });
+        return false;
       }
-      return success;
     },
-    [configKey, schema, invalidateAndRefetch, saveNotes]
+    [schema, configKey, updateCache]
   );
 
   const deleteNote = useCallback(
-    async (index: number): Promise<boolean> => {
-      // Fetch fresh data to avoid overwriting other notes
-      const freshData = await invalidateAndRefetch(schema);
-      const currentNotes = freshData[configKey] || [];
-      const updatedNotes = currentNotes.filter((_, i) => i !== index);
-      const updatedData = { ...freshData };
-      if (updatedNotes.length === 0) {
-        delete updatedData[configKey];
-      } else {
-        updatedData[configKey] = updatedNotes;
-      }
-      const success = await saveNotes(updatedData);
-      if (success) {
-        await invalidateAndRefetch(schema);
-      } else {
+    async (noteId: string): Promise<boolean> => {
+      try {
+        const response = await fetch(`/api/notes/${encodeURIComponent(schema)}/delete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            configKey,
+            noteId,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Update cache with server response
+          updateCache(schema, result.data);
+          setVersion((v) => v + 1);
+          return true;
+        } else {
+          toast.error(result.error || "Failed to delete note", { position: "bottom-right" });
+          return false;
+        }
+      } catch (error) {
+        console.error("Failed to delete note:", error);
         toast.error("Failed to delete note", { position: "bottom-right" });
+        return false;
       }
-      return success;
     },
-    [configKey, schema, invalidateAndRefetch, saveNotes]
+    [schema, configKey, updateCache]
   );
 
   return {

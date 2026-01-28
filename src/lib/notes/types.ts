@@ -6,9 +6,18 @@
  * Note entry for a config option
  */
 export type Note = {
+  id: string; // unique identifier for the note
   createdBy: string; // username who created the note
   note: string; // note content (plain text or HTML)
 };
+
+/**
+ * Generate a unique ID for a note
+ * Uses timestamp + random string for uniqueness
+ */
+export function generateNoteId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
 
 /**
  * Notes for a schema file - keyed by config option name

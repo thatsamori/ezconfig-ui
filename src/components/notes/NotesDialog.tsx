@@ -28,8 +28,8 @@ export interface NotesDialogProps {
   configKey: string;
   notes: Note[];
   onAddNote: (note: string) => Promise<boolean>;
-  onEditNote: (index: number, note: string) => Promise<boolean>;
-  onDeleteNote: (index: number) => Promise<boolean>;
+  onEditNote: (noteId: string, note: string) => Promise<boolean>;
+  onDeleteNote: (noteId: string) => Promise<boolean>;
   currentUsername: string;
 }
 
@@ -53,17 +53,17 @@ export function NotesDialog({
   currentUsername,
 }: NotesDialogProps) {
   const [noteText, setNoteText] = useState("");
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (isHtmlEmpty(noteText)) return;
 
     let success: boolean;
-    if (editingIndex !== null) {
-      success = await onEditNote(editingIndex, noteText);
+    if (editingNoteId !== null) {
+      success = await onEditNote(editingNoteId, noteText);
       if (success) {
-        setEditingIndex(null);
+        setEditingNoteId(null);
       }
     } else {
       success = await onAddNote(noteText);
@@ -73,38 +73,35 @@ export function NotesDialog({
     }
   };
 
-  const handleEdit = (index: number, currentNote: string) => {
+  const handleEdit = (noteId: string, currentNote: string) => {
     setNoteText(currentNote);
-    setEditingIndex(index);
+    setEditingNoteId(noteId);
   };
 
   const handleCancel = () => {
     setNoteText("");
-    setEditingIndex(null);
+    setEditingNoteId(null);
   };
 
-  const handleDeleteClick = (index: number) => {
-    setDeleteIndex(index);
+  const handleDeleteClick = (noteId: string) => {
+    setDeleteNoteId(noteId);
   };
 
   const handleDeleteConfirm = async () => {
-    if (deleteIndex === null) return;
+    if (deleteNoteId === null) return;
 
-    const success = await onDeleteNote(deleteIndex);
+    const success = await onDeleteNote(deleteNoteId);
     if (success) {
       // If we were editing this note, cancel the edit
-      if (editingIndex === deleteIndex) {
+      if (editingNoteId === deleteNoteId) {
         handleCancel();
-      } else if (editingIndex !== null && editingIndex > deleteIndex) {
-        // Adjust editing index if we deleted a note before it
-        setEditingIndex(editingIndex - 1);
       }
     }
-    setDeleteIndex(null);
+    setDeleteNoteId(null);
   };
 
   const handleDeleteCancel = () => {
-    setDeleteIndex(null);
+    setDeleteNoteId(null);
   };
 
   return (
@@ -119,9 +116,9 @@ export function NotesDialog({
             {/* Notes list */}
             {notes.length > 0 ? (
               <div className="space-y-3 max-h-60 overflow-y-auto">
-                {notes.map((note, index) => (
+                {notes.map((note) => (
                   <div
-                    key={index}
+                    key={note.id}
                     className="p-3 bg-muted rounded-md space-y-1"
                   >
                     <div
@@ -138,8 +135,8 @@ export function NotesDialog({
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6"
-                            onClick={() => handleEdit(index, note.note)}
-                            disabled={editingIndex !== null}
+                            onClick={() => handleEdit(note.id, note.note)}
+                            disabled={editingNoteId !== null}
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
@@ -147,7 +144,7 @@ export function NotesDialog({
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6 text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteClick(index)}
+                            onClick={() => handleDeleteClick(note.id)}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -171,13 +168,13 @@ export function NotesDialog({
                 placeholder="Add a note..."
               />
               <div className="flex justify-end gap-2">
-                {editingIndex !== null && (
+                {editingNoteId !== null && (
                   <Button variant="outline" onClick={handleCancel}>
                     Cancel
                   </Button>
                 )}
                 <Button onClick={handleSubmit} disabled={isHtmlEmpty(noteText)}>
-                  {editingIndex !== null ? "Save" : "Add Note"}
+                  {editingNoteId !== null ? "Save" : "Add Note"}
                 </Button>
               </div>
             </div>
@@ -186,7 +183,7 @@ export function NotesDialog({
       </Dialog>
 
       {/* Delete confirmation dialog */}
-      <AlertDialog open={deleteIndex !== null} onOpenChange={(open) => !open && handleDeleteCancel()}>
+      <AlertDialog open={deleteNoteId !== null} onOpenChange={(open) => !open && handleDeleteCancel()}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete note?</AlertDialogTitle>

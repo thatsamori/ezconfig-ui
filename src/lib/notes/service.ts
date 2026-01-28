@@ -10,6 +10,7 @@ import { mkdir, readFile, writeFile } from 'fs/promises';
 import { join, resolve, dirname } from 'path';
 import { env } from '@/lib/env';
 import type { NotesData } from './types';
+import { generateNoteId } from './types';
 
 /**
  * Valid schema names
@@ -90,4 +91,85 @@ export async function writeNotes(
   // Write with pretty formatting (2-space indent)
   const content = JSON.stringify(data, null, 2);
   await writeFile(filePath, content, 'utf-8');
+}
+
+/**
+ * Add a note to a config key (atomic operation)
+ * Returns the updated notes data with the new note (including generated ID)
+ */
+export async function addNote(
+  schema: string,
+  configKey: string,
+  note: { createdBy: string; note: string }
+): Promise<NotesData> {
+  const data = await readNotes(schema);
+  const notes = data[configKey] || [];
+  const newNote = {
+    id: generateNoteId(),
+    createdBy: note.createdBy,
+    note: note.note,
+  };
+  notes.push(newNote);
+  data[configKey] = notes;
+  await writeNotes(schema, data);
+  return data;
+}
+
+/**
+ * Edit a note by ID (atomic operation)
+ * Returns the updated notes data, or throws if note not found
+ */
+export async function editNote(
+  schema: string,
+  configKey: string,
+  noteId: string,
+  newNote: string
+): Promise<NotesData> {
+  const data = await readNotes(schema);
+  const notes = data[configKey];
+
+  if (!notes) {
+    throw new Error(`No notes found for key "${configKey}"`);
+  }
+
+  const noteIndex = notes.findIndex((n) => n.id === noteId);
+  if (noteIndex === -1) {
+    throw new Error(`Note with id "${noteId}" not found for key "${configKey}"`);
+  }
+
+  notes[noteIndex] = { ...notes[noteIndex], note: newNote };
+  await writeNotes(schema, data);
+  return data;
+}
+
+/**
+ * Delete a note by ID (atomic operation)
+ * Returns the updated notes data, or throws if note not found
+ */
+export async function deleteNote(
+  schema: string,
+  configKey: string,
+  noteId: string
+): Promise<NotesData> {
+  const data = await readNotes(schema);
+  const notes = data[configKey];
+
+  if (!notes) {
+    throw new Error(`No notes found for key "${configKey}"`);
+  }
+
+  const noteIndex = notes.findIndex((n) => n.id === noteId);
+  if (noteIndex === -1) {
+    throw new Error(`Note with id "${noteId}" not found for key "${configKey}"`);
+  }
+
+  notes.splice(noteIndex, 1);
+
+  // Remove the key entirely if no notes left
+  if (notes.length === 0) {
+    delete data[configKey];
+  }
+
+  await writeNotes(schema, data);
+  return data;
 }
