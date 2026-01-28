@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
+  ContextMenuSeparator,
 } from "@/components/ui/context-menu";
 import {
   BooleanInput,
@@ -16,10 +18,11 @@ import {
   Vector2DInput,
   FloatArrayInput,
 } from "@/components/config";
-import { NotesButton } from "@/components/notes";
+import { NotesDialog } from "@/components/notes";
 import { ConfigEntry, DataType } from "@/lib/config/types";
 import type { ConfigValue } from "@/lib/store/configStore";
-import { Pencil, X } from "lucide-react";
+import { useNotes } from "@/lib/hooks";
+import { Pencil, X, MessageCircle } from "lucide-react";
 
 export interface ConfigRowProps {
   configEntry: ConfigEntry;
@@ -44,7 +47,23 @@ export function ConfigRow({
   disabled,
   readonly,
 }: ConfigRowProps) {
+  const [notesOpen, setNotesOpen] = useState(false);
   const isCustomized = value !== undefined;
+
+  const {
+    notes,
+    loading: notesLoading,
+    addNote,
+    editNote,
+    deleteNote,
+    currentUsername,
+  } = useNotes({
+    database,
+    category,
+    configKey: configEntry.configKey,
+  });
+
+  const hasNotes = notes.length > 0;
 
   const handleEdit = () => {
     // When clicking Edit, set to the schema default value
@@ -103,68 +122,94 @@ export function ConfigRow({
   };
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div className="flex items-center gap-4 py-2 border-b border-border last:border-b-0">
-          <Label className="min-w-[200px] font-medium">
-            {configEntry.configKey}
-          </Label>
-          <div className="flex-1 flex items-center gap-2">
-            {isCustomized ? (
-              <>
-                {renderInput()}
-                <NotesButton
-                  database={database}
-                  category={category}
-                  configKey={configEntry.configKey}
-                />
-                {onReset && !readonly && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onReset}
-                    disabled={disabled}
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    title="Reset to game default"
+    <>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div className="flex items-center gap-4 py-2 border-b border-border last:border-b-0">
+            <div className="min-w-[200px] flex items-center gap-1">
+              <Label className="font-medium">{configEntry.configKey}</Label>
+              {hasNotes && !notesLoading && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setNotesOpen(true)}
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                  title={`${notes.length} note${notes.length > 1 ? "s" : ""}`}
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  <Badge
+                    variant="secondary"
+                    className="absolute -top-0.5 -right-0.5 h-3.5 min-w-3.5 px-0.5 text-[9px] flex items-center justify-center"
                   >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </>
-            ) : (
-              <>
-                <Badge variant="secondary" className="text-xs">
-                  Game Default
-                </Badge>
-                <NotesButton
-                  database={database}
-                  category={category}
-                  configKey={configEntry.configKey}
-                />
-                {!readonly && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleEdit}
-                    disabled={disabled}
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                    title="Customize value"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                )}
-              </>
-            )}
+                    {notes.length}
+                  </Badge>
+                </Button>
+              )}
+            </div>
+            <div className="flex-1 flex items-center gap-2">
+              {isCustomized ? (
+                <>
+                  {renderInput()}
+                  {onReset && !readonly && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={onReset}
+                      disabled={disabled}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      title="Reset to game default"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Badge variant="secondary" className="text-xs">
+                    Game Default
+                  </Badge>
+                  {!readonly && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleEdit}
+                      disabled={disabled}
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      title="Customize value"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      </ContextMenuTrigger>
-      {onApplyToAll && !readonly && (
+        </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem onClick={onApplyToAll}>
-            {isCustomized ? "Apply to all weapons" : "Reset all to default"}
+          <ContextMenuItem onClick={() => setNotesOpen(true)}>
+            {hasNotes ? `View notes (${notes.length})` : "Add note"}
           </ContextMenuItem>
+          {onApplyToAll && !readonly && (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuItem onClick={onApplyToAll}>
+                {isCustomized ? "Apply to all weapons" : "Reset all to default"}
+              </ContextMenuItem>
+            </>
+          )}
         </ContextMenuContent>
-      )}
-    </ContextMenu>
+      </ContextMenu>
+
+      <NotesDialog
+        open={notesOpen}
+        onOpenChange={setNotesOpen}
+        configKey={configEntry.configKey}
+        notes={notes}
+        onAddNote={addNote}
+        onEditNote={editNote}
+        onDeleteNote={deleteNote}
+        currentUsername={currentUsername}
+      />
+    </>
   );
 }

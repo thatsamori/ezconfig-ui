@@ -1,11 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Button } from "@/components/ui/button";
-import { Bold, Italic, Underline as UnderlineIcon } from "lucide-react";
+import { Bold, Italic, Underline as UnderlineIcon, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface RichTextEditorProps {
@@ -24,7 +25,6 @@ export function RichTextEditor({
       StarterKit.configure({
         // Disable features we don't need
         heading: false,
-        bulletList: false,
         orderedList: false,
         blockquote: false,
         codeBlock: false,
@@ -47,6 +47,13 @@ export function RichTextEditor({
       onChange(editor.getHTML());
     },
   });
+
+  // Sync editor content when prop changes (e.g., when editing existing note)
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content);
+    }
+  }, [editor, content]);
 
   if (!editor) {
     return null;
@@ -83,11 +90,20 @@ export function RichTextEditor({
         >
           <UnderlineIcon className="h-4 w-4" />
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={cn("h-7 w-7", editor.isActive("bulletList") && "bg-accent")}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+        >
+          <List className="h-4 w-4" />
+        </Button>
       </div>
       {/* Editor */}
       <EditorContent
         editor={editor}
-        className="[&_.is-editor-empty:first-child::before]:text-muted-foreground [&_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.is-editor-empty:first-child::before]:float-left [&_.is-editor-empty:first-child::before]:pointer-events-none [&_.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:m-0"
+        className="[&_.is-editor-empty:first-child::before]:text-muted-foreground [&_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.is-editor-empty:first-child::before]:float-left [&_.is-editor-empty:first-child::before]:pointer-events-none [&_.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:m-0 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-5 [&_.ProseMirror_ul]:my-1"
       />
     </div>
   );
