@@ -182,8 +182,9 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
     // Apply config search filter
     options = filterOptionsBySearch(options);
 
-    // Apply overrides filter
-    if (showOverridesOnly) {
+    // Apply overrides filter - but only if category data is loaded
+    // If not loaded, trust the server override map (handled by categoryHasVisibleOptions)
+    if (showOverridesOnly && isCategoryLoaded(`${weaponName}/${category}`)) {
       options = options.filter((configEntry) =>
         getEffectiveValue(weaponName, category, configEntry.configKey) !== undefined
       );
@@ -194,6 +195,21 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
 
   // Check if a category has any visible options
   const categoryHasVisibleOptions = (weaponName: string, category: string) => {
+    const categoryPath = `${weaponName}/${category}`;
+
+    // If showOverridesOnly is enabled and category isn't loaded yet,
+    // trust the server override map to decide if category should be visible
+    if (showOverridesOnly && !isCategoryLoaded(categoryPath)) {
+      // If we have an override map, check if this category has overrides
+      if (overrideMap && overrideMap[weaponName]?.[category]) {
+        // Category has overrides according to server, show it
+        // (filtered options will be all options until loaded)
+        return filterOptionsBySearch(getConfigOptions(category)).length > 0;
+      }
+      // No override map or no overrides for this category
+      return false;
+    }
+
     return getFilteredOptions(weaponName, category).length > 0;
   };
 

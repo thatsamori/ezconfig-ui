@@ -7,13 +7,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { listUserPresets, saveUserPreset } from '@/lib/presets';
-import type { PresetData } from '@/lib/presets';
+import { readAllConfigData } from '@/lib/database/structure';
 
 interface CreatePresetBody {
   name: string;
   title: string;
   description: string;
-  data: PresetData;
+  // data field is now ignored - we read from disk instead
+  data?: unknown;
 }
 
 export async function POST(request: NextRequest) {
@@ -35,19 +36,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!body.data || typeof body.data !== 'object') {
-      return NextResponse.json(
-        { success: false, error: 'Preset data is required' },
-        { status: 400 }
-      );
-    }
+    // Read current config data directly from disk
+    // This ensures we capture ALL saved configs, not just what's loaded in memory
+    const diskData = await readAllConfigData();
 
     const manifest = {
       title: body.title,
       description: body.description || '',
     };
 
-    await saveUserPreset(body.name, manifest, body.data);
+    await saveUserPreset(body.name, manifest, diskData);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -8,6 +8,7 @@
 import { readdir, readFile, stat } from 'fs/promises';
 import { join } from 'path';
 import { getDatabasesRoot } from './service';
+import type { PresetData, ConfigValue } from '@/lib/presets/types';
 
 /**
  * Database structure types
@@ -256,4 +257,92 @@ export async function scanOverrides(): Promise<OverrideMap> {
   }
 
   return overrides;
+}
+
+/**
+ * Read all config data from disk in PresetData format
+ *
+ * Returns a structure like:
+ * {
+ *   "character": { "Movement": { "key": value, ... }, ... },
+ *   "weapons": { "Greatsword": { "General": { "key": value, ... }, ... }, ... }
+ * }
+ */
+export async function readAllConfigData(): Promise<PresetData> {
+  const root = getDatabasesRoot();
+  const data: PresetData = {
+    character: {},
+    weapons: {},
+  };
+
+  try {
+    const rootStat = await stat(root);
+    if (!rootStat.isDirectory()) {
+      return data;
+    }
+  } catch {
+    // Databases directory doesn't exist yet
+    return data;
+  }
+
+  try {
+    const entries = await readdir(root, { withFileTypes: true });
+    const dirs = entries.filter((entry) => entry.isDirectory());
+
+    for (const dir of dirs) {
+      const dirPath = join(root, dir.name);
+
+      if (dir.name === 'Character') {
+        // Flat database - read category files directly
+        const categoryFiles = await readdir(dirPath, { withFileTypes: true });
+        for (const file of categoryFiles) {
+          if (file.isFile() && file.name.endsWith('.json')) {
+            const categoryName = file.name.replace('.json', '');
+            const filePath = join(dirPath, file.name);
+            try {
+              const content = await readFile(filePath, 'utf-8');
+              const parsed = JSON.parse(content);
+              if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) && Object.keys(parsed).length > 0) {
+                data.character[categoryName] = parsed as Record<string, ConfigValue>;
+              }
+            } catch {
+              // Skip invalid files
+            }
+          }
+        }
+      } else if (dir.name === 'Weapon') {
+        // Grouped database - read subdirectories
+        const weaponDirs = await readdir(dirPath, { withFileTypes: true });
+        for (const weaponDir of weaponDirs) {
+          if (weaponDir.isDirectory()) {
+            const weaponPath = join(dirPath, weaponDir.name);
+            const categoryFiles = await readdir(weaponPath, { withFileTypes: true });
+
+            for (const file of categoryFiles) {
+              if (file.isFile() && file.name.endsWith('.json')) {
+                const categoryName = file.name.replace('.json', '');
+                const filePath = join(weaponPath, file.name);
+                try {
+                  const content = await readFile(filePath, 'utf-8');
+                  const parsed = JSON.parse(content);
+                  if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) && Object.keys(parsed).length > 0) {
+                    if (!data.weapons[weaponDir.name]) {
+                      data.weapons[weaponDir.name] = {};
+                    }
+                    data.weapons[weaponDir.name][categoryName] = parsed as Record<string, ConfigValue>;
+                  }
+                } catch {
+                  // Skip invalid files
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch {
+    // Can't read root directory
+  }
+
+  return data;
 }

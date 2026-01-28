@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { WeaponAccordion } from "./WeaponAccordion";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -26,12 +26,32 @@ export function WeaponConfigTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [configSearchQuery, setConfigSearchQuery] = useState("");
   const [showOverridesOnly, setShowOverridesOnly] = useState(false);
+  const [serverOverrideMap, setServerOverrideMap] = useState<GroupedOverrideMap>({});
 
   // Get weapon values from store to compute override map
   const storeValues = useConfigStore((state) => state.values);
 
-  // Compute override map directly from store state (reactive to changes)
-  const overrideMap = useMemo<GroupedOverrideMap>(() => {
+  // Fetch override map from server on mount
+  useEffect(() => {
+    async function fetchOverrides() {
+      try {
+        const res = await fetch("/api/databases/overrides");
+        const json = await res.json();
+        if (json.success && json.data) {
+          // API returns { "Weapon": { weaponName: { category: bool } } }
+          // We need to extract just the weapon data
+          const weaponOverrides = json.data.Weapon || {};
+          setServerOverrideMap(weaponOverrides as GroupedOverrideMap);
+        }
+      } catch (error) {
+        console.error("Failed to fetch overrides:", error);
+      }
+    }
+    fetchOverrides();
+  }, []);
+
+  // Compute override map from store state (for newly added overrides not yet on disk)
+  const storeOverrideMap = useMemo<GroupedOverrideMap>(() => {
     const map: GroupedOverrideMap = {};
     for (const [weapon, categories] of Object.entries(storeValues.weapons)) {
       map[weapon] = {};
@@ -42,6 +62,22 @@ export function WeaponConfigTab() {
     }
     return map;
   }, [storeValues.weapons]);
+
+  // Merge server and store override maps (store takes precedence for loaded weapons)
+  const overrideMap = useMemo<GroupedOverrideMap>(() => {
+    const merged: GroupedOverrideMap = { ...serverOverrideMap };
+    // Merge in store overrides (these reflect current session changes)
+    for (const [weapon, categories] of Object.entries(storeOverrideMap)) {
+      if (!merged[weapon]) {
+        merged[weapon] = {};
+      }
+      for (const [category, hasOverride] of Object.entries(categories)) {
+        // Store value takes precedence (could be true if added, or false if cleared)
+        merged[weapon][category] = hasOverride;
+      }
+    }
+    return merged;
+  }, [serverOverrideMap, storeOverrideMap]);
 
   // Filter weapons based on search query and override presence
   const filteredWeapons = useMemo(() => {

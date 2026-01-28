@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useConfigStore } from "@/lib/store/configStore";
 import { toast } from "sonner";
 
 interface SavePresetDialogProps {
@@ -29,8 +28,6 @@ export function SavePresetDialog({ open, onOpenChange, onSaved }: SavePresetDial
   const [isSaving, setIsSaving] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
-
-  const values = useConfigStore((state) => state.values);
 
   const validateName = (value: string): boolean => {
     if (!value || value.length === 0) {
@@ -75,6 +72,7 @@ export function SavePresetDialog({ open, onOpenChange, onSaved }: SavePresetDial
 
     setIsSaving(true);
     try {
+      // API reads config data directly from disk to ensure all saved configs are captured
       const res = await fetch("/api/presets/user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -82,7 +80,6 @@ export function SavePresetDialog({ open, onOpenChange, onSaved }: SavePresetDial
           name,
           title: title.trim(),
           description: description.trim(),
-          data: values,
         }),
       });
 

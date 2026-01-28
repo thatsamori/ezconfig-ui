@@ -9,6 +9,10 @@ import { mkdir, readFile, writeFile, stat, readdir, unlink, rmdir, rm } from 'fs
 import { join, resolve, dirname } from 'path';
 import { env } from '@/lib/env';
 import type { ConfigData } from './types';
+import { CategoryName } from '@/lib/config/weaponConfigSchema';
+
+// Set of known weapon names for routing to Weapon/ directory
+const WEAPON_NAMES: Set<string> = new Set(Object.values(CategoryName));
 
 /**
  * Get the root path for databases
@@ -99,7 +103,14 @@ export async function resolveCategoryPath(database: string, category: string): P
     // Weapon subdirectory doesn't exist
   }
 
-  // Default to direct path for new databases
+  // For known weapon names, default to Weapon/ subdirectory
+  // This ensures new weapon configs go to the right place
+  if (WEAPON_NAMES.has(database)) {
+    // Create under Databases/Weapon/{database}/{category}.json
+    return resolve(weaponFilePath);
+  }
+
+  // Default to direct path for new non-weapon databases
   // This allows creating new databases directly under Databases/
   return resolve(directFilePath);
 }
