@@ -8,8 +8,7 @@ import {
 } from "@/lib/config/characterConfigSchema";
 import { ConfigRow } from "@/components/weapons/ConfigRow";
 import { CollapsibleSection } from "@/components/weapons/CollapsibleSection";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import type { ConfigEntry } from "@/lib/config/types";
 
 // Lazy load character config from API
@@ -41,7 +40,7 @@ async function loadCharacterConfig(category: string) {
 
 export function CharacterConfigTab() {
   const [loadingCategory, setLoadingCategory] = useState<string | null>(null);
-  const [showOverridesOnly, setShowOverridesOnly] = useState(false);
+  const [configSearchQuery, setConfigSearchQuery] = useState("");
 
   // Subscribe to actual state values for reactivity
   const values = useConfigStore((state) => state.values);
@@ -82,18 +81,14 @@ export function CharacterConfigTab() {
     }
   };
 
-  // Check if a category has any overrides
-  const categoryHasOverrides = (options: ConfigEntry[], categoryName: string) => {
-    return options.some(
-      (configEntry) => getEffectiveValue(categoryName, configEntry.configKey) !== undefined
+  // Filter options by config search query
+  const filterOptionsBySearch = (options: ConfigEntry[]) => {
+    if (!configSearchQuery.trim()) return options;
+    const query = configSearchQuery.toLowerCase();
+    return options.filter((entry) =>
+      entry.configKey.toLowerCase().includes(query)
     );
   };
-
-  // Check if any category has overrides (for empty state)
-  const hasAnyOverrides =
-    categoryHasOverrides(CHARACTER_CONFIG_OPTIONS.Movement, CharacterConfigGroupName.Movement) ||
-    categoryHasOverrides(CHARACTER_CONFIG_OPTIONS.Combat, CharacterConfigGroupName.Combat) ||
-    categoryHasOverrides(CHARACTER_CONFIG_OPTIONS.General, CharacterConfigGroupName.General);
 
   const renderSection = (
     categoryName: string,
@@ -101,15 +96,10 @@ export function CharacterConfigTab() {
     defaultOpen: boolean = false
   ) => {
     const isLoading = loadingCategory === categoryName;
+    const filteredOptions = filterOptionsBySearch(options);
 
-    const filteredOptions = showOverridesOnly
-      ? options.filter((configEntry) =>
-          getEffectiveValue(categoryName, configEntry.configKey) !== undefined
-        )
-      : options;
-
-    // Hide empty sections when filter is ON
-    if (showOverridesOnly && filteredOptions.length === 0) {
+    // Hide sections with no matching options
+    if (filteredOptions.length === 0) {
       return null;
     }
 
@@ -145,27 +135,33 @@ export function CharacterConfigTab() {
     );
   };
 
+  // Check if any section will be rendered
+  const movementSection = renderSection(CharacterConfigGroupName.Movement, CHARACTER_CONFIG_OPTIONS.Movement, true);
+  const combatSection = renderSection(CharacterConfigGroupName.Combat, CHARACTER_CONFIG_OPTIONS.Combat);
+  const generalSection = renderSection(CharacterConfigGroupName.General, CHARACTER_CONFIG_OPTIONS.General);
+  const hasVisibleSections = movementSection || combatSection || generalSection;
+
   return (
-    <div className="space-y-4 mt-4">
-      <div className="flex items-center gap-2">
-        <Switch
-          id="character-overrides-toggle"
-          checked={showOverridesOnly}
-          onCheckedChange={setShowOverridesOnly}
+    <div className="space-y-4">
+      {/* Sticky search bar */}
+      <div className="sticky top-[105px] z-30 bg-background py-2 -mx-4 px-4">
+        <Input
+          placeholder="Search config options..."
+          value={configSearchQuery}
+          onChange={(e) => setConfigSearchQuery(e.target.value)}
         />
-        <Label htmlFor="character-overrides-toggle" className="text-sm">
-          Show overrides only
-        </Label>
       </div>
-      {showOverridesOnly && !hasAnyOverrides ? (
+      {!hasVisibleSections ? (
         <p className="text-muted-foreground py-8 text-center">
-          No character settings have overrides
+          {configSearchQuery.trim()
+            ? `No config options match '${configSearchQuery}'`
+            : "No config options found"}
         </p>
       ) : (
         <>
-          {renderSection(CharacterConfigGroupName.Movement, CHARACTER_CONFIG_OPTIONS.Movement, true)}
-          {renderSection(CharacterConfigGroupName.Combat, CHARACTER_CONFIG_OPTIONS.Combat)}
-          {renderSection(CharacterConfigGroupName.General, CHARACTER_CONFIG_OPTIONS.General)}
+          {movementSection}
+          {combatSection}
+          {generalSection}
         </>
       )}
     </div>

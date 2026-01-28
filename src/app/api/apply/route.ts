@@ -2,22 +2,21 @@
  * POST /api/apply
  *
  * Apply config to game via RCON.
- * Requires password authentication.
+ * No password required - app access implies authorization.
  *
- * Request body: { password: string, commands?: string[] }
+ * Request body: { commands?: string[], wipeDatabase?: boolean }
  * - If commands provided: use those commands directly (selective apply)
  * - If commands not provided: build from config (full apply)
+ * - wipeDatabase: if true (default), prepends WipeDatabases command
  *
  * Response: { success: boolean, commandsSent?: number, error?: string, failedAt?: string }
  */
 
 import { NextResponse } from "next/server";
-import { env } from "@/lib/env";
 import { buildRconCommands } from "@/lib/database/apply";
 import { executeBatchCommands } from "@/lib/rcon/service";
 
 interface ApplyRequest {
-  password: string;
   commands?: string[];
   wipeDatabase?: boolean;
 }
@@ -25,25 +24,6 @@ interface ApplyRequest {
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as ApplyRequest;
-
-    // Check if EZCONFIG_PASSWORD is configured
-    if (!env.ezconfigPassword) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "EZCONFIG_PASSWORD not configured on server",
-        },
-        { status: 500 }
-      );
-    }
-
-    // Validate password
-    if (!body.password || body.password !== env.ezconfigPassword) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
 
     // Get commands: use provided commands or build from config
     let categoryCommands: string[];

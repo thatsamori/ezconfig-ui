@@ -24,6 +24,7 @@ const SCHEMA_WEAPONS: GroupedDatabase = Object.fromEntries(
 
 export function WeaponConfigTab() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [configSearchQuery, setConfigSearchQuery] = useState("");
   const [showOverridesOnly, setShowOverridesOnly] = useState(false);
 
   // Get weapon values from store to compute override map
@@ -73,23 +74,31 @@ export function WeaponConfigTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Input
-          placeholder="Search weapons..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1"
-        />
-        <div className="flex items-center gap-2">
-          <Switch
-            id="overrides-toggle"
-            checked={showOverridesOnly}
-            onCheckedChange={setShowOverridesOnly}
+      {/* Sticky search bars */}
+      <div className="sticky top-[105px] z-30 bg-background py-2 -mx-4 px-4 space-y-2">
+        <div className="flex items-center gap-4">
+          <Input
+            placeholder="Search weapons..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1"
           />
-          <Label htmlFor="overrides-toggle" className="text-sm whitespace-nowrap">
-            Show overrides only
-          </Label>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="overrides-toggle"
+              checked={showOverridesOnly}
+              onCheckedChange={setShowOverridesOnly}
+            />
+            <Label htmlFor="overrides-toggle" className="text-sm whitespace-nowrap">
+              Show overrides only
+            </Label>
+          </div>
         </div>
+        <Input
+          placeholder="Search config options..."
+          value={configSearchQuery}
+          onChange={(e) => setConfigSearchQuery(e.target.value)}
+        />
       </div>
       {hasNoResults ? (
         <p className="text-muted-foreground py-8 text-center">
@@ -104,6 +113,7 @@ export function WeaponConfigTab() {
           weapons={filteredWeapons}
           showOverridesOnly={showOverridesOnly}
           overrideMap={showOverridesOnly ? overrideMap : undefined}
+          configSearchQuery={configSearchQuery}
         />
       )}
     </div>

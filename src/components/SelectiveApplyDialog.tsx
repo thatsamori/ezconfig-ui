@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 interface SelectiveApplyDialogProps {
@@ -31,7 +30,6 @@ export function SelectiveApplyDialog({
     new Set()
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -43,7 +41,6 @@ export function SelectiveApplyDialog({
       setIsLoading(true);
       setFetchError(null);
       setSearchQuery("");
-      setPassword("");
 
       fetch("/api/apply/preview")
         .then((res) => {
@@ -76,7 +73,6 @@ export function SelectiveApplyDialog({
       setCommands([]);
       setSelectedCommands(new Set());
       setSearchQuery("");
-      setPassword("");
       setFetchError(null);
       setWipeDatabase(true);
     }
@@ -118,13 +114,6 @@ export function SelectiveApplyDialog({
   };
 
   const handleApply = async () => {
-    if (!password.trim()) {
-      toast.error("Please enter the EZCONFIG_PASSWORD", {
-        position: "bottom-right",
-      });
-      return;
-    }
-
     // Allow proceeding with 0 commands if wipeDatabase is checked (wipe-only operation)
     if (selectedCommands.size === 0 && !wipeDatabase) {
       toast.error("No commands selected", { position: "bottom-right" });
@@ -138,7 +127,6 @@ export function SelectiveApplyDialog({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          password,
           commands: Array.from(selectedCommands),
           wipeDatabase,
         }),
@@ -275,23 +263,6 @@ export function SelectiveApplyDialog({
                   </div>
                 );
               })}
-          </div>
-
-          {/* Password input */}
-          <div className="shrink-0 space-y-2">
-            <Label htmlFor="apply-password">EZCONFIG_PASSWORD</Label>
-            <Input
-              id="apply-password"
-              type="password"
-              placeholder="Enter password to apply"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !isApplying) {
-                  handleApply();
-                }
-              }}
-            />
           </div>
         </div>
 

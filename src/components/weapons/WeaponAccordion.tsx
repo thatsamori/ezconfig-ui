@@ -38,6 +38,7 @@ interface WeaponAccordionProps {
   weapons: GroupedDatabase; // { Greatsword: ["General", "Strike", ...], ... }
   showOverridesOnly?: boolean;
   overrideMap?: Record<string, Record<string, boolean>>; // { Greatsword: { General: true, Strike: false }, ... }
+  configSearchQuery?: string; // Filter config options by key name
 }
 
 // Get config options for a category
@@ -78,7 +79,7 @@ async function loadWeaponConfig(weaponName: string, categories: string[]) {
   }
 }
 
-export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMap }: WeaponAccordionProps) {
+export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMap, configSearchQuery = "" }: WeaponAccordionProps) {
   const [expandedWeapon, setExpandedWeapon] = useState<string | undefined>(
     undefined
   );
@@ -165,18 +166,46 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
     return String(value);
   };
 
+  // Filter options by config search query
+  const filterOptionsBySearch = (options: ConfigEntry[]) => {
+    if (!configSearchQuery.trim()) return options;
+    const query = configSearchQuery.toLowerCase();
+    return options.filter((entry) =>
+      entry.configKey.toLowerCase().includes(query)
+    );
+  };
+
+  // Get filtered options for a category (applies both search and override filters)
+  const getFilteredOptions = (weaponName: string, category: string) => {
+    let options = getConfigOptions(category);
+
+    // Apply config search filter
+    options = filterOptionsBySearch(options);
+
+    // Apply overrides filter
+    if (showOverridesOnly) {
+      options = options.filter((configEntry) =>
+        getEffectiveValue(weaponName, category, configEntry.configKey) !== undefined
+      );
+    }
+
+    return options;
+  };
+
+  // Check if a category has any visible options
+  const categoryHasVisibleOptions = (weaponName: string, category: string) => {
+    return getFilteredOptions(weaponName, category).length > 0;
+  };
+
   const renderConfigSection = (
     weaponName: string,
     category: string,
     defaultOpen: boolean
   ) => {
-    const options = getConfigOptions(category);
+    const filteredOptions = getFilteredOptions(weaponName, category);
 
-    const filteredOptions = showOverridesOnly
-      ? options.filter((configEntry) =>
-          getEffectiveValue(weaponName, category, configEntry.configKey) !== undefined
-        )
-      : options;
+    // Don't render if no options match
+    if (filteredOptions.length === 0) return null;
 
     return (
       <CollapsibleSection
@@ -184,40 +213,51 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
         title={category}
         defaultOpen={defaultOpen}
       >
-        {filteredOptions.length === 0 ? (
-          <p className="text-muted-foreground py-2 text-sm italic">
-            No overrides in {category}
-          </p>
-        ) : (
-          filteredOptions.map((configEntry) => {
-            const effectiveValue = getEffectiveValue(weaponName, category, configEntry.configKey);
-            return (
-              <ConfigRow
-                key={`${weaponName}-${category}-${configEntry.configKey}`}
-                configEntry={configEntry}
-                database={weaponName}
-                category={category}
-                value={effectiveValue}
-                onChange={(value) =>
-                  setValue(weaponName, category, configEntry.configKey, value)
-                }
-                onReset={() =>
-                  removeValue(weaponName, category, configEntry.configKey)
-                }
-                onApplyToAll={() =>
-                  handleApplyToAll(
-                    category,
-                    configEntry.configKey,
-                    effectiveValue !== undefined ? effectiveValue : null
-                  )
-                }
-              />
-            );
-          })
-        )}
+        {filteredOptions.map((configEntry) => {
+          const effectiveValue = getEffectiveValue(weaponName, category, configEntry.configKey);
+          return (
+            <ConfigRow
+              key={`${weaponName}-${category}-${configEntry.configKey}`}
+              configEntry={configEntry}
+              database={weaponName}
+              category={category}
+              value={effectiveValue}
+              onChange={(value) =>
+                setValue(weaponName, category, configEntry.configKey, value)
+              }
+              onReset={() =>
+                removeValue(weaponName, category, configEntry.configKey)
+              }
+              onApplyToAll={() =>
+                handleApplyToAll(
+                  category,
+                  configEntry.configKey,
+                  effectiveValue !== undefined ? effectiveValue : null
+                )
+              }
+            />
+          );
+        })}
       </CollapsibleSection>
     );
   };
+
+  // Check if a weapon has any visible categories
+  const weaponHasVisibleCategories = (weaponName: string, categories: string[]) => {
+    return categories.some((category) => {
+      // When override map available, check overrides first
+      if (showOverridesOnly && overrideMap) {
+        if (overrideMap[weaponName]?.[category] !== true) return false;
+      }
+      // Then check if category has visible options (considering config search)
+      return categoryHasVisibleOptions(weaponName, category);
+    });
+  };
+
+  // Filter weapons that have at least one visible category
+  const visibleWeaponNames = weaponNames.filter((weaponName) =>
+    weaponHasVisibleCategories(weaponName, weapons[weaponName])
+  );
 
   return (
     <Accordion
@@ -227,7 +267,7 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
       onValueChange={handleAccordionChange}
       className="w-full"
     >
-      {weaponNames.map((weaponName) => {
+      {visibleWeaponNames.map((weaponName) => {
         const categories = weapons[weaponName];
         const isLoading = loadingWeapon === weaponName;
         const isExpanded = expandedWeapon === weaponName;
@@ -248,9 +288,10 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
                     .filter((category) => {
                       // When override map available, filter categories with no overrides
                       if (showOverridesOnly && overrideMap) {
-                        return overrideMap[weaponName]?.[category] === true;
+                        if (overrideMap[weaponName]?.[category] !== true) return false;
                       }
-                      return true;
+                      // Filter categories with no matching options
+                      return categoryHasVisibleOptions(weaponName, category);
                     })
                     .map((category, index) =>
                       renderConfigSection(weaponName, category, index === 0)
