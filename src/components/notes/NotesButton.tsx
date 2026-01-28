@@ -44,6 +44,22 @@ export function NotesButton({ database, category, configKey }: NotesButtonProps)
     fetchNotes();
   }, [fetchNotes]);
 
+  // Fetch fresh data from server to avoid stale state overwrites
+  const fetchFreshData = async (): Promise<NotesData> => {
+    try {
+      const response = await fetch(`/api/notes/${encodeURIComponent(database)}/${encodeURIComponent(category)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          return data.data || {};
+        }
+      }
+    } catch {
+      // Fall back to local state
+    }
+    return notesData;
+  };
+
   const saveNotes = async (updatedData: NotesData): Promise<boolean> => {
     try {
       const response = await fetch(`/api/notes/${encodeURIComponent(database)}/${encodeURIComponent(category)}`, {
@@ -59,9 +75,12 @@ export function NotesButton({ database, category, configKey }: NotesButtonProps)
 
   const handleAddNote = async (note: string): Promise<boolean> => {
     if (!user) return false;
+    // Fetch fresh data to avoid overwriting other notes
+    const freshData = await fetchFreshData();
+    const currentNotes = freshData[configKey] || [];
     const newNote: Note = { createdBy: user.username, note };
-    const updatedNotes = [...notes, newNote];
-    const updatedData = { ...notesData, [configKey]: updatedNotes };
+    const updatedNotes = [...currentNotes, newNote];
+    const updatedData = { ...freshData, [configKey]: updatedNotes };
     const success = await saveNotes(updatedData);
     if (success) {
       setNotesData(updatedData);
@@ -72,8 +91,11 @@ export function NotesButton({ database, category, configKey }: NotesButtonProps)
   };
 
   const handleEditNote = async (index: number, note: string): Promise<boolean> => {
-    const updatedNotes = notes.map((n, i) => (i === index ? { ...n, note } : n));
-    const updatedData = { ...notesData, [configKey]: updatedNotes };
+    // Fetch fresh data to avoid overwriting other notes
+    const freshData = await fetchFreshData();
+    const currentNotes = freshData[configKey] || [];
+    const updatedNotes = currentNotes.map((n, i) => (i === index ? { ...n, note } : n));
+    const updatedData = { ...freshData, [configKey]: updatedNotes };
     const success = await saveNotes(updatedData);
     if (success) {
       setNotesData(updatedData);
@@ -84,8 +106,11 @@ export function NotesButton({ database, category, configKey }: NotesButtonProps)
   };
 
   const handleDeleteNote = async (index: number): Promise<boolean> => {
-    const updatedNotes = notes.filter((_, i) => i !== index);
-    const updatedData = { ...notesData };
+    // Fetch fresh data to avoid overwriting other notes
+    const freshData = await fetchFreshData();
+    const currentNotes = freshData[configKey] || [];
+    const updatedNotes = currentNotes.filter((_, i) => i !== index);
+    const updatedData = { ...freshData };
     if (updatedNotes.length === 0) {
       delete updatedData[configKey];
     } else {

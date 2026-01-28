@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/lib/store/authStore";
+import { useNotesContext } from "@/lib/notes/NotesContext";
 import type { Note, NotesData } from "@/lib/notes/types";
 
 export interface UseNotesOptions {
@@ -18,37 +19,29 @@ export interface UseNotesReturn {
 }
 
 export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn {
-  const [notesData, setNotesData] = useState<NotesData>({});
-  const [loading, setLoading] = useState(false);
+  const { getNotes, getCachedNotes, invalidateAndRefetch, isLoading, subscribeToLoading } = useNotesContext();
+  const [, setVersion] = useState(0);
   const user = useAuthStore((state) => state.user);
 
+  // Get notes from cache (synchronous)
+  const notesData = getCachedNotes(schema);
   const notes = notesData[configKey] || [];
+  const loading = isLoading(schema);
 
-  const fetchNotes = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(
-        `/api/notes/${encodeURIComponent(schema)}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setNotesData(data.data || {});
-        }
-      }
-    } catch {
-      // Ignore fetch errors - notes are optional
-    } finally {
-      setLoading(false);
-    }
-  }, [schema]);
-
+  // Subscribe to loading state changes to trigger re-renders
   useEffect(() => {
-    fetchNotes();
-  }, [fetchNotes]);
+    return subscribeToLoading(() => setVersion((v) => v + 1));
+  }, [subscribeToLoading]);
 
-  // Wrap saveNotes in useCallback to ensure stable reference
-  // Returns true on success, false on failure
+  // Fetch notes on mount (will use cache if available)
+  useEffect(() => {
+    getNotes(schema).then(() => {
+      // Trigger re-render after fetch completes
+      setVersion((v) => v + 1);
+    });
+  }, [schema, getNotes]);
+
+  // Save notes to server
   const saveNotes = useCallback(
     async (updatedData: NotesData): Promise<boolean> => {
       try {
@@ -77,39 +70,49 @@ export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn
   const addNote = useCallback(
     async (note: string): Promise<boolean> => {
       if (!user) return false;
+      // Fetch fresh data to avoid overwriting other notes
+      const freshData = await invalidateAndRefetch(schema);
+      const currentNotes = freshData[configKey] || [];
       const newNote: Note = { createdBy: user.username, note };
-      const updatedNotes = [...notes, newNote];
-      const updatedData = { ...notesData, [configKey]: updatedNotes };
+      const updatedNotes = [...currentNotes, newNote];
+      const updatedData = { ...freshData, [configKey]: updatedNotes };
       const success = await saveNotes(updatedData);
       if (success) {
-        setNotesData(updatedData);
+        // Invalidate cache to get fresh data
+        await invalidateAndRefetch(schema);
       } else {
         toast.error("Failed to save note", { position: "bottom-right" });
       }
       return success;
     },
-    [user, notes, notesData, configKey, saveNotes]
+    [user, configKey, schema, invalidateAndRefetch, saveNotes]
   );
 
   const editNote = useCallback(
     async (index: number, note: string): Promise<boolean> => {
-      const updatedNotes = notes.map((n, i) => (i === index ? { ...n, note } : n));
-      const updatedData = { ...notesData, [configKey]: updatedNotes };
+      // Fetch fresh data to avoid overwriting other notes
+      const freshData = await invalidateAndRefetch(schema);
+      const currentNotes = freshData[configKey] || [];
+      const updatedNotes = currentNotes.map((n, i) => (i === index ? { ...n, note } : n));
+      const updatedData = { ...freshData, [configKey]: updatedNotes };
       const success = await saveNotes(updatedData);
       if (success) {
-        setNotesData(updatedData);
+        await invalidateAndRefetch(schema);
       } else {
         toast.error("Failed to update note", { position: "bottom-right" });
       }
       return success;
     },
-    [notes, notesData, configKey, saveNotes]
+    [configKey, schema, invalidateAndRefetch, saveNotes]
   );
 
   const deleteNote = useCallback(
     async (index: number): Promise<boolean> => {
-      const updatedNotes = notes.filter((_, i) => i !== index);
-      const updatedData = { ...notesData };
+      // Fetch fresh data to avoid overwriting other notes
+      const freshData = await invalidateAndRefetch(schema);
+      const currentNotes = freshData[configKey] || [];
+      const updatedNotes = currentNotes.filter((_, i) => i !== index);
+      const updatedData = { ...freshData };
       if (updatedNotes.length === 0) {
         delete updatedData[configKey];
       } else {
@@ -117,13 +120,13 @@ export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn
       }
       const success = await saveNotes(updatedData);
       if (success) {
-        setNotesData(updatedData);
+        await invalidateAndRefetch(schema);
       } else {
         toast.error("Failed to delete note", { position: "bottom-right" });
       }
       return success;
     },
-    [notes, notesData, configKey, saveNotes]
+    [configKey, schema, invalidateAndRefetch, saveNotes]
   );
 
   return {
