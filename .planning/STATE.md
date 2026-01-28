@@ -5,18 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with immediate persistence: edit freely (changes save automatically), apply to game on demand.
-**Current focus:** v2.0 complete - planning next milestone
+**Current focus:** v2.1 User Notes - adding note annotations to config options
 
 ## Current Position
 
-Phase: None — between milestones
-Plan: N/A
-Status: v2.0 milestone complete, ready for next milestone
-Last activity: 2026-01-27 — v2.0 Simplification shipped
+Phase: 28 of 30 (Notes Database)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-01-27 — Milestone v2.1 created
 
-Progress: ██████████ 100% (v2.0)
-
-Progress: ███████░░░ 75%
+Progress: ░░░░░░░░░░ 0% (v2.1)
 
 ## Milestone History
 
@@ -88,9 +86,11 @@ None.
 - Phase 20.1 completed: 2026-01-27
 - v1.5 superseded 2026-01-27: Architectural change in v2.0 removes working state
 - Milestone v2.0 created: Simplification, 4 phases (Phase 24-27)
+- v2.0 shipped 2026-01-27: All 4 phases (24-27) complete
+- Milestone v2.1 created: User Notes (revived from superseded v1.5), 3 phases (Phase 28-30)
 
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: v2.0 milestone complete
+Stopped at: Milestone v2.1 initialization
 Resume file: None

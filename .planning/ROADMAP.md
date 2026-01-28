@@ -18,6 +18,7 @@ None
 - **v1.4 UX Improvements** — Phases 19-20 (SHIPPED 2026-01-27) — [Archive](milestones/v1.4-ROADMAP.md)
 - **v1.5 User Notes** — Phases 21-23 (SUPERSEDED 2026-01-27)
 - **v2.0 Simplification** — Phases 24-27 (SHIPPED 2026-01-27) — [Archive](milestones/v2.0-ROADMAP.md)
+- 🚧 **v2.1 User Notes** — Phases 28-30 (in progress)
 
 ## Completed Milestones
 
@@ -140,6 +141,44 @@ See [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md) for full details.
 
 </details>
 
+---
+
+### 🚧 v2.1 User Notes (In Progress)
+
+**Milestone Goal:** Enable users to add notes to config options, stored as JSON files mirroring the config structure. Multiple users can annotate the same options.
+
+#### Phase 28: Notes Database
+
+**Goal**: Create notes storage layer and API endpoints
+**Depends on**: v2.0 complete
+**Research**: Unlikely (follows existing database service patterns)
+**Plans**: TBD
+
+Plans:
+- [ ] 28-01: TBD (run /gsd:plan-phase 28 to break down)
+
+#### Phase 29: Notes UI
+
+**Goal**: Add notes display and editing to config rows
+**Depends on**: Phase 28
+**Research**: Unlikely (internal UI patterns)
+**Plans**: TBD
+
+Plans:
+- [ ] 29-01: TBD
+
+#### Phase 30: Notes Integration
+
+**Goal**: Wire up notes to existing config tabs with user context
+**Depends on**: Phase 29
+**Research**: Unlikely (internal integration)
+**Plans**: TBD
+
+Plans:
+- [ ] 30-01: TBD
+
+---
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -172,3 +211,6 @@ See [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md) for full details.
 | 25. UI Simplification | v2.0 | 1/1 | Complete | 2026-01-27 |
 | 26. Preset Flow Update | v2.0 | 1/1 | Complete | 2026-01-27 |
 | 27. Apply Flow Streamline | v2.0 | 1/1 | Complete | 2026-01-27 |
+| 28. Notes Database | v2.1 | 0/? | Not started | - |
+| 29. Notes UI | v2.1 | 0/? | Not started | - |
+| 30. Notes Integration | v2.1 | 0/? | Not started | - |
