@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-01-26)
 
 ## Current Position
 
-Phase: 29 of 30 (Notes UI)
+Phase: 30 of 30 (Notes Integration)
 Plan: 01 complete
-Status: Phase 29 complete, ready for Phase 30
-Last activity: 2026-01-27 — Phase 29 complete
+Status: v2.1 User Notes milestone complete
+Last activity: 2026-01-27 — v2.1 shipped
 
-Progress: ██████░░░░ 67% (v2.1)
+Progress: ██████████ 100% (v2.1)
 
 ## Milestone History
 
@@ -92,5 +92,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Phase 29 complete
+Stopped at: v2.1 shipped
 Resume file: None
