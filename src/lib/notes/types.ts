@@ -7,12 +7,27 @@
  */
 export type Note = {
   createdBy: string; // username who created the note
-  note: string; // note content (plain text)
+  note: string; // note content (plain text or HTML)
 };
 
 /**
- * Notes for a category file - keyed by config option name
+ * Notes for a schema file - keyed by config option name
  * Each option can have multiple notes from different users
+ * Notes are shared across all categories where a config key appears.
  * Example: { "CanDodge": [{ createdBy: "admin", note: "Allows dodging" }] }
  */
 export type NotesData = Record<string, Note[]>;
+
+/**
+ * Get schema name from database path
+ * - "Weapon/*" → "weapon"
+ * - "Character/*" → "character"
+ *
+ * This function is safe to import in client components.
+ */
+export function getSchemaFromDatabase(database: string): string {
+  const firstPart = database.split('/')[0].toLowerCase();
+  if (firstPart === 'weapon') return 'weapon';
+  if (firstPart === 'character') return 'character';
+  return firstPart; // fallback
+}

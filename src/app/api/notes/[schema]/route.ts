@@ -1,13 +1,11 @@
 /**
  * Notes API route handler
  *
- * GET /api/notes/{database}/{category} - Read notes for a category
- * POST /api/notes/{database}/{category} - Write notes for a category
+ * GET /api/notes/{schema} - Read all notes for a schema
+ * POST /api/notes/{schema} - Write all notes for a schema
  *
- * The last path segment is the category, everything before is the database path.
- * Examples:
- *   /api/notes/Character/Movement -> database="Character", category="Movement"
- *   /api/notes/Weapon/Greatsword/Strike -> database="Weapon/Greatsword", category="Strike"
+ * Schema must be "weapon" or "character".
+ * Notes are stored per-schema with config keys as top-level index.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,21 +13,9 @@ import { readNotes, writeNotes } from '@/lib/notes/service';
 import type { NotesData, Note } from '@/lib/notes/types';
 
 /**
- * Parse path segments into database and category
- * Last segment is always the category, rest is the database path
+ * Valid schema names
  */
-function parsePath(pathSegments: string[]): { database: string; category: string } | null {
-  if (!pathSegments || pathSegments.length < 2) {
-    return null;
-  }
-
-  // Last segment is the category
-  const category = pathSegments[pathSegments.length - 1];
-  // Everything else is the database path (join with / for nested paths)
-  const database = pathSegments.slice(0, -1).join('/');
-
-  return { database, category };
-}
+const VALID_SCHEMAS = ['weapon', 'character'];
 
 /**
  * Validate that a value is a valid Note object
@@ -67,28 +53,26 @@ function isValidNotesData(value: unknown): value is NotesData {
 }
 
 /**
- * GET /api/notes/{database}/{category}
+ * GET /api/notes/{schema}
  *
- * Read notes from a category file.
+ * Read all notes for a schema.
  * Returns empty object if file doesn't exist.
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ schema: string }> }
 ) {
   try {
-    const { path: pathSegments } = await params;
-    const parsed = parsePath(pathSegments);
+    const { schema } = await params;
 
-    if (!parsed) {
+    if (!VALID_SCHEMAS.includes(schema)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid path: expected /api/notes/{database}/{category}' },
+        { success: false, error: `Invalid schema: "${schema}". Must be one of: ${VALID_SCHEMAS.join(', ')}` },
         { status: 400 }
       );
     }
 
-    const { database, category } = parsed;
-    const notes = await readNotes(database, category);
+    const notes = await readNotes(schema);
 
     return NextResponse.json({ success: true, data: notes });
   } catch (error) {
@@ -98,29 +82,26 @@ export async function GET(
 }
 
 /**
- * POST /api/notes/{database}/{category}
+ * POST /api/notes/{schema}
  *
- * Write notes to a category file.
- * Replaces all notes for the category with the provided data.
+ * Write all notes for a schema.
+ * Replaces all notes for the schema with the provided data.
  *
  * Request body: { notes: NotesData }
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ schema: string }> }
 ) {
   try {
-    const { path: pathSegments } = await params;
-    const parsed = parsePath(pathSegments);
+    const { schema } = await params;
 
-    if (!parsed) {
+    if (!VALID_SCHEMAS.includes(schema)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid path: expected /api/notes/{database}/{category}' },
+        { success: false, error: `Invalid schema: "${schema}". Must be one of: ${VALID_SCHEMAS.join(', ')}` },
         { status: 400 }
       );
     }
-
-    const { database, category } = parsed;
 
     // Parse request body
     let body: { notes?: unknown };
@@ -144,7 +125,7 @@ export async function POST(
     }
 
     // Write to file
-    await writeNotes(database, category, body.notes);
+    await writeNotes(schema, body.notes);
 
     return NextResponse.json({ success: true });
   } catch (error) {

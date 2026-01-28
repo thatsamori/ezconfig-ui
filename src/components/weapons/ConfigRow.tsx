@@ -22,6 +22,7 @@ import { NotesDialog } from "@/components/notes";
 import { ConfigEntry, DataType } from "@/lib/config/types";
 import type { ConfigValue } from "@/lib/store/configStore";
 import { useNotes } from "@/lib/hooks";
+import { getSchemaFromDatabase } from "@/lib/notes/types";
 import { Pencil, X, MessageCircle } from "lucide-react";
 
 export interface ConfigRowProps {
@@ -50,6 +51,9 @@ export function ConfigRow({
   const [notesOpen, setNotesOpen] = useState(false);
   const isCustomized = value !== undefined;
 
+  // Derive schema from database path (e.g., "Weapon/Greatsword" -> "weapon")
+  const schema = getSchemaFromDatabase(database);
+
   const {
     notes,
     loading: notesLoading,
@@ -58,8 +62,7 @@ export function ConfigRow({
     deleteNote,
     currentUsername,
   } = useNotes({
-    database,
-    category,
+    schema,
     configKey: configEntry.configKey,
   });
 

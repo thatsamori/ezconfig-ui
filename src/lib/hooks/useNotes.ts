@@ -3,8 +3,7 @@ import { useAuthStore } from "@/lib/store/authStore";
 import type { Note, NotesData } from "@/lib/notes/types";
 
 export interface UseNotesOptions {
-  database: string;
-  category: string;
+  schema: string;
   configKey: string;
 }
 
@@ -17,7 +16,7 @@ export interface UseNotesReturn {
   currentUsername: string;
 }
 
-export function useNotes({ database, category, configKey }: UseNotesOptions): UseNotesReturn {
+export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn {
   const [notesData, setNotesData] = useState<NotesData>({});
   const [loading, setLoading] = useState(false);
   const user = useAuthStore((state) => state.user);
@@ -28,7 +27,7 @@ export function useNotes({ database, category, configKey }: UseNotesOptions): Us
     setLoading(true);
     try {
       const response = await fetch(
-        `/api/notes/${encodeURIComponent(database)}/${encodeURIComponent(category)}`
+        `/api/notes/${encodeURIComponent(schema)}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -41,7 +40,7 @@ export function useNotes({ database, category, configKey }: UseNotesOptions): Us
     } finally {
       setLoading(false);
     }
-  }, [database, category]);
+  }, [schema]);
 
   useEffect(() => {
     fetchNotes();
@@ -50,7 +49,7 @@ export function useNotes({ database, category, configKey }: UseNotesOptions): Us
   const saveNotes = async (updatedData: NotesData) => {
     try {
       await fetch(
-        `/api/notes/${encodeURIComponent(database)}/${encodeURIComponent(category)}`,
+        `/api/notes/${encodeURIComponent(schema)}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
