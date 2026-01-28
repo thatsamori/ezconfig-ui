@@ -162,10 +162,10 @@ Plans:
 **Goal**: Add notes display and editing to config rows
 **Depends on**: Phase 28
 **Research**: Unlikely (internal UI patterns)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 29-01: TBD
+- [x] 29-01: Create NotesDialog and NotesButton components — completed 2026-01-27
 
 #### Phase 30: Notes Integration
 
@@ -212,5 +212,5 @@ Plans:
 | 26. Preset Flow Update | v2.0 | 1/1 | Complete | 2026-01-27 |
 | 27. Apply Flow Streamline | v2.0 | 1/1 | Complete | 2026-01-27 |
 | 28. Notes Database | v2.1 | 1/1 | Complete | 2026-01-27 |
-| 29. Notes UI | v2.1 | 0/? | Not started | - |
+| 29. Notes UI | v2.1 | 1/1 | Complete | 2026-01-27 |
 | 30. Notes Integration | v2.1 | 0/? | Not started | - |
