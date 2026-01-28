@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle } from "lucide-react";
@@ -43,35 +44,46 @@ export function NotesButton({ database, category, configKey }: NotesButtonProps)
     fetchNotes();
   }, [fetchNotes]);
 
-  const saveNotes = async (updatedData: NotesData) => {
+  const saveNotes = async (updatedData: NotesData): Promise<boolean> => {
     try {
-      await fetch(`/api/notes/${encodeURIComponent(database)}/${encodeURIComponent(category)}`, {
+      const response = await fetch(`/api/notes/${encodeURIComponent(database)}/${encodeURIComponent(category)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notes: updatedData }),
       });
+      return response.ok;
     } catch {
-      // Ignore save errors
+      return false;
     }
   };
 
-  const handleAddNote = (note: string) => {
-    if (!user) return;
+  const handleAddNote = async (note: string): Promise<boolean> => {
+    if (!user) return false;
     const newNote: Note = { createdBy: user.username, note };
     const updatedNotes = [...notes, newNote];
     const updatedData = { ...notesData, [configKey]: updatedNotes };
-    setNotesData(updatedData);
-    saveNotes(updatedData);
+    const success = await saveNotes(updatedData);
+    if (success) {
+      setNotesData(updatedData);
+    } else {
+      toast.error("Failed to save note", { position: "bottom-right" });
+    }
+    return success;
   };
 
-  const handleEditNote = (index: number, note: string) => {
+  const handleEditNote = async (index: number, note: string): Promise<boolean> => {
     const updatedNotes = notes.map((n, i) => (i === index ? { ...n, note } : n));
     const updatedData = { ...notesData, [configKey]: updatedNotes };
-    setNotesData(updatedData);
-    saveNotes(updatedData);
+    const success = await saveNotes(updatedData);
+    if (success) {
+      setNotesData(updatedData);
+    } else {
+      toast.error("Failed to update note", { position: "bottom-right" });
+    }
+    return success;
   };
 
-  const handleDeleteNote = (index: number) => {
+  const handleDeleteNote = async (index: number): Promise<boolean> => {
     const updatedNotes = notes.filter((_, i) => i !== index);
     const updatedData = { ...notesData };
     if (updatedNotes.length === 0) {
@@ -79,8 +91,13 @@ export function NotesButton({ database, category, configKey }: NotesButtonProps)
     } else {
       updatedData[configKey] = updatedNotes;
     }
-    setNotesData(updatedData);
-    saveNotes(updatedData);
+    const success = await saveNotes(updatedData);
+    if (success) {
+      setNotesData(updatedData);
+    } else {
+      toast.error("Failed to delete note", { position: "bottom-right" });
+    }
+    return success;
   };
 
   return (

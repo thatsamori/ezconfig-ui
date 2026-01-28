@@ -61,3 +61,6 @@ rconExamples.ts
 Game.ini
 
 Databases/**
+Presets/User/**
+users.json
+Notes/**

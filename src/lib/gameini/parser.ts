@@ -1,10 +1,10 @@
-'use server';
+"use server";
 
-import { readFile } from 'fs/promises';
-import { existsSync } from 'fs';
-import { characterConfigFlatMap } from '@/lib/config/characterConfigSchema';
-import { weaponConfigFlatMap } from '@/lib/config/weaponConfigSchema';
-import { DataType, ConfigEntry } from '@/lib/config/types';
+import { readFile } from "fs/promises";
+import { existsSync } from "fs";
+import { characterConfigFlatMap } from "@/lib/config/characterConfigSchema";
+import { weaponConfigFlatMap } from "@/lib/config/weaponConfigSchema";
+import { DataType, ConfigEntry } from "@/lib/config/types";
 
 export interface ParsedGameIni {
   characterValues: Record<string, any>;
@@ -12,7 +12,9 @@ export interface ParsedGameIni {
 }
 
 // Parse Vector format: X=1.00,Y=2.00,Z=3.00 → {x: 1, y: 2, z: 3}
-function parseVector(value: string): { x: number; y: number; z: number } | null {
+function parseVector(
+  value: string,
+): { x: number; y: number; z: number } | null {
   const match = value.match(/X=([-\d.]+),Y=([-\d.]+),Z=([-\d.]+)/i);
   if (!match) return null;
   return {
@@ -38,7 +40,7 @@ function parseFloatArray(value: string): number[] | null {
   const match = value.match(/^\((.*)\)$/);
   if (!match) return null;
 
-  const numbers = match[1].split(',').map(s => parseFloat(s.trim()));
+  const numbers = match[1].split(",").map((s) => parseFloat(s.trim()));
   if (numbers.some(isNaN)) return null;
   return numbers;
 }
@@ -46,8 +48,8 @@ function parseFloatArray(value: string): number[] | null {
 // Convert string value based on expected data type
 function convertValue(value: string, dataType: DataType): any {
   switch (dataType) {
-    case DataType.Boolean:
-      return value.toLowerCase() === 'true';
+    case DataType.Bool:
+      return value.toLowerCase() === "true";
     case DataType.Float:
       return parseFloat(value);
     case DataType.Vector:
@@ -62,7 +64,9 @@ function convertValue(value: string, dataType: DataType): any {
 }
 
 // Parse section header: [EZCONFIG_Category_Group] or [EZCONFIG_WeaponName_GroupName]
-function parseSectionHeader(line: string): { category: string; group: string } | null {
+function parseSectionHeader(
+  line: string,
+): { category: string; group: string } | null {
   const match = line.match(/^\[EZCONFIG_([^_]+)_([^\]]+)\]$/);
   if (!match) return null;
   return {
@@ -73,7 +77,7 @@ function parseSectionHeader(line: string): { category: string; group: string } |
 
 // Check if this is a character config section (Movement, Combat, General)
 function isCharacterSection(category: string): boolean {
-  return ['Character'].includes(category);
+  return ["Character"].includes(category);
 }
 
 export async function parseGameIni(filePath: string): Promise<ParsedGameIni> {
@@ -90,13 +94,13 @@ export async function parseGameIni(filePath: string): Promise<ParsedGameIni> {
 
   let content: string;
   try {
-    content = await readFile(filePath, 'utf-8');
+    content = await readFile(filePath, "utf-8");
   } catch (error) {
     console.warn(`Failed to read Game.ini at ${filePath}:`, error);
     return result;
   }
 
-  const lines = content.split('\n').map(line => line.trim());
+  const lines = content.split("\n").map((line) => line.trim());
 
   let currentSection: { category: string; group: string } | null = null;
   let isCharacter = false;
@@ -104,12 +108,12 @@ export async function parseGameIni(filePath: string): Promise<ParsedGameIni> {
 
   for (const line of lines) {
     // Skip empty lines and comments
-    if (!line || line.startsWith(';') || line.startsWith('#')) {
+    if (!line || line.startsWith(";") || line.startsWith("#")) {
       continue;
     }
 
     // Check for EZCONFIG section header
-    if (line.startsWith('[EZCONFIG_')) {
+    if (line.startsWith("[EZCONFIG_")) {
       currentSection = parseSectionHeader(line);
       if (currentSection) {
         isCharacter = isCharacterSection(currentSection.category);
@@ -125,7 +129,7 @@ export async function parseGameIni(filePath: string): Promise<ParsedGameIni> {
     }
 
     // Skip non-EZCONFIG sections
-    if (line.startsWith('[')) {
+    if (line.startsWith("[")) {
       currentSection = null;
       isCharacter = false;
       currentWeapon = null;
@@ -133,8 +137,8 @@ export async function parseGameIni(filePath: string): Promise<ParsedGameIni> {
     }
 
     // Parse key=value pairs within EZCONFIG sections
-    if (currentSection && line.includes('=')) {
-      const eqIndex = line.indexOf('=');
+    if (currentSection && line.includes("=")) {
+      const eqIndex = line.indexOf("=");
       const key = line.substring(0, eqIndex).trim();
       const value = line.substring(eqIndex + 1).trim();
 

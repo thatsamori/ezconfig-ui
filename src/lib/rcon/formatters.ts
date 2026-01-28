@@ -1,10 +1,10 @@
-import { DataType } from '@/lib/config/types';
+import { DataType } from "@/lib/config/types";
 
 /**
  * Format a boolean value for RCON commands
  */
 export function formatBoolean(value: boolean): string {
-  return value ? 'True' : 'False';
+  return value ? "True" : "False";
 }
 
 /**
@@ -19,7 +19,11 @@ export function formatFloat(value: number): string {
  * Store format: { x: number, y: number, z: number }
  * Output format: "X=0.00,Y=0.00,Z=0.00"
  */
-export function formatVector(value: { x: number; y: number; z: number }): string {
+export function formatVector(value: {
+  x: number;
+  y: number;
+  z: number;
+}): string {
   return `X=${value.x.toFixed(2)},Y=${value.y.toFixed(2)},Z=${value.z.toFixed(2)}`;
 }
 
@@ -37,7 +41,7 @@ export function formatVector2D(value: { x: number; y: number }): string {
  * Output format: "(0.00,0.00,0.00)"
  */
 export function formatFloatArray(values: number[]): string {
-  return `(${values.map((v) => v.toFixed(2)).join(',')})`;
+  return `(${values.map((v) => v.toFixed(2)).join(",")})`;
 }
 
 /**
@@ -45,7 +49,7 @@ export function formatFloatArray(values: number[]): string {
  */
 export function formatValue(dataType: DataType, value: unknown): string {
   switch (dataType) {
-    case DataType.Boolean:
+    case DataType.Bool:
       return formatBoolean(value as boolean);
     case DataType.Float:
       return formatFloat(value as number);

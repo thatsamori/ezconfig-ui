@@ -27,9 +27,9 @@ export interface NotesDialogProps {
   onOpenChange: (open: boolean) => void;
   configKey: string;
   notes: Note[];
-  onAddNote: (note: string) => void;
-  onEditNote: (index: number, note: string) => void;
-  onDeleteNote: (index: number) => void;
+  onAddNote: (note: string) => Promise<boolean>;
+  onEditNote: (index: number, note: string) => Promise<boolean>;
+  onDeleteNote: (index: number) => Promise<boolean>;
   currentUsername: string;
 }
 
@@ -56,16 +56,21 @@ export function NotesDialog({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (isHtmlEmpty(noteText)) return;
 
+    let success: boolean;
     if (editingIndex !== null) {
-      onEditNote(editingIndex, noteText);
-      setEditingIndex(null);
+      success = await onEditNote(editingIndex, noteText);
+      if (success) {
+        setEditingIndex(null);
+      }
     } else {
-      onAddNote(noteText);
+      success = await onAddNote(noteText);
     }
-    setNoteText("");
+    if (success) {
+      setNoteText("");
+    }
   };
 
   const handleEdit = (index: number, currentNote: string) => {
@@ -82,16 +87,18 @@ export function NotesDialog({
     setDeleteIndex(index);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deleteIndex === null) return;
 
-    onDeleteNote(deleteIndex);
-    // If we were editing this note, cancel the edit
-    if (editingIndex === deleteIndex) {
-      handleCancel();
-    } else if (editingIndex !== null && editingIndex > deleteIndex) {
-      // Adjust editing index if we deleted a note before it
-      setEditingIndex(editingIndex - 1);
+    const success = await onDeleteNote(deleteIndex);
+    if (success) {
+      // If we were editing this note, cancel the edit
+      if (editingIndex === deleteIndex) {
+        handleCancel();
+      } else if (editingIndex !== null && editingIndex > deleteIndex) {
+        // Adjust editing index if we deleted a note before it
+        setEditingIndex(editingIndex - 1);
+      }
     }
     setDeleteIndex(null);
   };

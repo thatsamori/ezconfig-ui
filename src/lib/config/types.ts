@@ -16,7 +16,7 @@ export type ConfigEntry = {
 };
 
 export enum DataType {
-  Boolean = "Boolean",
+  Bool = "Bool",
   Float = "Float",
   Vector = "Vector",
   Vector2D = "Vector2D",

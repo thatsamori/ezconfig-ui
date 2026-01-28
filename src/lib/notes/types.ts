@@ -20,14 +20,14 @@ export type NotesData = Record<string, Note[]>;
 
 /**
  * Get schema name from database path
- * - "Weapon/*" → "weapon"
- * - "Character/*" → "character"
+ * - "Character" → "character"
+ * - Everything else (weapon names like "ArmingSword") → "weapon"
  *
  * This function is safe to import in client components.
  */
 export function getSchemaFromDatabase(database: string): string {
   const firstPart = database.split('/')[0].toLowerCase();
-  if (firstPart === 'weapon') return 'weapon';
   if (firstPart === 'character') return 'character';
-  return firstPart; // fallback
+  // All non-character databases are weapons (e.g., "ArmingSword", "Greatsword")
+  return 'weapon';
 }

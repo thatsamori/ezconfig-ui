@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { useAuthStore } from "@/lib/store/authStore";
 import type { Note, NotesData } from "@/lib/notes/types";
 
@@ -10,9 +11,9 @@ export interface UseNotesOptions {
 export interface UseNotesReturn {
   notes: Note[];
   loading: boolean;
-  addNote: (note: string) => void;
-  editNote: (index: number, note: string) => void;
-  deleteNote: (index: number) => void;
+  addNote: (note: string) => Promise<boolean>;
+  editNote: (index: number, note: string) => Promise<boolean>;
+  deleteNote: (index: number) => Promise<boolean>;
   currentUsername: string;
 }
 
@@ -47,8 +48,9 @@ export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn
   }, [fetchNotes]);
 
   // Wrap saveNotes in useCallback to ensure stable reference
+  // Returns true on success, false on failure
   const saveNotes = useCallback(
-    async (updatedData: NotesData) => {
+    async (updatedData: NotesData): Promise<boolean> => {
       try {
         const response = await fetch(
           `/api/notes/${encodeURIComponent(schema)}`,
@@ -61,38 +63,51 @@ export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn
         if (!response.ok) {
           const data = await response.json();
           console.error("Failed to save notes:", data.error);
+          return false;
         }
+        return true;
       } catch (error) {
         console.error("Failed to save notes:", error);
+        return false;
       }
     },
     [schema]
   );
 
   const addNote = useCallback(
-    (note: string) => {
-      if (!user) return;
+    async (note: string): Promise<boolean> => {
+      if (!user) return false;
       const newNote: Note = { createdBy: user.username, note };
       const updatedNotes = [...notes, newNote];
       const updatedData = { ...notesData, [configKey]: updatedNotes };
-      setNotesData(updatedData);
-      saveNotes(updatedData);
+      const success = await saveNotes(updatedData);
+      if (success) {
+        setNotesData(updatedData);
+      } else {
+        toast.error("Failed to save note", { position: "bottom-right" });
+      }
+      return success;
     },
     [user, notes, notesData, configKey, saveNotes]
   );
 
   const editNote = useCallback(
-    (index: number, note: string) => {
+    async (index: number, note: string): Promise<boolean> => {
       const updatedNotes = notes.map((n, i) => (i === index ? { ...n, note } : n));
       const updatedData = { ...notesData, [configKey]: updatedNotes };
-      setNotesData(updatedData);
-      saveNotes(updatedData);
+      const success = await saveNotes(updatedData);
+      if (success) {
+        setNotesData(updatedData);
+      } else {
+        toast.error("Failed to update note", { position: "bottom-right" });
+      }
+      return success;
     },
     [notes, notesData, configKey, saveNotes]
   );
 
   const deleteNote = useCallback(
-    (index: number) => {
+    async (index: number): Promise<boolean> => {
       const updatedNotes = notes.filter((_, i) => i !== index);
       const updatedData = { ...notesData };
       if (updatedNotes.length === 0) {
@@ -100,8 +115,13 @@ export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn
       } else {
         updatedData[configKey] = updatedNotes;
       }
-      setNotesData(updatedData);
-      saveNotes(updatedData);
+      const success = await saveNotes(updatedData);
+      if (success) {
+        setNotesData(updatedData);
+      } else {
+        toast.error("Failed to delete note", { position: "bottom-right" });
+      }
+      return success;
     },
     [notes, notesData, configKey, saveNotes]
   );
