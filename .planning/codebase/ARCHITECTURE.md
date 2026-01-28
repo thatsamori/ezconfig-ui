@@ -1,123 +1,142 @@
 # Architecture
 
-**Analysis Date:** 2026-01-23
+**Analysis Date:** 2026-01-27
 
 ## Pattern Overview
 
-**Overall:** Schema-Driven Configuration Management Library
+**Overall:** Full-stack Next.js Application with File-based Data Storage
 
 **Key Characteristics:**
-- Declarative configuration schemas for game entities
-- Type-safe validation and conversion layer
-- RCON protocol integration for server communication
-- Flat map pattern for O(1) config lookup
+- Single-page application with tabbed interface
+- File-based JSON storage (no database)
+- Real-time sync to game server via RCON
+- Optimistic UI updates with fire-and-forget API writes
+- Role-based access control (admin/user)
 
 ## Layers
 
-**Data Models Layer:**
-- Purpose: Central type definitions and enumerations
-- Contains: `ConfigEntry` interface, `DataType` enum
-- Location: `types.ts`
-- Depends on: Nothing (foundation layer)
-- Used by: All schema files
+**Presentation Layer:**
+- Purpose: React components for user interface
+- Contains: Page components, UI components, feature components
+- Location: `src/app/page.tsx`, `src/components/`
+- Depends on: Store layer, API routes
+- Used by: End users via browser
 
-**Schema Definition Layer:**
-- Purpose: Declarative config schemas organized by functional groups
-- Contains: Configuration constants, group enums, flattened lookup maps
-- Location: `characterConfigSchema.ts`, `weaponConfigSchema.ts`
-- Depends on: types.ts
-- Used by: RCON integration layer
+**Store Layer (Client State):**
+- Purpose: Client-side state management with Zustand
+- Contains: Config values, auth state, UI state
+- Location: `src/lib/store/configStore.ts`, `src/lib/store/authStore.ts`
+- Depends on: API layer for persistence
+- Used by: React components
 
-**Validation & Conversion Layer:**
-- Purpose: Convert JavaScript types to RCON command format
-- Contains: `validateAndConvertDataType()` function
-- Location: `rconExamples.ts` (lines 22-75)
-- Depends on: types.ts for DataType enum
-- Used by: RCON send functions
+**API Layer (Route Handlers):**
+- Purpose: HTTP endpoints for data operations
+- Contains: Next.js route handlers (GET, POST, DELETE)
+- Location: `src/app/api/`
+- Depends on: Service layer
+- Used by: Client-side fetch calls
 
-**Integration Layer:**
-- Purpose: RCON client connection and command sending
-- Contains: `sendWeaponConfigUpdate()`, `sendCharacterConfigUpdate()`
-- Location: `rconExamples.ts` (lines 77-102)
-- Depends on: All schema files, rcon-client package
-- Used by: External consumers
+**Service Layer:**
+- Purpose: Business logic and external integrations
+- Contains: Database service, RCON service, Auth service, Presets service
+- Location: `src/lib/database/service.ts`, `src/lib/rcon/service.ts`, `src/lib/auth/service.ts`
+- Depends on: File system, RCON protocol
+- Used by: API route handlers
+
+**Schema Layer:**
+- Purpose: Configuration schemas and validation
+- Contains: Weapon config schema, character config schema, data types
+- Location: `src/lib/config/weaponConfigSchema.ts`, `src/lib/config/characterConfigSchema.ts`
+- Used by: Components for rendering, service layer for validation
 
 ## Data Flow
 
-**Configuration Update Flow:**
+**Config Edit Flow:**
 
-1. User provides config value (e.g., `{ weaponName, groupName, configKey, value }`)
-2. Lookup config entry from flat map (`weaponConfigFlatMap[configKey]`)
-3. Validate and convert value via `validateAndConvertDataType()`
-   - Type checking against `DataType` enum
-   - Format conversion (e.g., boolean → "True"/"False", vector → "X=0.00,Y=0.00,Z=0.00")
-4. Build RCON command string: `string ezconfig [Entity] [Group] [Key] [Value]`
-5. Send via `rcon.send()` to game server
-6. Log response (success path only)
+1. User edits a config value in UI
+2. React component calls `setValue()` from configStore
+3. Store updates local state immediately (optimistic)
+4. Store fires fire-and-forget POST to `/api/config/{database}/{category}`
+5. API route calls `writeCategory()` to write JSON file
+6. If API fails, toast notification shown (no rollback)
+
+**Apply to Game Server Flow:**
+
+1. User clicks "Apply" button
+2. Client calls `/api/apply` endpoint
+3. API reads all database JSON files
+4. Service generates RCON commands from config data
+5. `executeBatchCommands()` sends commands to game server via RCON
+6. Responses returned to client
 
 **State Management:**
-- Stateless - each config update is independent
-- RCON connection established at module load (top-level await)
-- No persistent state or caching
+- Single source of truth: Zustand store (`useConfigStore`)
+- Values synced to JSON files in `./Databases/` directory
+- No working/saved distinction - all edits persist immediately
+- Presets load by clearing all databases and writing new values
 
 ## Key Abstractions
 
-**ConfigEntry:**
-- Purpose: Standardized shape for all configuration options
-- Fields: configKey, dataType, isImplemented, documentation, default
-- Location: `types.ts` (lines 11-17)
-- Pattern: Interface with discriminated union potential (via dataType)
+**ConfigStore:**
+- Purpose: Centralized config state with API persistence
+- Location: `src/lib/store/configStore.ts`
+- Pattern: Zustand store with async side effects
 
-**Flat Map Pattern:**
-- Purpose: O(1) lookup for config entries by key
-- Examples: `characterConfigFlatMap`, `weaponConfigFlatMap`
-- Location: End of each schema file
-- Pattern: Reduce array to object with configKey as key
+**Database Service:**
+- Purpose: JSON file CRUD operations
+- Location: `src/lib/database/service.ts`
+- Pattern: Pure functions for file I/O with path security
 
-**Type-Safe Keys:**
-- Purpose: Branded types for compile-time config key validation
-- Examples: `CharacterConfigKeyType`, `WeaponConfigKeyType`
-- Location: Schema file exports
-- Pattern: `keyof typeof flatMap`
+**Config Schema:**
+- Purpose: Define available config options per weapon/character
+- Location: `src/lib/config/weaponConfigSchema.ts`
+- Pattern: TypeScript enums and const objects with metadata
+
+**RCON Service:**
+- Purpose: Game server communication
+- Location: `src/lib/rcon/service.ts`
+- Pattern: Connection-per-batch with sequential command execution
 
 ## Entry Points
 
-**Module Entry:**
-- Location: `rconExamples.ts`
-- Triggers: Import of module
-- Responsibilities: Establish RCON connection, export API functions
+**Web Application:**
+- Location: `src/app/page.tsx`
+- Triggers: Browser navigation to root URL
+- Responsibilities: Render main UI with auth gate
 
-**Public API:**
-- `sendCharacterConfigUpdate()` - Update character configuration
-- `sendWeaponConfigUpdate()` - Update weapon configuration
-- Schema exports for UI consumption
+**API Routes:**
+- Location: `src/app/api/**/*.ts`
+- Triggers: HTTP requests from client
+- Responsibilities: Handle data CRUD, auth, game server communication
 
 ## Error Handling
 
-**Strategy:** Throw on validation failure, no catch at integration layer
+**Strategy:** Optimistic updates with toast notifications on failure
 
 **Patterns:**
-- Validation throws `Error` with descriptive message including config key
-- No try/catch around RCON send operations (gap identified)
-- Success logging only (`console.log` on line 101)
+- Service layer throws errors on invalid operations
+- API routes catch errors and return appropriate HTTP status
+- Client shows toast notifications for failed API calls
+- No automatic retry - user must manually retry
 
 ## Cross-Cutting Concerns
 
 **Logging:**
-- Console.log for success responses only
+- Console.log for RCON command execution
 - No structured logging framework
-- No error logging (gap identified)
 
 **Validation:**
-- Runtime type checking in `validateAndConvertDataType()`
-- Supports: Boolean, Float, FloatArray, Vector, Vector2D
-- Throws on type mismatch
+- Path traversal prevention in database service
+- Schema-based validation for config values (DataType enum)
+- Auth middleware for protected API routes
 
-**Configuration:**
-- Hardcoded RCON credentials (security concern identified)
-- No environment variable usage yet
+**Authentication:**
+- Cookie-based session tokens
+- JSON file storage for users (`users.json`)
+- Admin bootstrap from environment variables
+- Middleware pattern for route protection (`src/lib/auth/middleware.ts`)
 
 ---
 
-*Architecture analysis: 2026-01-23*
+*Architecture analysis: 2026-01-27*
 *Update when major patterns change*

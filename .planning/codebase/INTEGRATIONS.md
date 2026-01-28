@@ -1,44 +1,52 @@
 # External Integrations
 
-**Analysis Date:** 2026-01-23
+**Analysis Date:** 2026-01-27
 
 ## APIs & External Services
 
-**RCON (Remote Console) Server:**
-- Service: Game server configuration via RCON protocol
-- SDK/Client: rcon-client npm package v4.2.5 (`package.json`)
-- Connection: `rconExamples.ts` (lines 16-20)
-  - Host: `15.204.103.39`
-  - Port: `4747`
-  - Password: `ezbones` (hardcoded - security concern)
-- Commands: `string ezconfig [Entity] [Group] [Key] [Value]`
-- Usage: Character and weapon configuration updates
-
-**Payment Processing:**
-- Not applicable
-
-**Email/SMS:**
-- Not applicable
+**Game Server (RCON):**
+- Mordhau game server - Real-time config application
+  - SDK/Client: `rcon-client` 4.2.5 (`src/lib/rcon/service.ts`)
+  - Auth: Password in RCON_PASSWORD env var
+  - Protocol: RCON (Source engine protocol)
+  - Connection: TCP to RCON_HOST:RCON_PORT
+  - Usage: Execute batch commands to apply config changes
 
 **External APIs:**
-- None
+- None - Self-contained application
 
 ## Data Storage
 
 **Databases:**
-- None (configuration sent directly to game server)
+- File-based JSON storage (no database server)
+  - Location: `./Databases/` directory
+  - Client: Node.js fs/promises (`src/lib/database/service.ts`)
+  - Structure: `{Database}/{Category}.json`
 
 **File Storage:**
-- Not applicable
+- Local filesystem for all data
+  - Config data: `./Databases/`
+  - Presets: `./Presets/`
+  - Notes: `./Notes/`
+  - Users: `./users.json`
 
 **Caching:**
-- None
+- None - All reads from filesystem
+- Zustand store acts as client-side cache
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- RCON password authentication only
-- Credentials: Hardcoded in `rconExamples.ts` (line 19)
+- Custom file-based authentication
+  - Implementation: `src/lib/auth/service.ts`
+  - Token storage: HTTP-only cookies (`src/lib/auth/tokens.ts`)
+  - Session management: UUID tokens with in-memory token store
+
+**User Storage:**
+- JSON file (`users.json`)
+  - Passwords stored in plain text (development only)
+  - Roles: 'admin' or 'user'
+  - Bootstrap: Admin created from ADMIN_USERNAME/ADMIN_PASSWORD env vars
 
 **OAuth Integrations:**
 - None
@@ -49,42 +57,49 @@
 - None configured
 
 **Analytics:**
-- None
+- None configured
 
 **Logs:**
-- Console.log only (`rconExamples.ts` line 101)
+- Console.log only (stdout)
 - No structured logging
+- No log aggregation
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Not configured (local development tool)
+- Self-hosted deployment
+  - Requires local access to game server
+  - Must run on same network as game server (RCON access)
 
 **CI Pipeline:**
-- Not configured
-- No GitHub Actions or similar
+- None configured
+  - No GitHub Actions workflows
+  - No automated testing
 
 ## Environment Configuration
 
 **Development:**
-- Required env vars: None currently (credentials hardcoded)
-- Secrets location: Should be `.env.local` (pattern in `.gitignore`)
-- Mock/stub services: None (direct RCON connection)
+- Required env vars:
+  - `RCON_HOST` - Game server hostname (default: localhost)
+  - `RCON_PORT` - RCON port (default: 27015)
+  - `RCON_PASSWORD` - RCON password
+  - `EZCONFIG_PASSWORD` - App verification password
+  - `ADMIN_USERNAME` - Initial admin username
+  - `ADMIN_PASSWORD` - Initial admin password
+- Secrets location: `.env` file (gitignored), `.env.example` template provided
+- Optional vars:
+  - `DATABASES_PATH` - Config storage location (default: ./Databases)
+  - `PRESETS_PATH` - Presets location (default: ./Presets)
+  - `NOTES_PATH` - Notes location (default: ./Notes)
+  - `USERS_PATH` - Users file location (default: ./users.json)
 
-**Future Environment Setup:**
-- `.gitignore` prepared for env files:
-  - `.env`
-  - `.env.local`
-  - `.env.development.local`
-  - `.env.test.local`
-  - `.env.production.local`
+**Staging:**
+- Not applicable (single environment)
 
-**Recommended Environment Variables:**
-```
-RCON_HOST=15.204.103.39
-RCON_PORT=4747
-RCON_PASSWORD=<secret>
-```
+**Production:**
+- Same as development
+- Run alongside game server
+- Secrets in environment variables
 
 ## Webhooks & Callbacks
 
@@ -94,33 +109,15 @@ RCON_PASSWORD=<secret>
 **Outgoing:**
 - None
 
-## RCON Protocol Details
+## Integration Points Summary
 
-**Connection Pattern:**
-```typescript
-// rconExamples.ts (lines 16-20)
-const rcon = await Rcon.connect({
-  host: "15.204.103.39",
-  port: 4747,
-  password: "ezbones",
-});
-```
-
-**Command Format:**
-- Character: `string ezconfig Character [GroupName] [ConfigKey] [FormattedValue]`
-- Weapon: `string ezconfig [WeaponName] [GroupName] [ConfigKey] [FormattedValue]`
-
-**Value Formatting:**
-- Boolean: `"True"` or `"False"`
-- Float: `"0.00"` (2 decimal places)
-- Vector: `"X=0.00,Y=0.00,Z=0.00"`
-- Vector2D: `"X=0.00,Y=0.00"`
-- FloatArray: `"(0.00,0.00,0.00)"`
-
-**Transitive Dependencies:**
-- typed-emitter v0.1.0 - Event emitter for RCON client internals
+| Service | Purpose | Config Location |
+|---------|---------|-----------------|
+| Game Server | Apply configs via RCON | `src/lib/rcon/service.ts` |
+| Filesystem | JSON data storage | `src/lib/database/service.ts` |
+| Local Auth | User management | `src/lib/auth/service.ts` |
 
 ---
 
-*Integration audit: 2026-01-23*
+*Integration audit: 2026-01-27*
 *Update when adding/removing external services*

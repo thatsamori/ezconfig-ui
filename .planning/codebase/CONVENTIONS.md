@@ -1,153 +1,174 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-01-23
+**Analysis Date:** 2026-01-27
 
 ## Naming Patterns
 
 **Files:**
-- camelCase for source files: `characterConfigSchema.ts`, `weaponConfigSchema.ts`, `rconExamples.ts`
-- Single lowercase word for utility files: `types.ts`
-- No test files present (future: `*.test.ts` pattern expected based on .gitignore)
+- camelCase.ts for library/utility files (`configStore.ts`, `service.ts`)
+- PascalCase.tsx for React components (`WeaponConfigTab.tsx`, `LoginForm.tsx`)
+- index.ts for barrel exports
+- route.ts for Next.js API routes
 
 **Functions:**
-- camelCase for all functions: `validateAndConvertDataType`, `sendWeaponConfigUpdate`, `sendCharacterConfigUpdate`
+- camelCase for all functions (`setValue`, `readCategory`, `executeBatchCommands`)
 - No special prefix for async functions
-- Descriptive verb + noun pattern: `sendConfigUpdate`, `validateDataType`
+- Descriptive verb-noun pattern (`validateCredentials`, `generateToken`)
 
 **Variables:**
-- camelCase for variables: `characterConfigFlatMap`, `weaponConfigFlatMap`, `configEntry`
-- UPPER_SNAKE_CASE for constants: `CHARACTER_CONFIG_OPTIONS`, `WEAPON_CONFIG_OPTIONS`
+- camelCase for variables and parameters
+- UPPER_SNAKE_CASE for enums values (`DataType.Bool`, `CategoryName.Greatsword`)
 - No underscore prefix for private members
 
 **Types:**
-- PascalCase for interfaces: `ConfigEntry`
-- PascalCase for type aliases: `CharacterConfigKeyType`, `WeaponConfigKeyType`
-- PascalCase for enums: `DataType`, `CharacterConfigGroupName`, `WeaponName`
-- Enum values match key name: `Movement = "Movement"`, `Boolean = "Boolean"`
+- PascalCase for interfaces and types (`ConfigValue`, `RconConfig`, `User`)
+- No I prefix for interfaces
+- PascalCase for enums (`DataType`, `CategoryName`, `WeaponConfigGroupName`)
 
 ## Code Style
 
 **Formatting:**
-- 2-space indentation (consistent across all files)
-- Double quotes for strings
-- Semicolons always used
-- No max line length enforced (lines up to ~80 characters observed)
+- 2 space indentation (inferred from source files)
+- Single quotes for strings in JSX
+- Double quotes for strings in TypeScript
+- Semicolons required
+- No trailing commas after last property
 
 **Linting:**
-- No ESLint configuration present
-- No Prettier configuration present
-- Formatting appears manual but consistent
+- ESLint with `eslint-config-next` (`package.json`)
+- Run: `npm run lint` or `bun lint`
 
 ## Import Organization
 
 **Order:**
-1. External packages: `import { Rcon } from "rcon-client";`
-2. Internal modules: `import { DataType } from "./types";`
+1. React imports (`'use client'`, React hooks)
+2. External packages (zustand, sonner, etc.)
+3. Internal modules with path alias (`@/components/`, `@/lib/`)
+4. Relative imports (`./`, `../`)
+5. Type imports (`import type {}`)
 
 **Grouping:**
 - No blank lines between import groups
-- Related imports from same module combined: `import { ..., type ... } from "./schema";`
+- Types imported separately with `import type`
 
 **Path Aliases:**
-- None configured (relative paths only: `./types`, `./characterConfigSchema`)
+- `@/` maps to `src/` (`tsconfig.json`)
 
 ## Error Handling
 
 **Patterns:**
-- Throw errors with descriptive messages including context
-- Error messages include config key: `Invalid value for boolean config key: ${configKey}`
-- No try/catch at function boundaries (identified as gap)
+- Service functions throw errors with descriptive messages
+- API routes wrap in try/catch, return appropriate HTTP status
+- Client uses toast notifications for user-facing errors
 
 **Error Types:**
-- Standard `Error` class only
-- No custom error classes
+- Standard Error class with descriptive messages
+- NodeJS.ErrnoException for file system errors
+- ENOENT check for missing files (return empty defaults)
 
-**Validation:**
-- Type checking at runtime: `typeof configValue !== "boolean"`
-- Array validation: `!Array.isArray(configValue)`, `configValue.length !== 3`
+**Examples from codebase:**
+```typescript
+// Service throws
+throw new Error(`Invalid path: path traversal detected in "${combined}"`);
+
+// API catches and returns
+if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+  return {};
+}
+```
 
 ## Logging
 
 **Framework:**
-- Console.log for output
-- No structured logging
+- console.log for server-side logging
+- toast() from sonner for client-side notifications
 
 **Patterns:**
-- Success logging only: `console.log("RCON command success: ", response);`
-- No error logging present
-- No log levels
+- Log RCON command execution: `console.log("Successfully executed command:", command)`
+- No structured logging
 
 ## Comments
 
 **When to Comment:**
-- Section headers for data type groups: `// Booleans`, `// Floats`, `// Vector 2D`
-- TODO comments for pending work: `// These should be moved to env vars`
+- JSDoc comments for service functions explaining purpose
+- Inline comments for non-obvious logic
+- Section comments for grouped config options
 
 **JSDoc/TSDoc:**
-- Block comment example for type structure in `types.ts`
-- Not required for all functions
+- Used for public service functions
+- `@param` and `@returns` tags when helpful
+- Example:
+```typescript
+/**
+ * Execute a batch of RCON commands sequentially using a single connection
+ * @param commands Array of command strings to execute
+ * @returns Array of responses from each command
+ */
+```
 
 **TODO Comments:**
-- Format: `// These should be moved to env vars`
-- No ticket/issue references
+- Not found in codebase (clean)
 
 ## Function Design
 
 **Size:**
-- Functions under 30 lines
-- `validateAndConvertDataType()` is the longest at ~53 lines (multiple type cases)
+- Functions generally under 50 lines
+- Complex logic extracted to helper functions
 
 **Parameters:**
-- Up to 4 parameters acceptable: `sendWeaponConfigUpdate(weaponName, groupName, configKey, configValue)`
-- Type annotations for all parameters
-- `any` type used for config values (noted as area for improvement)
+- Max 3-4 parameters typical
+- Options objects used for complex configurations
+- Destructuring used in React components
 
 **Return Values:**
-- Explicit returns
-- Validation function returns formatted string or implicitly undefined (bug potential)
+- Explicit return types on service functions
+- Async functions return Promise types
+- Empty objects `{}` returned for missing data (not null)
 
 ## Module Design
 
 **Exports:**
-- Named exports for everything: `export enum`, `export const`, `export type`
-- No default exports
-- Type exports with `type` keyword: `type CharacterConfigKeyType`
+- Named exports preferred for services and utilities
+- Default export for React page components
+- Barrel files (index.ts) for feature directories
 
 **Barrel Files:**
-- None used (direct imports from each file)
+- Each feature directory has index.ts re-exporting public API
+- Example: `src/components/weapons/index.ts` exports `WeaponConfigTab`, `WeaponAccordion`
 
-## Schema Object Pattern
+## React Patterns
+
+**Component Structure:**
+- `'use client'` directive at top for client components
+- Hooks at top of component body
+- useMemo for derived state
+- Props destructured in function signature
+
+**State Management:**
+- Zustand for global state (`useConfigStore`, `useAuthStore`)
+- useState for local UI state
+- useMemo for computed values
+
+**Event Handlers:**
+- Inline arrow functions for simple handlers
+- Named handlers for complex logic
+
+## API Route Patterns
 
 **Structure:**
 ```typescript
-export const CONFIG_OPTIONS = {
-  GroupName: [
-    {
-      configKey: "KeyName",
-      dataType: DataType.Type,
-      isImplemented: false,
-      documentation: "",
-      default: value,
-    },
-    // ...
-  ],
-};
+export async function GET(request: Request) {
+  // Auth check
+  // Business logic
+  // Return NextResponse.json()
+}
 ```
 
-**Flat Map Pattern:**
-```typescript
-export const configFlatMap = Object.values(CONFIG_OPTIONS)
-  .reduce((acc, group) => [...acc, ...group], [])
-  .reduce(
-    (acc, configEntry) => ({
-      ...acc,
-      [configEntry.configKey]: configEntry,
-    }),
-    {},
-  );
-```
+**Response Format:**
+- NextResponse.json() for data responses
+- Appropriate HTTP status codes (200, 400, 401, 404, 500)
 
 ---
 
-*Convention analysis: 2026-01-23*
+*Convention analysis: 2026-01-27*
 *Update when patterns change*

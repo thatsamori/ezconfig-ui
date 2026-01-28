@@ -1,114 +1,181 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-01-23
+**Analysis Date:** 2026-01-27
 
 ## Directory Layout
 
 ```
 ezconfig-ui/
-├── types.ts                    # Core type definitions and enums
-├── characterConfigSchema.ts    # Character configuration schema (532 lines)
-├── weaponConfigSchema.ts       # Weapon configuration schema (497 lines)
-├── rconExamples.ts            # RCON client integration (102 lines) [gitignored]
-├── package.json               # Project manifest
-├── tsconfig.json              # TypeScript configuration
-├── bun.lock                   # Dependency lock file
-├── README.md                  # Project documentation
-├── t.md                       # Additional notes/documentation
-├── .gitignore                 # Git ignore rules
-├── .planning/                 # Planning documentation
-│   └── codebase/             # Codebase analysis (this folder)
-└── node_modules/             # Dependencies (gitignored)
-    ├── rcon-client/          # RCON protocol implementation
-    ├── typescript/           # TypeScript compiler
-    ├── @types/bun/           # Bun type definitions
-    └── @types/node/          # Node.js type definitions
+├── src/                    # Application source code
+│   ├── app/               # Next.js App Router pages and API routes
+│   ├── components/        # React components
+│   └── lib/               # Shared libraries and utilities
+├── Databases/             # JSON config storage (runtime data)
+├── Presets/               # Saved preset configurations
+├── Notes/                 # Per-schema notes storage
+├── scripts/               # Utility scripts
+├── public/                # Static assets
+├── .planning/             # Project planning documents
+└── string-schemas/        # String format schemas
 ```
 
 ## Directory Purposes
 
-**Root Directory:**
-- Purpose: All source code lives at root level (flat structure)
-- Contains: TypeScript source files, configuration files, documentation
-- Key files: All `.ts` files are source code
-- Subdirectories: Only node_modules and .planning
+**src/app/**
+- Purpose: Next.js App Router - pages and API routes
+- Contains: `page.tsx`, `layout.tsx`, `api/` directory
+- Key files: `page.tsx` (main SPA), `layout.tsx` (root layout)
+- Subdirectories:
+  - `actions/` - Server actions for RCON and GameINI
+  - `api/` - API route handlers
 
-**.planning/codebase/:**
-- Purpose: Codebase analysis documentation
-- Contains: Architecture, stack, conventions docs
-- Key files: This documentation set
-- Subdirectories: None
+**src/app/api/**
+- Purpose: REST API endpoints
+- Contains: Route handlers organized by resource
+- Key directories:
+  - `auth/` - Login, logout, session management
+  - `config/` - Config CRUD operations
+  - `presets/` - Preset management
+  - `users/` - User management (admin only)
+  - `apply/` - Apply config to game server
+  - `databases/` - Database structure endpoints
+  - `notes/` - Notes CRUD
+
+**src/components/**
+- Purpose: React UI components
+- Contains: Feature components and shared UI
+- Subdirectories:
+  - `ui/` - Reusable UI primitives (shadcn/ui)
+  - `weapons/` - Weapon config components
+  - `character/` - Character config components
+  - `presets/` - Preset management components
+  - `auth/` - Authentication components
+  - `users/` - User management components
+  - `config/` - Config input components
+  - `notes/` - Notes feature components
+
+**src/lib/**
+- Purpose: Shared libraries, services, and utilities
+- Contains: Business logic, types, hooks
+- Subdirectories:
+  - `store/` - Zustand state stores
+  - `database/` - File-based storage service
+  - `rcon/` - RCON protocol service
+  - `auth/` - Authentication service
+  - `config/` - Config schemas and types
+  - `presets/` - Preset service
+  - `notes/` - Notes service
+  - `hooks/` - Custom React hooks
+  - `gameini/` - Game INI file parser
+
+**Databases/**
+- Purpose: Runtime JSON config storage
+- Contains: Nested JSON files by database/category
+- Structure: `{DatabaseName}/{Category}.json` or `Weapon/{WeaponName}/{Category}.json`
+- Generated: Created on-demand when configs are saved
+
+**Presets/**
+- Purpose: Saved configuration presets
+- Contains: Preset JSON files and user preset subdirectories
+
+**Notes/**
+- Purpose: Per-schema rich text notes
+- Contains: JSON files with TipTap editor content
 
 ## Key File Locations
 
 **Entry Points:**
-- `rconExamples.ts` - RCON integration and API (gitignored - contains credentials)
+- `src/app/page.tsx` - Main application page
+- `src/app/layout.tsx` - Root layout with providers
 
 **Configuration:**
-- `tsconfig.json` - TypeScript compiler options
-- `package.json` - Dependencies and project metadata
-- `.gitignore` - Excluded files
+- `tsconfig.json` - TypeScript configuration
+- `next.config.ts` - Next.js configuration
+- `postcss.config.mjs` - PostCSS/Tailwind configuration
+- `components.json` - shadcn/ui configuration
+- `.env.example` - Environment variable template
 
 **Core Logic:**
-- `types.ts` - Foundation types (ConfigEntry, DataType enum)
-- `characterConfigSchema.ts` - Character config definitions
-- `weaponConfigSchema.ts` - Weapon config definitions
+- `src/lib/store/configStore.ts` - Config state management
+- `src/lib/database/service.ts` - JSON file storage
+- `src/lib/rcon/service.ts` - Game server communication
+- `src/lib/auth/service.ts` - User authentication
+
+**Schemas:**
+- `src/lib/config/weaponConfigSchema.ts` - Weapon config definitions
+- `src/lib/config/characterConfigSchema.ts` - Character config definitions
+- `src/lib/config/types.ts` - Shared config types
 
 **Testing:**
-- No test files present
-- `coverage/` directory in `.gitignore` for future use
-
-**Documentation:**
-- `README.md` - Installation and run instructions
-- `t.md` - Design notes for planned UI
+- No dedicated test files (tests embedded in service files via `import.meta.main`)
 
 ## Naming Conventions
 
 **Files:**
-- camelCase for all TypeScript files: `characterConfigSchema.ts`, `weaponConfigSchema.ts`
-- Single word lowercase for utility files: `types.ts`
-- UPPERCASE.md for documentation: `README.md`
+- camelCase.ts/tsx - All TypeScript files
+- PascalCase.tsx - React component files
+- index.ts - Barrel exports for directories
 
 **Directories:**
-- kebab-case: `.planning`
-- All lowercase: `node_modules`, `codebase`
+- kebab-case - Feature directories under components/
+- camelCase - Library directories under lib/
 
 **Special Patterns:**
-- `*Schema.ts` suffix for configuration schema files
-- No index.ts barrel exports (direct imports)
+- `route.ts` - Next.js API route handler
+- `[param]/` - Dynamic route segments
+- `[...path]/` - Catch-all route segments
 
 ## Where to Add New Code
 
-**New Configuration Schema:**
-- Implementation: `[entityName]ConfigSchema.ts` at root
-- Import types from: `types.ts`
-- Export: Group enum, config options constant, flat map, key type
+**New Feature:**
+- Primary code: `src/components/{feature}/`
+- State management: `src/lib/store/`
+- API routes: `src/app/api/{resource}/`
+- Types: `src/lib/{feature}/types.ts`
 
-**New Data Type:**
-- Type definition: Add to `DataType` enum in `types.ts`
-- Validation: Add case to `validateAndConvertDataType()` in `rconExamples.ts`
+**New Component:**
+- UI primitive: `src/components/ui/`
+- Feature component: `src/components/{feature}/`
+- Export: Add to `src/components/{feature}/index.ts`
 
-**New RCON Function:**
-- Implementation: Add to `rconExamples.ts`
-- Pattern: Follow `sendCharacterConfigUpdate()` / `sendWeaponConfigUpdate()`
+**New API Endpoint:**
+- Route: `src/app/api/{resource}/route.ts`
+- Dynamic: `src/app/api/{resource}/[param]/route.ts`
+- Service logic: `src/lib/{domain}/service.ts`
+
+**New Service:**
+- Implementation: `src/lib/{domain}/service.ts`
+- Types: `src/lib/{domain}/types.ts`
+- Export: `src/lib/{domain}/index.ts`
 
 **Utilities:**
-- Shared helpers: Create `utils.ts` at root
-- Type utilities: Add to `types.ts`
+- Shared helpers: `src/lib/utils.ts`
+- Hooks: `src/lib/hooks/`
+- Type definitions: `src/lib/{domain}/types.ts`
 
 ## Special Directories
 
-**.planning/:**
-- Purpose: Project planning and codebase documentation
-- Source: Created by GSD workflow
-- Committed: Yes
+**Databases/**
+- Purpose: Runtime config storage (JSON files)
+- Source: Created by database service when configs saved
+- Committed: No (gitignored)
 
-**node_modules/:**
-- Purpose: Installed dependencies
-- Source: `bun install`
+**Presets/**
+- Purpose: Saved configuration presets
+- Source: User-created presets
+- Committed: Yes (default presets)
+
+**Notes/**
+- Purpose: Per-schema notes with rich text
+- Source: User-created notes
+- Committed: No (gitignored)
+
+**.next/**
+- Purpose: Next.js build output
+- Source: Generated by Next.js build
 - Committed: No (gitignored)
 
 ---
 
-*Structure analysis: 2026-01-23*
+*Structure analysis: 2026-01-27*
 *Update when directory structure changes*
