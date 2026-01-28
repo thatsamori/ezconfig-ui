@@ -129,6 +129,8 @@ export function CharacterConfigTab() {
             <ConfigRow
               key={configEntry.configKey}
               configEntry={configEntry}
+              database="Character"
+              category={categoryName}
               value={getEffectiveValue(categoryName, configEntry.configKey)}
               onChange={(value) =>
                 setValue("Character", categoryName, configEntry.configKey, value)

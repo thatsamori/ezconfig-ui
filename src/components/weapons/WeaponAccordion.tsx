@@ -195,6 +195,8 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
               <ConfigRow
                 key={`${weaponName}-${category}-${configEntry.configKey}`}
                 configEntry={configEntry}
+                database={weaponName}
+                category={category}
                 value={effectiveValue}
                 onChange={(value) =>
                   setValue(weaponName, category, configEntry.configKey, value)

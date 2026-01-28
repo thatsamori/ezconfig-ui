@@ -16,12 +16,15 @@ import {
   Vector2DInput,
   FloatArrayInput,
 } from "@/components/config";
+import { NotesButton } from "@/components/notes";
 import { ConfigEntry, DataType } from "@/lib/config/types";
 import type { ConfigValue } from "@/lib/store/configStore";
 import { Pencil, X } from "lucide-react";
 
 export interface ConfigRowProps {
   configEntry: ConfigEntry;
+  database: string;
+  category: string;
   value: ConfigValue | undefined;
   onChange: (value: ConfigValue) => void;
   onReset?: () => void;
@@ -32,6 +35,8 @@ export interface ConfigRowProps {
 
 export function ConfigRow({
   configEntry,
+  database,
+  category,
   value,
   onChange,
   onReset,
@@ -52,7 +57,7 @@ export function ConfigRow({
   const renderInput = () => {
     // Value is guaranteed to exist here (only called when isCustomized)
     switch (configEntry.dataType) {
-      case DataType.Boolean:
+      case DataType.Bool:
         return (
           <BooleanInput
             value={value as boolean}
@@ -101,11 +106,18 @@ export function ConfigRow({
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div className="flex items-center gap-4 py-2 border-b border-border last:border-b-0">
-          <Label className="min-w-[200px] font-medium">{configEntry.configKey}</Label>
+          <Label className="min-w-[200px] font-medium">
+            {configEntry.configKey}
+          </Label>
           <div className="flex-1 flex items-center gap-2">
             {isCustomized ? (
               <>
                 {renderInput()}
+                <NotesButton
+                  database={database}
+                  category={category}
+                  configKey={configEntry.configKey}
+                />
                 {onReset && !readonly && (
                   <Button
                     variant="ghost"
@@ -124,6 +136,11 @@ export function ConfigRow({
                 <Badge variant="secondary" className="text-xs">
                   Game Default
                 </Badge>
+                <NotesButton
+                  database={database}
+                  category={category}
+                  configKey={configEntry.configKey}
+                />
                 {!readonly && (
                   <Button
                     variant="ghost"
