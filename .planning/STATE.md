@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-27)
 
 **Core value:** Database-driven configuration with immediate persistence: edit freely (changes save automatically), apply to game on demand.
-**Current focus:** v2.3 Notes Simplification — per-schema notes with shared config keys
+**Current focus:** None — v2.3 complete
 
 ## Current Position
 
-Phase: 34 of 36 (Notes Schema Refactor)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-01-27 — Milestone v2.3 created
+Phase: 36 of 36 (Migration & Cleanup)
+Plan: 00 complete (not needed)
+Status: v2.3 Notes Simplification milestone complete
+Last activity: 2026-01-27 — v2.3 shipped
 
-Progress: ░░░░░░░░░░ 0% (v2.3)
+Progress: ██████████ 100% (v2.3)
 
 ## Milestone History
 
@@ -96,9 +96,10 @@ None.
 - Milestone v2.2 created: Improvements (UX polish, performance), 3 phases (Phase 31-33)
 - v2.2 shipped 2026-01-27: All 3 phases (31-33) complete
 - Milestone v2.3 created: Notes Simplification, 3 phases (Phase 34-36)
+- v2.3 shipped 2026-01-27: All 3 phases (34-36) complete
 
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Milestone v2.3 initialization
+Stopped at: v2.3 shipped
 Resume file: None
