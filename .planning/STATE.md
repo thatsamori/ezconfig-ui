@@ -4,17 +4,17 @@
 
 See: .planning/PROJECT.md (updated 2026-01-26)
 
-**Core value:** Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
-**Current focus:** Simplify architecture by removing working state, direct database writes
+**Core value:** Database-driven configuration with immediate persistence: edit freely (changes save automatically), apply to game on demand.
+**Current focus:** v2.0 complete - planning next milestone
 
 ## Current Position
 
-Phase: 27 of 27 (Apply Flow Streamline)
-Plan: 1 of 1 in current phase
-Status: Phase complete, milestone complete
-Last activity: 2026-01-27 — Completed 27-01-PLAN.md
+Phase: None — between milestones
+Plan: N/A
+Status: v2.0 milestone complete, ready for next milestone
+Last activity: 2026-01-27 — v2.0 Simplification shipped
 
-Progress: ██████████ 100%
+Progress: ██████████ 100% (v2.0)
 
 Progress: ███████░░░ 75%
 
@@ -31,7 +31,8 @@ Progress: ███████░░░ 75%
 - v1.4 UX Improvements: SHIPPED (Phases 19-20, 2 plans)
   - See: .planning/milestones/v1.4-ROADMAP.md
 - v1.5 User Notes: SUPERSEDED (Phases 21-23)
-- v2.0 Simplification: IN PROGRESS (Phases 24-27)
+- v2.0 Simplification: SHIPPED (Phases 24-27)
+  - See: .planning/milestones/v2.0-ROADMAP.md
 
 ## Performance Metrics
 
@@ -91,5 +92,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed Phase 26 (Preset Flow Update)
+Stopped at: v2.0 milestone complete
 Resume file: None

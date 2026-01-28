@@ -6,20 +6,31 @@ A web-based configuration interface for the ezconfig game mod. The web app is th
 
 ## Core Value
 
-Database-driven configuration with working state persistence: edit freely, save explicitly, apply to game on demand.
+Database-driven configuration with immediate persistence: edit freely (changes save automatically), apply to game on demand.
 
 ## Current State
 
-**Version:** v1.4 shipped 2026-01-27
-**LOC:** ~11,500 TypeScript
+**Version:** v2.0 shipped 2026-01-27
+**LOC:** ~10,150 TypeScript
 **Tech stack:** Next.js 16, React 19, Tailwind CSS 4, Shadcn UI, Zustand, JSZip
 
-**What shipped in v1.4:**
+**What shipped in v2.0:**
+- Removed working/saved state split - single state with immediate persistence
+- All UI changes write directly to database (no Save button needed)
+- Removed Save/Reset buttons - simplified to just Apply to Game
+- Presets immediately replace database (no merge into working state)
+- Cleaned up terminology to match immediate-persistence model
+
+<details>
+<summary>v1.4 (shipped 2026-01-27)</summary>
+
 - Selective apply dialog with command list and checkboxes
 - Search filter for RCON commands in apply dialog
 - Select All / Deselect All for quick command selection
 - Fixed "Show overrides only" toggle to actually filter empty items
 - Context-aware empty state messages (search vs filter)
+
+</details>
 
 <details>
 <summary>v1.3 (shipped 2026-01-27)</summary>
@@ -103,6 +114,9 @@ Database-driven configuration with working state persistence: edit freely, save 
 - ✓ Selective apply dialog with command checkboxes — v1.4
 - ✓ Command search filter in apply dialog — v1.4
 - ✓ Fixed overrides filter to hide empty items — v1.4
+- ✓ Immediate persistence (no Save/Reset buttons) — v2.0
+- ✓ Direct database writes on all UI changes — v2.0
+- ✓ Simplified preset loading (immediate database replace) — v2.0
 
 ### Active
 
@@ -156,7 +170,7 @@ See `architecture_update.md` for full details.
 | Copied tw-animate-css locally | Turbopack resolution workaround | ✓ Good |
 | Web app JSON as source of truth | Mod can request config on startup | ✓ Good |
 | Accordion-based weapon selection | Simpler UX, lazy loading | ✓ Good |
-| Working → Save → Apply flow | Explicit persistence, clear state model | ✓ Good |
+| ~~Working → Save → Apply flow~~ | ~~Explicit persistence, clear state model~~ | ⚠️ Superseded by v2.0 |
 | Context menu on all rows | Users want to bulk-reset to defaults too | ✓ Good |
 | ~~Staged state per config key~~ | ~~Selective apply workflow~~ | ⚠️ Superseded |
 | ~~Multi-weapon bulk editing~~ | ~~Apply to all selected~~ | ⚠️ Superseded |
@@ -172,6 +186,8 @@ See `architecture_update.md` for full details.
 | localStorage token persistence | Simple session management | ✓ Good |
 | Simplified 2-role system | admin + config_editor instead of 4 roles | ✓ Good |
 | Environment-based admin bootstrap | Easy first-time setup | ✓ Good |
+| Immediate persistence (v2.0) | Edit freely, changes save automatically | ✓ Good |
+| Fire-and-forget API writes | Last write wins, UI stays responsive | ✓ Good |
 
 ---
-*Last updated: 2026-01-27 after v1.4 milestone*
+*Last updated: 2026-01-27 after v2.0 milestone*

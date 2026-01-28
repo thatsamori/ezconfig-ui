@@ -17,7 +17,7 @@ None
 - **v1.3 Users & Auth** — Phases 16-18 (SHIPPED 2026-01-27) — [Archive](milestones/v1.3-ROADMAP.md)
 - **v1.4 UX Improvements** — Phases 19-20 (SHIPPED 2026-01-27) — [Archive](milestones/v1.4-ROADMAP.md)
 - **v1.5 User Notes** — Phases 21-23 (SUPERSEDED 2026-01-27)
-- 🚧 **v2.0 Simplification** — Phases 24-27 (in progress)
+- **v2.0 Simplification** — Phases 24-27 (SHIPPED 2026-01-27) — [Archive](milestones/v2.0-ROADMAP.md)
 
 ## Completed Milestones
 
@@ -126,50 +126,19 @@ Superseded before implementation due to v2.0 architectural simplification (remov
 
 ---
 
-### 🚧 v2.0 Simplification (In Progress)
+<details>
+<summary>v2.0 Simplification (Phases 24-27) — SHIPPED 2026-01-27</summary>
 
-**Milestone Goal:** Remove working state model for direct database writes. All UI changes immediately persist to database, presets immediately replace database, no Save/Reset buttons needed.
+Remove working state model for direct database writes. All UI changes immediately persist to database, presets immediately replace database, no Save/Reset buttons needed.
 
-#### Phase 24: State Model Removal
+- [x] Phase 24: State Model Removal (2/2 plans) — completed 2026-01-27
+- [x] Phase 25: UI Simplification (1/1 plan) — completed 2026-01-27
+- [x] Phase 26: Preset Flow Update (1/1 plan) — completed 2026-01-27
+- [x] Phase 27: Apply Flow Streamline (1/1 plan) — completed 2026-01-27
 
-**Goal**: Remove working state and localStorage persistence, all changes write directly to database
-**Depends on**: Previous milestone complete
-**Research**: Unlikely (internal refactoring)
-**Plans**: 2 plans
+See [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md) for full details.
 
-Plans:
-- [x] 24-01: Store refactor - single state model, async API writes — completed 2026-01-27
-- [x] 24-02: Preset and bulk operations - direct API writes — completed 2026-01-27
-
-#### Phase 25: UI Simplification
-
-**Goal**: Remove Save/Reset buttons, update status indicators to reflect immediate persistence
-**Depends on**: Phase 24
-**Research**: Unlikely (internal UI changes)
-**Plans**: 1 plan
-
-Plans:
-- [x] 25-01: Remove Save/Reset buttons, update store method names — completed 2026-01-27
-
-#### Phase 26: Preset Flow Update
-
-**Goal**: Update preset loading to immediately replace database instead of merging into working state
-**Depends on**: Phase 25
-**Research**: Unlikely (internal patterns)
-**Plans**: 1 plan
-
-Plans:
-- [x] 26-01: Remove deprecated store methods from preset components — completed 2026-01-27
-
-#### Phase 27: Apply Flow Streamline
-
-**Goal**: Simplify Apply dialog since there's no working vs saved distinction
-**Depends on**: Phase 26
-**Research**: Unlikely (internal patterns)
-**Plans**: 1 plan
-
-Plans:
-- [x] 27-01: Update apply flow terminology for v2.0 model — completed 2026-01-27
+</details>
 
 ## Progress
 
