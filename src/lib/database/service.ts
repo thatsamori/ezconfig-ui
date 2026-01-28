@@ -160,8 +160,12 @@ export async function readCategory(database: string, category: string): Promise<
 
     return parsed as ConfigData;
   } catch (error) {
-    // File doesn't exist or is invalid - return empty object
+    // File doesn't exist - return empty object
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return {};
+    }
+    // Empty file or invalid JSON - return empty object (same as non-existent)
+    if (error instanceof SyntaxError) {
       return {};
     }
     throw error;
