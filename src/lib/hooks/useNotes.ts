@@ -46,20 +46,28 @@ export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn
     fetchNotes();
   }, [fetchNotes]);
 
-  const saveNotes = async (updatedData: NotesData) => {
-    try {
-      await fetch(
-        `/api/notes/${encodeURIComponent(schema)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ notes: updatedData }),
+  // Wrap saveNotes in useCallback to ensure stable reference
+  const saveNotes = useCallback(
+    async (updatedData: NotesData) => {
+      try {
+        const response = await fetch(
+          `/api/notes/${encodeURIComponent(schema)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ notes: updatedData }),
+          }
+        );
+        if (!response.ok) {
+          const data = await response.json();
+          console.error("Failed to save notes:", data.error);
         }
-      );
-    } catch {
-      // Ignore save errors
-    }
-  };
+      } catch (error) {
+        console.error("Failed to save notes:", error);
+      }
+    },
+    [schema]
+  );
 
   const addNote = useCallback(
     (note: string) => {
@@ -70,7 +78,7 @@ export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn
       setNotesData(updatedData);
       saveNotes(updatedData);
     },
-    [user, notes, notesData, configKey]
+    [user, notes, notesData, configKey, saveNotes]
   );
 
   const editNote = useCallback(
@@ -80,7 +88,7 @@ export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn
       setNotesData(updatedData);
       saveNotes(updatedData);
     },
-    [notes, notesData, configKey]
+    [notes, notesData, configKey, saveNotes]
   );
 
   const deleteNote = useCallback(
@@ -95,7 +103,7 @@ export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn
       setNotesData(updatedData);
       saveNotes(updatedData);
     },
-    [notes, notesData, configKey]
+    [notes, notesData, configKey, saveNotes]
   );
 
   return {
