@@ -2,7 +2,7 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-26)
+See: .planning/PROJECT.md (updated 2026-01-27)
 
 **Core value:** Database-driven configuration with immediate persistence: edit freely (changes save automatically), apply to game on demand.
 **Current focus:** None — v2.2 complete
@@ -31,6 +31,10 @@ Progress: ██████████ 100% (v2.2)
 - v1.5 User Notes: SUPERSEDED (Phases 21-23)
 - v2.0 Simplification: SHIPPED (Phases 24-27)
   - See: .planning/milestones/v2.0-ROADMAP.md
+- v2.1 User Notes: SHIPPED (Phases 28-30, 3 plans)
+  - See: .planning/milestones/v2.1-ROADMAP.md
+- v2.2 Improvements: SHIPPED (Phases 31-33, 3 plans)
+  - See: .planning/milestones/v2.2-ROADMAP.md
 
 ## Performance Metrics
 

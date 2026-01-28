@@ -19,7 +19,7 @@ None
 - **v1.5 User Notes** — Phases 21-23 (SUPERSEDED 2026-01-27)
 - **v2.0 Simplification** — Phases 24-27 (SHIPPED 2026-01-27) — [Archive](milestones/v2.0-ROADMAP.md)
 - **v2.1 User Notes** — Phases 28-30 (SHIPPED 2026-01-27) — [Archive](milestones/v2.1-ROADMAP.md)
-- **v2.2 Improvements** — Phases 31-33 (SHIPPED 2026-01-27)
+- **v2.2 Improvements** — Phases 31-33 (SHIPPED 2026-01-27) — [Archive](milestones/v2.2-ROADMAP.md)
 
 ## Completed Milestones
 
