@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-26)
 
 **Core value:** Database-driven configuration with immediate persistence: edit freely (changes save automatically), apply to game on demand.
-**Current focus:** v2.2 Improvements - UX polish and performance
+**Current focus:** None — v2.2 complete
 
 ## Current Position
 
-Phase: 31 of 33 (Notes Enhancement)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-01-27 — Milestone v2.2 created
+Phase: 33 of 33 (Polish)
+Plan: 01 complete
+Status: v2.2 Improvements milestone complete
+Last activity: 2026-01-27 — v2.2 shipped
 
-Progress: ░░░░░░░░░░ 0% (v2.2)
+Progress: ██████████ 100% (v2.2)
 
 ## Milestone History
 
@@ -90,9 +90,10 @@ None.
 - Milestone v2.1 created: User Notes (revived from superseded v1.5), 3 phases (Phase 28-30)
 - v2.1 shipped 2026-01-27: All 3 phases (28-30) complete
 - Milestone v2.2 created: Improvements (UX polish, performance), 3 phases (Phase 31-33)
+- v2.2 shipped 2026-01-27: All 3 phases (31-33) complete
 
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Milestone v2.2 initialization
+Stopped at: v2.2 shipped
 Resume file: None

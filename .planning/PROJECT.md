@@ -10,16 +10,35 @@ Database-driven configuration with immediate persistence: edit freely (changes s
 
 ## Current State
 
-**Version:** v2.0 shipped 2026-01-27
-**LOC:** ~10,150 TypeScript
-**Tech stack:** Next.js 16, React 19, Tailwind CSS 4, Shadcn UI, Zustand, JSZip
+**Version:** v2.2 shipped 2026-01-27
+**LOC:** ~10,500 TypeScript
+**Tech stack:** Next.js 16, React 19, Tailwind CSS 4, Shadcn UI, Zustand, JSZip, Tiptap
 
-**What shipped in v2.0:**
+**What shipped in v2.2:**
+- Rich text notes with Tiptap editor (bold, italic, underline formatting)
+- Delete confirmation dialog for notes
+- 1-second debounced database writes for all numeric inputs
+- Visual save indicator (spinner while pending, green checkmark on save)
+
+<details>
+<summary>v2.1 (shipped 2026-01-27)</summary>
+
+- User notes system for annotating config options
+- Notes stored as JSON files mirroring config structure
+- Per-user note ownership (can only edit/delete your own notes)
+
+</details>
+
+<details>
+<summary>v2.0 (shipped 2026-01-27)</summary>
+
 - Removed working/saved state split - single state with immediate persistence
 - All UI changes write directly to database (no Save button needed)
 - Removed Save/Reset buttons - simplified to just Apply to Game
 - Presets immediately replace database (no merge into working state)
 - Cleaned up terminology to match immediate-persistence model
+
+</details>
 
 <details>
 <summary>v1.4 (shipped 2026-01-27)</summary>
@@ -117,6 +136,10 @@ Database-driven configuration with immediate persistence: edit freely (changes s
 - ✓ Immediate persistence (no Save/Reset buttons) — v2.0
 - ✓ Direct database writes on all UI changes — v2.0
 - ✓ Simplified preset loading (immediate database replace) — v2.0
+- ✓ User notes with per-config annotations — v2.1
+- ✓ Rich text notes (bold, italic, underline) — v2.2
+- ✓ Delete confirmation for notes — v2.2
+- ✓ Debounced input saves with visual indicator — v2.2
 
 ### Active
 
@@ -188,6 +211,8 @@ See `architecture_update.md` for full details.
 | Environment-based admin bootstrap | Easy first-time setup | ✓ Good |
 | Immediate persistence (v2.0) | Edit freely, changes save automatically | ✓ Good |
 | Fire-and-forget API writes | Last write wins, UI stays responsive | ✓ Good |
+| Tiptap for rich text notes | Lightweight, React-native, Shadcn-compatible | ✓ Good |
+| 1-second debounce for inputs | Reduces DB writes, improves responsiveness | ✓ Good |
 
 ---
-*Last updated: 2026-01-27 after v2.0 milestone*
+*Last updated: 2026-01-27 after v2.2 milestone*

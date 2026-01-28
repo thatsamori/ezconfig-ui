@@ -3,6 +3,7 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
+import Placeholder from "@tiptap/extension-placeholder";
 import { Button } from "@/components/ui/button";
 import { Bold, Italic, Underline as UnderlineIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,12 +31,16 @@ export function RichTextEditor({
         horizontalRule: false,
       }),
       Underline,
+      Placeholder.configure({
+        placeholder,
+        emptyEditorClass: "is-editor-empty",
+      }),
     ],
     content,
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: "outline-none min-h-[80px] p-3 prose prose-sm max-w-none",
+        class: "outline-none min-h-[80px] p-3 text-sm",
       },
     },
     onUpdate: ({ editor }) => {
@@ -80,7 +85,10 @@ export function RichTextEditor({
         </Button>
       </div>
       {/* Editor */}
-      <EditorContent editor={editor} />
+      <EditorContent
+        editor={editor}
+        className="[&_.is-editor-empty:first-child::before]:text-muted-foreground [&_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.is-editor-empty:first-child::before]:float-left [&_.is-editor-empty:first-child::before]:pointer-events-none [&_.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:m-0"
+      />
     </div>
   );
 }

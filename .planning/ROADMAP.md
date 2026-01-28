@@ -19,7 +19,7 @@ None
 - **v1.5 User Notes** — Phases 21-23 (SUPERSEDED 2026-01-27)
 - **v2.0 Simplification** — Phases 24-27 (SHIPPED 2026-01-27) — [Archive](milestones/v2.0-ROADMAP.md)
 - **v2.1 User Notes** — Phases 28-30 (SHIPPED 2026-01-27) — [Archive](milestones/v2.1-ROADMAP.md)
-- 🚧 **v2.2 Improvements** — Phases 31-33 (in progress)
+- **v2.2 Improvements** — Phases 31-33 (SHIPPED 2026-01-27)
 
 ## Completed Milestones
 
@@ -157,40 +157,16 @@ User annotations on config options, stored as JSON files mirroring the config st
 
 ---
 
-### 🚧 v2.2 Improvements (In Progress)
+<details>
+<summary>v2.2 Improvements (Phases 31-33) — SHIPPED 2026-01-27</summary>
 
-**Milestone Goal:** Enhance UX with rich text notes, input performance improvements, and polish
+Rich text notes with Tiptap, 1-second debounced inputs with save indicators.
 
-#### Phase 31: Notes Enhancement
+- [x] Phase 31: Notes Enhancement (1/1 plans) — completed 2026-01-27
+- [x] Phase 32: Input Debouncing (1/1 plans) — completed 2026-01-27
+- [x] Phase 33: Polish (1/1 plans) — completed 2026-01-27
 
-**Goal**: Add rich text editor for notes and delete confirmation
-**Depends on**: Phase 30
-**Research**: Likely (rich text editor library)
-**Research topics**: Tiptap vs Slate vs other lightweight rich text editors for React
-**Plans**: TBD
-
-Plans:
-- [ ] 31-01: TBD (run /gsd:plan-phase 31 to break down)
-
-#### Phase 32: Input Debouncing
-
-**Goal**: Delay DB writes until input blur for float inputs to improve responsiveness
-**Depends on**: Phase 31
-**Research**: Unlikely (internal patterns)
-**Plans**: TBD
-
-Plans:
-- [ ] 32-01: TBD
-
-#### Phase 33: Polish
-
-**Goal**: Final UX polish and cleanup from phases 31-32
-**Depends on**: Phase 32
-**Research**: Unlikely (internal patterns)
-**Plans**: TBD
-
-Plans:
-- [ ] 33-01: TBD
+</details>
 
 ---
 
@@ -229,6 +205,6 @@ Plans:
 | 28. Notes Database | v2.1 | 1/1 | Complete | 2026-01-27 |
 | 29. Notes UI | v2.1 | 1/1 | Complete | 2026-01-27 |
 | 30. Notes Integration | v2.1 | 1/1 | Complete | 2026-01-27 |
-| 31. Notes Enhancement | v2.2 | 0/? | Not started | - |
-| 32. Input Debouncing | v2.2 | 0/? | Not started | - |
-| 33. Polish | v2.2 | 0/? | Not started | - |
+| 31. Notes Enhancement | v2.2 | 1/1 | Complete | 2026-01-27 |
+| 32. Input Debouncing | v2.2 | 1/1 | Complete | 2026-01-27 |
+| 33. Polish | v2.2 | 1/1 | Complete | 2026-01-27 |
