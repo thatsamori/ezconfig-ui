@@ -20,6 +20,7 @@ None
 - **v2.0 Simplification** — Phases 24-27 (SHIPPED 2026-01-27) — [Archive](milestones/v2.0-ROADMAP.md)
 - **v2.1 User Notes** — Phases 28-30 (SHIPPED 2026-01-27) — [Archive](milestones/v2.1-ROADMAP.md) — [Archive](milestones/v2.1-ROADMAP.md)
 - **v2.2 Improvements** — Phases 31-33 (SHIPPED 2026-01-27) — [Archive](milestones/v2.2-ROADMAP.md)
+- 🚧 **v2.3 Notes Simplification** — Phases 34-36 (in progress)
 
 ## Completed Milestones
 
@@ -170,6 +171,45 @@ Rich text notes with Tiptap, 1-second debounced inputs with save indicators.
 
 ---
 
+### 🚧 v2.3 Notes Simplification (In Progress)
+
+**Milestone Goal:** Simplify notes storage to per-schema files with config key as top-level index, making notes shared across all categories.
+
+#### Phase 34: Notes Schema Refactor
+
+**Goal**: Change notes storage from per-category to per-schema with config key indexing
+**Depends on**: v2.2 complete
+**Research**: Unlikely (internal refactor)
+**Plans**: TBD
+
+Current structure: `Notes/{database}/{category}.json` → `{ configKey: [notes] }`
+New structure: `Notes/{schema}.json` → `{ configKey: [notes] }` (shared across categories)
+
+Plans:
+- [ ] 34-01: TBD (run /gsd:plan-phase 34 to break down)
+
+#### Phase 35: Notes UI Update
+
+**Goal**: Update UI and hooks to work with shared notes across categories
+**Depends on**: Phase 34
+**Research**: Unlikely (internal patterns)
+**Plans**: TBD
+
+Plans:
+- [ ] 35-01: TBD
+
+#### Phase 36: Migration & Cleanup
+
+**Goal**: Migrate existing notes and remove old storage structure
+**Depends on**: Phase 35
+**Research**: Unlikely (cleanup)
+**Plans**: TBD
+
+Plans:
+- [ ] 36-01: TBD
+
+---
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -208,3 +248,6 @@ Rich text notes with Tiptap, 1-second debounced inputs with save indicators.
 | 31. Notes Enhancement | v2.2 | 1/1 | Complete | 2026-01-27 |
 | 32. Input Debouncing | v2.2 | 1/1 | Complete | 2026-01-27 |
 | 33. Polish | v2.2 | 1/1 | Complete | 2026-01-27 |
+| 34. Notes Schema Refactor | v2.3 | 0/? | Not started | - |
+| 35. Notes UI Update | v2.3 | 0/? | Not started | - |
+| 36. Migration & Cleanup | v2.3 | 0/? | Not started | - |
