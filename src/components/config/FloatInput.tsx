@@ -1,6 +1,8 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { useDebouncedCallback } from "@/lib/hooks";
+import { SaveIndicator } from "./SaveIndicator";
 
 export interface FloatInputProps {
   value: number;
@@ -19,22 +21,34 @@ export function FloatInput({
   min,
   max,
 }: FloatInputProps) {
+  const [localValue, setLocalValue, saveState] = useDebouncedCallback(
+    String(value),
+    (strValue) => {
+      const parsed = parseFloat(strValue);
+      if (!isNaN(parsed)) {
+        onChange(parsed);
+      }
+    },
+    1000
+  );
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseFloat(e.target.value);
-    if (!isNaN(newValue)) {
-      onChange(newValue);
-    }
+    setLocalValue(e.target.value);
   };
 
   return (
-    <Input
-      type="number"
-      value={value}
-      onChange={handleChange}
-      disabled={disabled}
-      step={step}
-      min={min}
-      max={max}
-    />
+    <div className="flex items-center gap-1">
+      <Input
+        type="number"
+        value={localValue}
+        onChange={handleChange}
+        disabled={disabled}
+        step={step}
+        min={min}
+        max={max}
+        className="w-24"
+      />
+      <SaveIndicator state={saveState} />
+    </div>
   );
 }
