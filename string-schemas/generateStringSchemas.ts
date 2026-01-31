@@ -18,4 +18,19 @@ const writeWeaponConfigStringSchema = () => {
   Bun.write("./weaponConfigSchema.txt", acc.trim());
 };
 
+const writeCharacterConfigStringSchema = () => {
+  let acc = "";
+
+  const options = Object.values(CHARACTER_CONFIG_OPTIONS).flat();
+  options.forEach((opt) => {
+    const isVector =
+      opt.dataType === DataType.Vector || opt.dataType === DataType.Vector2D;
+    acc += `${opt.configKey},${isVector ? "Vector" : opt.dataType} `;
+  });
+
+  // Write to file
+  Bun.write("./characterConfigSchema.txt", acc.trim());
+};
+
 writeWeaponConfigStringSchema();
+writeCharacterConfigStringSchema();

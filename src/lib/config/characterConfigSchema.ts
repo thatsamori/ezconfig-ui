@@ -178,13 +178,6 @@ export const CHARACTER_CONFIG_OPTIONS = {
       documentation: "",
       default: true,
     },
-    {
-      configKey: "AlwaysStunInsteadOfDisarm",
-      dataType: DataType.Bool,
-      isImplemented: false,
-      documentation: "",
-      default: false,
-    },
 
     // Floats
     {
@@ -525,6 +518,27 @@ export const CHARACTER_CONFIG_OPTIONS = {
       isImplemented: false,
       documentation: "",
       default: 0.15,
+    },
+    {
+      configKey: "LookUpLimit",
+      dataType: DataType.Float,
+      isImplemented: false,
+      documentation: "",
+      default: 55.0,
+    },
+    {
+      configKey: "LookDownLimit",
+      dataType: DataType.Float,
+      isImplemented: false,
+      documentation: "",
+      default: 70.0,
+    },
+    {
+      configKey: "LookUpRateCap",
+      dataType: DataType.Float,
+      isImplemented: false,
+      documentation: "",
+      default: -1.0,
     },
   ],
 };
