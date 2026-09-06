@@ -665,7 +665,26 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       default: 0.675,
     },
   ],
-  Chamber: [],
+  Chamber: [
+    // ChamberSlowdown: movement slowdown after a chamber (ticket 03). Toggle first.
+    {
+      configKey: "ChamberSlowdown",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      isFeatureToggle: true,
+      documentation:
+        "Feature toggle. When a player chambers (blocks an attack with a chamber), that player's movement is restricted to partial sprint for a short duration. Off is stock behaviour; the other Chamber keys are stored and sent regardless but only read while this is on. Cswics: useChamberSlowdown",
+      default: false,
+    },
+    {
+      configKey: "ChamberSlowdownDuration",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "How long in seconds the movement slowdown lasts after a chamber. Cswics: CustomChamberSlowdownDuration",
+      default: 0.2,
+    },
+  ],
   Parry: [],
   Combo: [],
   Damage: [],
