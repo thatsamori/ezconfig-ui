@@ -8,10 +8,13 @@ export function formatBoolean(value: boolean): string {
 }
 
 /**
- * Format a float value for RCON commands (2 decimal places)
+ * Format a float value for RCON commands: at least 2 decimal places (the
+ * historical wire format), up to 4 so that values such as 0.325 or 0.675
+ * (ChftpStun parry times) are not rounded on the way to the mod.
  */
 export function formatFloat(value: number): string {
-  return value.toFixed(2);
+  const four = value.toFixed(4);
+  return four.replace(/(\.\d\d)(\d*?)0+$/, "$1$2");
 }
 
 /**
@@ -45,6 +48,15 @@ export function formatFloatArray(values: number[]): string {
 }
 
 /**
+ * Format a String value for RCON commands
+ * The choice name is passed through unquoted; the JSON encoding of the
+ * command wraps it in one pair of quotes exactly like every other value.
+ */
+export function formatString(value: string): string {
+  return value;
+}
+
+/**
  * Format a value based on its data type for RCON commands
  */
 export function formatValue(dataType: DataType, value: unknown): string {
@@ -59,6 +71,8 @@ export function formatValue(dataType: DataType, value: unknown): string {
       return formatVector2D(value as { x: number; y: number });
     case DataType.FloatArray:
       return formatFloatArray(value as number[]);
+    case DataType.String:
+      return formatString(value as string);
     default:
       throw new Error(`Unknown data type: ${dataType}`);
   }

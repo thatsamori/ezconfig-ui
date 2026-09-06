@@ -1,7 +1,7 @@
 /**
  * Initialize Databases folder structure
  *
- * Creates empty JSON files for all weapons and character categories.
+ * Creates empty JSON object files for all weapons and character categories.
  * Idempotent - safe to run multiple times (won't overwrite existing files).
  *
  * Usage: bun run init-db
@@ -36,14 +36,14 @@ async function fileExists(path: string): Promise<boolean> {
 }
 
 /**
- * Create a JSON file with empty array if it doesn't exist
+ * Create a JSON file with empty object if it doesn't exist
  */
 async function createIfNotExists(filePath: string): Promise<boolean> {
   if (await fileExists(filePath)) {
     return false; // Already exists
   }
 
-  await writeFile(filePath, '[]', 'utf-8');
+  await writeFile(filePath, '{}', 'utf-8');
   return true; // Created
 }
 

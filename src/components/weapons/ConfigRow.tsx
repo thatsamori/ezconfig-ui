@@ -17,6 +17,7 @@ import {
   VectorInput,
   Vector2DInput,
   FloatArrayInput,
+  StringSelectInput,
 } from "@/components/config";
 import { NotesDialog } from "@/components/notes";
 import { ConfigEntry, DataType } from "@/lib/config/types";
@@ -35,6 +36,11 @@ export interface ConfigRowProps {
   onApplyToAll?: () => void;
   disabled?: boolean;
   readonly?: boolean;
+  /**
+   * Grey the whole row (a feature parameter whose feature toggle is off).
+   * Visual only: the value stays stored and is still sent.
+   */
+  muted?: boolean;
 }
 
 export function ConfigRow({
@@ -47,6 +53,7 @@ export function ConfigRow({
   onApplyToAll,
   disabled,
   readonly,
+  muted,
 }: ConfigRowProps) {
   const [notesOpen, setNotesOpen] = useState(false);
   const isCustomized = value !== undefined;
@@ -119,6 +126,15 @@ export function ConfigRow({
             disabled={disabled}
           />
         );
+      case DataType.String:
+        return (
+          <StringSelectInput
+            value={value as string}
+            choices={configEntry.choices ?? [String(configEntry.default)]}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        );
       default:
         return <span className="text-muted-foreground">Unknown type</span>;
     }
@@ -128,9 +144,23 @@ export function ConfigRow({
     <>
       <ContextMenu>
         <ContextMenuTrigger asChild>
-          <div className="flex items-center gap-4 py-2 border-b border-border last:border-b-0">
+          <div
+            className={`flex items-center gap-4 py-2 border-b border-border last:border-b-0${
+              muted ? " opacity-50" : ""
+            }`}
+            title={
+              muted
+                ? "Feature parameter: stored and sent, but only read while the feature toggle is on."
+                : undefined
+            }
+          >
             <div className="min-w-[200px] flex items-center gap-1">
-              <Label className="font-medium">{configEntry.configKey}</Label>
+              <Label
+                className="font-medium"
+                title={configEntry.documentation || undefined}
+              >
+                {configEntry.configKey}
+              </Label>
               {hasNotes && !notesLoading && (
                 <Button
                   variant="ghost"

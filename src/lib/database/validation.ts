@@ -86,6 +86,8 @@ function getTypeName(dataType: DataType): string {
       return "Vector2D";
     case DataType.Vector:
       return "Vector";
+    case DataType.String:
+      return "String";
     default:
       return "Unknown";
   }
@@ -100,6 +102,9 @@ function getActualTypeName(value: ConfigValue): string {
   }
   if (typeof value === "number") {
     return "Float";
+  }
+  if (typeof value === "string") {
+    return "String";
   }
   if (Array.isArray(value)) {
     if (value.every((v) => typeof v === "number")) {
@@ -132,6 +137,9 @@ function valueMatchesType(value: ConfigValue, dataType: DataType): boolean {
 
     case DataType.FloatArray:
       return Array.isArray(value) && value.every((v) => typeof v === "number");
+
+    case DataType.String:
+      return typeof value === "string";
 
     case DataType.Vector2D:
       return (
@@ -200,6 +208,18 @@ export function validateConfigEntry(
     return {
       valid: false,
       error: `Expected ${expected}, got ${actual}`,
+    };
+  }
+
+  // String entries only accept a listed choice
+  if (
+    schemaEntry.dataType === DataType.String &&
+    schemaEntry.choices &&
+    !schemaEntry.choices.includes(value as string)
+  ) {
+    return {
+      valid: false,
+      error: `Expected one of [${schemaEntry.choices.join(", ")}], got "${value}"`,
     };
   }
 
@@ -385,6 +405,29 @@ if (import.meta.main) {
       !result.valid &&
       result.errors[0].reason.includes("Unknown database/category")
     );
+  });
+
+  console.log("\nTest: String entry accepts a listed choice only");
+  const stringSchema = {
+    Choice: {
+      configKey: "Choice",
+      dataType: DataType.String,
+      isImplemented: true,
+      documentation: "",
+      default: "Default",
+      choices: ["Default", "Other"],
+    },
+  };
+  test("listed choice passes", () => {
+    return validateConfigEntry("Choice", "Other", stringSchema).valid;
+  });
+  test("unlisted choice fails", () => {
+    const result = validateConfigEntry("Choice", "Nope", stringSchema);
+    return !result.valid && (result.error ?? "").startsWith("Expected one of");
+  });
+  test("non-string fails with type error", () => {
+    const result = validateConfigEntry("Choice", 1, stringSchema);
+    return !result.valid && result.error === "Expected String, got Float";
   });
 
   console.log("\nTest: Multiple entries in single object");

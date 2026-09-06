@@ -4,7 +4,7 @@ import type { PresetData } from '@/lib/presets/types';
 
 // Config values can be various types from the schema
 // null is used as a tombstone to mark saved values for deletion (reset to game default)
-export type ConfigValue = boolean | number | number[] | { x: number; y: number } | { x: number; y: number; z: number } | null;
+export type ConfigValue = boolean | number | string | number[] | { x: number; y: number } | { x: number; y: number; z: number } | null;
 
 export interface ConfigState {
   // Single source of truth - matches database

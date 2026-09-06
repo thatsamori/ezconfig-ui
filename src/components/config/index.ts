@@ -15,4 +15,8 @@ export {
   type Vector2Value,
 } from "./Vector2DInput";
 export { FloatArrayInput, type FloatArrayInputProps } from "./FloatArrayInput";
+export {
+  StringSelectInput,
+  type StringSelectInputProps,
+} from "./StringSelectInput";
 export { SaveIndicator } from "./SaveIndicator";

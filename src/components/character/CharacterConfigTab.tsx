@@ -103,6 +103,24 @@ export function CharacterConfigTab() {
       return null;
     }
 
+    // Feature groups: the entry marked isFeatureToggle renders first and,
+    // while its stored value is not true, the group's other entries (the
+    // feature parameters) render greyed and locked. They stay in the store
+    // and the database and are still sent on apply; the mod only reads them
+    // while the toggle is on. A group without a toggle is unaffected.
+    // The toggle is looked up on the unfiltered group so a search that hides
+    // it still greys the parameters correctly.
+    const toggleEntry = options.find((entry) => entry.isFeatureToggle);
+    const featureOn =
+      !toggleEntry ||
+      getEffectiveValue(categoryName, toggleEntry.configKey) === true;
+    const orderedOptions = toggleEntry
+      ? [
+          ...filteredOptions.filter((entry) => entry.isFeatureToggle),
+          ...filteredOptions.filter((entry) => !entry.isFeatureToggle),
+        ]
+      : filteredOptions;
+
     return (
       <CollapsibleSection
         key={categoryName}
@@ -115,31 +133,42 @@ export function CharacterConfigTab() {
             Loading {categoryName} configuration...
           </p>
         ) : (
-          filteredOptions.map((configEntry) => (
-            <ConfigRow
-              key={configEntry.configKey}
-              configEntry={configEntry}
-              database="Character"
-              category={categoryName}
-              value={getEffectiveValue(categoryName, configEntry.configKey)}
-              onChange={(value) =>
-                setValue("Character", categoryName, configEntry.configKey, value)
-              }
-              onReset={() =>
-                removeValue("Character", categoryName, configEntry.configKey)
-              }
-            />
-          ))
+          orderedOptions.map((configEntry) => {
+            const isParameterOfOffFeature =
+              !!toggleEntry && !configEntry.isFeatureToggle && !featureOn;
+            return (
+              <ConfigRow
+                key={configEntry.configKey}
+                configEntry={configEntry}
+                database="Character"
+                category={categoryName}
+                value={getEffectiveValue(categoryName, configEntry.configKey)}
+                onChange={(value) =>
+                  setValue("Character", categoryName, configEntry.configKey, value)
+                }
+                onReset={() =>
+                  removeValue("Character", categoryName, configEntry.configKey)
+                }
+                muted={isParameterOfOffFeature}
+              />
+            );
+          })
         )}
       </CollapsibleSection>
     );
   };
 
-  // Check if any section will be rendered
-  const movementSection = renderSection(CharacterConfigGroupName.Movement, CHARACTER_CONFIG_OPTIONS.Movement, true);
-  const combatSection = renderSection(CharacterConfigGroupName.Combat, CHARACTER_CONFIG_OPTIONS.Combat);
-  const generalSection = renderSection(CharacterConfigGroupName.General, CHARACTER_CONFIG_OPTIONS.General);
-  const hasVisibleSections = movementSection || combatSection || generalSection;
+  // One section per group, in enum order; the first group opens by default.
+  // Groups with no (matching) options render nothing, so an empty feature
+  // category stays hidden until its keys land.
+  const sections = Object.values(CharacterConfigGroupName).map((groupName) =>
+    renderSection(
+      groupName,
+      CHARACTER_CONFIG_OPTIONS[groupName],
+      groupName === CharacterConfigGroupName.Movement
+    )
+  );
+  const hasVisibleSections = sections.some((section) => section !== null);
 
   return (
     <div className="space-y-4">
@@ -158,11 +187,7 @@ export function CharacterConfigTab() {
             : "No config options found"}
         </p>
       ) : (
-        <>
-          {movementSection}
-          {combatSection}
-          {generalSection}
-        </>
+        sections
       )}
     </div>
   );

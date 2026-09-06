@@ -1,4 +1,4 @@
-import { DataType } from "./types";
+import { DataType, type ConfigEntry } from "./types";
 
 export const CHARACTER_CATEGORY_NAME = "Character";
 
@@ -6,9 +6,20 @@ export enum CharacterConfigGroupName {
   Movement = "Movement",
   Combat = "Combat",
   General = "General",
+  // Feature clusters (spec: .scratch/cswics-features). Keys arrive per feature ticket.
+  Chftp = "Chftp",
+  Chamber = "Chamber",
+  Parry = "Parry",
+  Combo = "Combo",
+  Damage = "Damage",
+  Stun = "Stun",
+  Misc = "Misc",
 }
 
-export const CHARACTER_CONFIG_OPTIONS = {
+export const CHARACTER_CONFIG_OPTIONS: Record<
+  CharacterConfigGroupName,
+  ConfigEntry[]
+> = {
   Movement: [
     // Booleans
     {
@@ -541,6 +552,125 @@ export const CHARACTER_CONFIG_OPTIONS = {
       default: -1.0,
     },
   ],
+
+  // Feature clusters: empty until the feature tickets add their keys.
+  // Feature parameter defaults equal the Cswics values, so a bare toggle
+  // reproduces Cswics behaviour. Integers travel as Float (ADR 0003).
+  Chftp: [
+    // ChftpStun: stun on chamber-feint-to-parry (ticket 02). Toggle first.
+    {
+      configKey: "ChftpStun",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      isFeatureToggle: true,
+      documentation:
+        "Feature toggle. When an attack is blocked by a parry that came out of a feinted chamber (chamber-feint-to-parry), the player who feinted is stunned and pays stamina while the attacker is rewarded stamina. Off is stock behaviour; the other Chftp keys are stored and sent regardless but only read while this is on. Cswics: useChftpStun",
+      default: false,
+    },
+    {
+      configKey: "ChftpStunDuration",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Length of the chftp stun motion in seconds. Cswics: ChftpStunValues.X",
+      default: 1.5,
+    },
+    {
+      configKey: "ChftpStunMovementRestriction",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Movement restriction applied for the length of the stun, as the engine's movement-restriction enum index (an integer sent as Float and truncated by the mod); 3 = NO_MOVEMENT. Cswics: ChftpStunValues.Y",
+      default: 3,
+    },
+    {
+      configKey: "ChftpStunDisarms",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      documentation:
+        "Whether the chftp stun also disarms the stunned player. Cswics: ChftpStunValues.Z",
+      default: true,
+    },
+    {
+      configKey: "ChftpStunAnimation",
+      dataType: DataType.String,
+      isImplemented: true,
+      documentation:
+        "Stun montage the chftp stun plays; Default is the stock stun montage. Choice names map to assets inside the mod. Cswics: ChftpStunAnimation",
+      default: "Default",
+      choices: ["Default"],
+    },
+    {
+      configKey: "ChftpStunTurnCap",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Turn cap modifier applied while chftp stunned; lower is a tighter cap. Cswics: ChftpStunTurnCap (index 0..3 = 0.4, 1.5625, 1.7708, 2.0833)",
+      default: 0.4,
+    },
+    {
+      configKey: "ChftpStunStaminaCost",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Extra stamina the chamber-feint-to-parry player loses on top of the standard block drain when the stun lands. Replaces the game's own chamber-feint-to-parry penalty of 15. Cswics: CustomChftpStunStamCost",
+      default: 15,
+    },
+    {
+      configKey: "ChftpStunAttackerStaminaReward",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Stamina given to the attacker whose attack was blocked by a chamber-feint-to-parry. Cswics: ChftpStamForAttacker",
+      default: 30,
+    },
+    {
+      configKey: "ChftpStunExcludeStabs",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      documentation:
+        "When on, a chamber-feint-to-parry against a stab pays only the standard block drain (no penalty at all) and is not stunned. Cswics: ExcludeStabChftpStam",
+      default: false,
+    },
+    {
+      configKey: "ChftpStunIgnoreEarlyRelease",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      documentation:
+        "When on, a chamber feinted inside the early-release allowance does not count as a chamber-feint-to-parry and is not stunned. Cswics: DisableEarlyReleaseCHFTPStun",
+      default: false,
+    },
+    {
+      configKey: "ChftpStunCanParry",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      documentation:
+        "Whether the stunned player can still parry during the chftp stun. Cswics: inverse of DisableParryInChftpStun",
+      default: true,
+    },
+    {
+      configKey: "ChftpStunParryDuration",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Parry-up duration in seconds for a parry made out of a chftp stun; 0 means stock. Cswics: ChftpStunParryDuration",
+      default: 0.325,
+    },
+    {
+      configKey: "ChftpStunParryRecoveryTime",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Recovery time in seconds after a parry made out of a chftp stun; 0 means stock. Cswics: ChftpStunParryRecoveryTime",
+      default: 0.675,
+    },
+  ],
+  Chamber: [],
+  Parry: [],
+  Combo: [],
+  Damage: [],
+  Stun: [],
+  Misc: [],
 };
 export const characterConfigFlatMap = Object.values(CHARACTER_CONFIG_OPTIONS)
   .reduce((acc, group) => [...acc, ...group], [])

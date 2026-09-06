@@ -58,6 +58,8 @@ function convertValue(value: string, dataType: DataType): any {
       return parseVector2D(value);
     case DataType.FloatArray:
       return parseFloatArray(value);
+    case DataType.String:
+      return value;
     default:
       return value;
   }
