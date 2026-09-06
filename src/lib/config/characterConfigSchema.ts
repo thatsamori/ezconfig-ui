@@ -685,7 +685,26 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       default: 0.2,
     },
   ],
-  Parry: [],
+  Parry: [
+    // ExperimentalParry: parry window extended after a block (ticket 04). Toggle first.
+    {
+      configKey: "ExperimentalParry",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      isFeatureToggle: true,
+      documentation:
+        "Feature toggle. When a player blocks an attack with a parry (OnBlockedMelee), the live parry motion's parry-up time is extended so the parry window stays open for an extra ExperimentalParryDuration seconds measured from the block. Off is stock behaviour; the other Parry keys are stored and sent regardless but only read while this is on. Cswics: useExperimentalParry",
+      default: false,
+    },
+    {
+      configKey: "ExperimentalParryDuration",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Seconds added to the parry-up time after a block; only read while ExperimentalParry is on, stored regardless. Cswics: ExperimentalParryDuration",
+      default: 0.05,
+    },
+  ],
   Combo: [],
   Damage: [],
   Stun: [],
