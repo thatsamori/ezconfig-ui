@@ -704,6 +704,16 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
         "Seconds added to the parry-up time after a block; only read while ExperimentalParry is on, stored regardless. Cswics: ExperimentalParryDuration",
       default: 0.05,
     },
+    // KicksUnparryable: kicks cannot be parried (ticket 05).
+    {
+      configKey: "KicksUnparryable",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      isFeatureToggle: true,
+      documentation:
+        "Feature toggle. When on, kicks cannot be parried: a parry against a kick fails as if it had not been attempted, so the kick lands. Off is stock behaviour. Cswics: DisableKickparry",
+      default: false,
+    },
   ],
   Combo: [],
   Damage: [],
