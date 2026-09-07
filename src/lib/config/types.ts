@@ -20,13 +20,18 @@ export type ConfigEntry = {
   choices?: string[];
   /**
    * Feature-toggle entries only (spec: .scratch/cswics-features, CONTEXT.md
-   * "Feature toggle"). Exactly one Bool entry per feature group carries this.
-   * The webapp renders it first in its group and greys the group's other
-   * entries (the feature parameters) while it is off; those parameters are
-   * still stored and still sent, the mod only reads them while the toggle
-   * is on.
+   * "Feature toggle"). A Bool entry that switches a feature on or off. A group
+   * may hold several toggles; each feature parameter names its toggle via
+   * gatedBy.
    */
   isFeatureToggle?: boolean;
+  /**
+   * Feature-parameter entries only: the configKey of the toggle (in the same
+   * group) that enables this entry. The webapp greys and locks the entry while
+   * that toggle's stored value is not true; the value is still stored and
+   * still sent, the mod only reads it while the toggle is on.
+   */
+  gatedBy?: string;
 };
 
 export enum DataType {

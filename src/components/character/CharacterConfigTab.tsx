@@ -103,23 +103,18 @@ export function CharacterConfigTab() {
       return null;
     }
 
-    // Feature groups: the entry marked isFeatureToggle renders first and,
-    // while its stored value is not true, the group's other entries (the
-    // feature parameters) render greyed and locked. They stay in the store
-    // and the database and are still sent on apply; the mod only reads them
-    // while the toggle is on. A group without a toggle is unaffected.
-    // The toggle is looked up on the unfiltered group so a search that hides
-    // it still greys the parameters correctly.
-    const toggleEntry = options.find((entry) => entry.isFeatureToggle);
-    const featureOn =
-      !toggleEntry ||
-      getEffectiveValue(categoryName, toggleEntry.configKey) === true;
-    const orderedOptions = toggleEntry
-      ? [
-          ...filteredOptions.filter((entry) => entry.isFeatureToggle),
-          ...filteredOptions.filter((entry) => !entry.isFeatureToggle),
-        ]
-      : filteredOptions;
+    // Options render alphabetically by key. A feature parameter (an entry
+    // with gatedBy) renders greyed and locked while its toggle's stored value
+    // is not true. It stays in the store and the database and is still sent
+    // on apply; the mod only reads it while the toggle is on. The toggle is
+    // read from the store, not the filtered list, so a search that hides it
+    // still greys the parameters correctly.
+    const orderedOptions = [...filteredOptions].sort((a, b) =>
+      a.configKey.localeCompare(b.configKey)
+    );
+    const isParameterOfOffFeature = (entry: ConfigEntry) =>
+      !!entry.gatedBy &&
+      getEffectiveValue(categoryName, entry.gatedBy) !== true;
 
     return (
       <CollapsibleSection
@@ -134,8 +129,6 @@ export function CharacterConfigTab() {
           </p>
         ) : (
           orderedOptions.map((configEntry) => {
-            const isParameterOfOffFeature =
-              !!toggleEntry && !configEntry.isFeatureToggle && !featureOn;
             return (
               <ConfigRow
                 key={configEntry.configKey}
@@ -149,7 +142,7 @@ export function CharacterConfigTab() {
                 onReset={() =>
                   removeValue("Character", categoryName, configEntry.configKey)
                 }
-                muted={isParameterOfOffFeature}
+                muted={isParameterOfOffFeature(configEntry)}
               />
             );
           })

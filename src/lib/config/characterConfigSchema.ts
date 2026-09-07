@@ -571,6 +571,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ChftpStunDuration",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "ChftpStun",
       documentation:
         "Length of the chftp stun motion in seconds. Cswics: ChftpStunValues.X",
       default: 1.5,
@@ -579,6 +580,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ChftpStunMovementRestriction",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "ChftpStun",
       documentation:
         "Movement restriction applied for the length of the stun, as the engine's movement-restriction enum index (an integer sent as Float and truncated by the mod); 3 = NO_MOVEMENT. Cswics: ChftpStunValues.Y",
       default: 3,
@@ -587,6 +589,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ChftpStunDisarms",
       dataType: DataType.Bool,
       isImplemented: true,
+      gatedBy: "ChftpStun",
       documentation:
         "Whether the chftp stun also disarms the stunned player. Cswics: ChftpStunValues.Z",
       default: true,
@@ -595,6 +598,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ChftpStunAnimation",
       dataType: DataType.String,
       isImplemented: true,
+      gatedBy: "ChftpStun",
       documentation:
         "Stun montage the chftp stun plays; Default is the stock stun montage. Choice names map to assets inside the mod. Cswics: ChftpStunAnimation",
       default: "Default",
@@ -604,6 +608,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ChftpStunTurnCap",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "ChftpStun",
       documentation:
         "Turn cap modifier applied while chftp stunned; lower is a tighter cap. Cswics: ChftpStunTurnCap (index 0..3 = 0.4, 1.5625, 1.7708, 2.0833)",
       default: 0.4,
@@ -612,6 +617,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ChftpStunStaminaCost",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "ChftpStun",
       documentation:
         "Extra stamina the chamber-feint-to-parry player loses on top of the standard block drain when the stun lands. Replaces the game's own chamber-feint-to-parry penalty of 15. Cswics: CustomChftpStunStamCost",
       default: 15,
@@ -620,6 +626,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ChftpStunAttackerStaminaReward",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "ChftpStun",
       documentation:
         "Stamina given to the attacker whose attack was blocked by a chamber-feint-to-parry. Cswics: ChftpStamForAttacker",
       default: 30,
@@ -628,6 +635,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ChftpStunExcludeStabs",
       dataType: DataType.Bool,
       isImplemented: true,
+      gatedBy: "ChftpStun",
       documentation:
         "When on, a chamber-feint-to-parry against a stab pays only the standard block drain (no penalty at all) and is not stunned. Cswics: ExcludeStabChftpStam",
       default: false,
@@ -636,6 +644,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ChftpStunIgnoreEarlyRelease",
       dataType: DataType.Bool,
       isImplemented: true,
+      gatedBy: "ChftpStun",
       documentation:
         "When on, a chamber feinted inside the early-release allowance does not count as a chamber-feint-to-parry and is not stunned. Cswics: DisableEarlyReleaseCHFTPStun",
       default: false,
@@ -644,6 +653,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ChftpStunCanParry",
       dataType: DataType.Bool,
       isImplemented: true,
+      gatedBy: "ChftpStun",
       documentation:
         "Whether the stunned player can still parry during the chftp stun. Cswics: inverse of DisableParryInChftpStun",
       default: true,
@@ -652,6 +662,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ChftpStunParryDuration",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "ChftpStun",
       documentation:
         "Parry-up duration in seconds for a parry made out of a chftp stun; 0 means stock. Cswics: ChftpStunParryDuration",
       default: 0.325,
@@ -660,6 +671,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ChftpStunParryRecoveryTime",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "ChftpStun",
       documentation:
         "Recovery time in seconds after a parry made out of a chftp stun; 0 means stock. Cswics: ChftpStunParryRecoveryTime",
       default: 0.675,
@@ -680,6 +692,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ChamberSlowdownDuration",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "ChamberSlowdown",
       documentation:
         "How long in seconds the movement slowdown lasts after a chamber. Cswics: CustomChamberSlowdownDuration",
       default: 0.2,
@@ -700,6 +713,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "ExperimentalParryDuration",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "ExperimentalParry",
       documentation:
         "Seconds added to the parry-up time after a block; only read while ExperimentalParry is on, stored regardless. Cswics: ExperimentalParryDuration",
       default: 0.05,
@@ -728,6 +742,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "TrueComboRecoveryTime",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "TrueCombo",
       documentation:
         "Parry recovery time in seconds applied to a parry made inside the post-flinch miss-parry window; only read while TrueCombo is on, stored regardless. Cswics: TrueComboValues.Y",
       default: 0.25,
@@ -736,6 +751,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "TrueComboStamina",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "TrueCombo",
       documentation:
         "Stamina offset in whole points (negative drains) applied to the parrier on a parry made inside the post-flinch miss-parry window; 0 means none. Only read while TrueCombo is on, stored regardless. Cswics: TrueComboValues.Z",
       default: 0,
@@ -757,6 +773,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "TeamDamageReflectPercent",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "TeamDamageReflect",
       documentation:
         "Fraction of the team damage dealt back to the attacker, as a multiplier (1 = the full damage, 0.5 = half), truncated to a whole number of damage points; only read while TeamDamageReflect is on, stored regardless. Cswics: TeamDamageReflect",
       default: 0,
@@ -775,6 +792,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "TeamHitRecoveryExtraTime",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "TeamHitRecovery",
       documentation:
         "Seconds added to the end of the attacker's hit-recovery motion after hitting a teammate; only read while TeamHitRecovery is on, stored regardless. Cswics: customTeamHitRecoveryTime",
       default: 0.35,
@@ -796,6 +814,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "DisarmPickupDelayDuration",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "DisarmPickupDelay",
       documentation:
         "Seconds after a disarm during which pickups are blocked; only read while DisarmPickupDelay is on, stored regardless. Cswics: disarmPickupDelayDuration",
       default: 0.001,
@@ -814,6 +833,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       configKey: "DelayedSuicideDuration",
       dataType: DataType.Float,
       isImplemented: true,
+      gatedBy: "DelayedSuicide",
       documentation:
         "Seconds the suicide emote plays before the character dies; only read while DelayedSuicide is on, stored regardless. Cswics: delayedSuicideDuration",
       default: 3.0,

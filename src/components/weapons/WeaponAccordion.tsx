@@ -175,9 +175,12 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
     );
   };
 
-  // Get filtered options for a category (applies both search and override filters)
+  // Get filtered options for a category (applies both search and override
+  // filters), sorted alphabetically by key.
   const getFilteredOptions = (weaponName: string, category: string) => {
-    let options = getConfigOptions(category);
+    let options = [...getConfigOptions(category)].sort((a, b) =>
+      a.configKey.localeCompare(b.configKey)
+    );
 
     // Apply config search filter
     options = filterOptionsBySearch(options);
