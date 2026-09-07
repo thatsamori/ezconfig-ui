@@ -829,6 +829,16 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
   ],
   Stun: [],
   Misc: [
+    // NoJumpInParryRecovery: owning-client Jump gate (ticket 13).
+    {
+      configKey: "NoJumpInParryRecovery",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      isFeatureToggle: true,
+      documentation:
+        "Feature toggle. When on, pressing jump during parry recovery does not request a jump. Climbing is attempted first as usual; other motions and the active parry stage keep normal jump behaviour. Off is stock behaviour. Cswics: DisableJumpParryRecovery (character: DisableJumpDuringRecovery)",
+      default: false,
+    },
     // DisarmPickupDelay: pickups blocked for a while after being disarmed (ticket 09). Toggle first.
     {
       configKey: "DisarmPickupDelay",
