@@ -781,7 +781,26 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
     },
   ],
   Stun: [],
-  Misc: [],
+  Misc: [
+    // DisarmPickupDelay: pickups blocked for a while after being disarmed (ticket 09). Toggle first.
+    {
+      configKey: "DisarmPickupDelay",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      isFeatureToggle: true,
+      documentation:
+        "Feature toggle. When on, a player who has just been disarmed cannot pick anything up for DisarmPickupDelayDuration seconds (their interaction sweeps are suspended, then restored). Off is stock behaviour. Cswics: useDisarmPickupDelay",
+      default: false,
+    },
+    {
+      configKey: "DisarmPickupDelayDuration",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Seconds after a disarm during which pickups are blocked; only read while DisarmPickupDelay is on, stored regardless. Cswics: disarmPickupDelayDuration",
+      default: 0.001,
+    },
+  ],
 };
 export const characterConfigFlatMap = Object.values(CHARACTER_CONFIG_OPTIONS)
   .reduce((acc, group) => [...acc, ...group], [])
