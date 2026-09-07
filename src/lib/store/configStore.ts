@@ -43,7 +43,23 @@ export interface ConfigState {
  * Helper to save category entries to API
  * Fire-and-forget pattern - returns promise but callers don't need to await
  */
-async function saveToApi(
+const categoryWrites = new Map<string, Promise<boolean>>();
+
+/** Wait for writes before taking a preset snapshot or reviewing saved overrides. */
+export async function flushConfigWrites(): Promise<void> {
+  const results = await Promise.all([...categoryWrites.values()]);
+  if (results.some((success) => !success)) throw new Error('Some changes could not be saved. Retry the edits before continuing.');
+}
+
+function saveToApi(database: string, category: string, entries: Record<string, ConfigValue>): Promise<boolean> {
+  const path = `${database}/${category}`;
+  // Serialize snapshots of the same category so rapid edits cannot finish out of order.
+  const write = (categoryWrites.get(path) ?? Promise.resolve(true)).then(() => writeToApi(database, category, entries));
+  categoryWrites.set(path, write);
+  return write;
+}
+
+async function writeToApi(
   database: string,
   category: string,
   entries: Record<string, ConfigValue>
@@ -302,6 +318,8 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
     }),
 
   loadPreset: async (presetData) => {
+    // Finish earlier edits before replacing the working set on disk.
+    await Promise.all([...categoryWrites.values()]);
     // Build new values from preset data
     const newValues: ConfigState['values'] = {
       character: {},
@@ -321,26 +339,11 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
       }
     }
 
-    // Update local state immediately
-    set({
-      values: newValues,
-      workingValues: newValues,
-      savedValues: newValues,
-      // Clear loaded categories since we're replacing everything
-      loadedCategories: new Set<string>(),
-    });
-
     // Step 1: Clear all existing database files
-    try {
-      const clearRes = await fetch('/api/config/clear', { method: 'DELETE' });
-      if (!clearRes.ok) {
-        toast.error('Failed to clear existing config');
-        return;
-      }
-    } catch {
-      toast.error('Failed to clear existing config');
-      return;
-    }
+    const clearRes = await fetch('/api/config/clear', { method: 'DELETE' });
+    if (!clearRes.ok) throw new Error('Failed to clear existing config');
+    categoryWrites.clear();
+    set({ values: newValues, workingValues: newValues, savedValues: newValues, loadedCategories: new Set<string>() });
 
     // Step 2: Write only the preset data (skip empty categories)
     const apiPromises: Promise<boolean>[] = [];
@@ -367,7 +370,7 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
       const failures = results.filter((success) => !success).length;
 
       if (failures > 0) {
-        toast.error(`Failed to save ${failures} config file(s)`);
+        throw new Error(`Failed to save ${failures} config file(s). Load the preset again to retry.`);
       }
     }
   },

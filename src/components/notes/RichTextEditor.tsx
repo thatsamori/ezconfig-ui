@@ -29,6 +29,7 @@ export function RichTextEditor({
         blockquote: false,
         codeBlock: false,
         horizontalRule: false,
+        underline: false,
       }),
       Underline,
       Placeholder.configure({
@@ -41,6 +42,9 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class: "outline-none min-h-[80px] p-3 text-sm",
+        role: "textbox",
+        "aria-label": "Note text",
+        "aria-multiline": "true",
       },
     },
     onUpdate: ({ editor }) => {
@@ -69,6 +73,7 @@ export function RichTextEditor({
           size="icon"
           className={cn("h-7 w-7", editor.isActive("bold") && "bg-accent")}
           onClick={() => editor.chain().focus().toggleBold().run()}
+          aria-label="Bold"
         >
           <Bold className="h-4 w-4" />
         </Button>
@@ -78,6 +83,7 @@ export function RichTextEditor({
           size="icon"
           className={cn("h-7 w-7", editor.isActive("italic") && "bg-accent")}
           onClick={() => editor.chain().focus().toggleItalic().run()}
+          aria-label="Italic"
         >
           <Italic className="h-4 w-4" />
         </Button>
@@ -87,6 +93,7 @@ export function RichTextEditor({
           size="icon"
           className={cn("h-7 w-7", editor.isActive("underline") && "bg-accent")}
           onClick={() => editor.chain().focus().toggleUnderline().run()}
+          aria-label="Underline"
         >
           <UnderlineIcon className="h-4 w-4" />
         </Button>
@@ -96,6 +103,7 @@ export function RichTextEditor({
           size="icon"
           className={cn("h-7 w-7", editor.isActive("bulletList") && "bg-accent")}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
+          aria-label="Bulleted list"
         >
           <List className="h-4 w-4" />
         </Button>

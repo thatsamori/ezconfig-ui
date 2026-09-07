@@ -12,7 +12,9 @@ export type ConfigEntry = {
   dataType: DataType;
   isImplemented: boolean;
   documentation: string;
-  default: any;
+  default?: any;
+  /** Stock values differ by motion; Customize must ask for an explicit value. */
+  defaultVariesByMotion?: boolean;
   /**
    * String entries only: the fixed list of choice names the webapp offers.
    * The mod maps a choice name to an asset; the webapp never sends asset paths.

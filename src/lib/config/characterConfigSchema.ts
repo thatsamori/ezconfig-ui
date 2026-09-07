@@ -1,4 +1,5 @@
 import { DataType, type ConfigEntry } from "./types";
+import { ATTACK_MOTION_CONFIG_OPTIONS } from "./attackMotionConfigSchema";
 
 export const CHARACTER_CATEGORY_NAME = "Character";
 
@@ -6,6 +7,7 @@ export enum CharacterConfigGroupName {
   Movement = "Movement",
   Combat = "Combat",
   General = "General",
+  AttackMotion = "AttackMotion",
   // Feature clusters (spec: .scratch/cswics-features). Keys arrive per feature ticket.
   Chftp = "Chftp",
   Chamber = "Chamber",
@@ -20,6 +22,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
   CharacterConfigGroupName,
   ConfigEntry[]
 > = {
+  AttackMotion: ATTACK_MOTION_CONFIG_OPTIONS,
   Movement: [
     // Booleans
     {

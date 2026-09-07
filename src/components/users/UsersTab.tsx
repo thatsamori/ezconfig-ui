@@ -1,16 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -130,7 +121,7 @@ export function UsersTab() {
 
   const getRoleLabel = (role: UserRole): string => {
     const labels: Record<UserRole, string> = {
-      config_editor: "Config Editor",
+      config_editor: "Config editor",
       admin: "Admin",
     };
     return labels[role] || role;
@@ -154,59 +145,9 @@ export function UsersTab() {
 
   return (
     <>
-      <div className="py-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>User Management</CardTitle>
-            <Button onClick={handleCreateClick}>Create User</Button>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">
-                      No users found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  users.map((user) => (
-                    <TableRow key={user.username}>
-                      <TableCell className="font-medium">{user.username}</TableCell>
-                      <TableCell>{getRoleLabel(user.role)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditClick(user)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteClick(user)}
-                            disabled={user.username === currentUser?.username}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+      <div className="users-page">
+        <header className="standalone-heading"><div><h1>Users</h1><p className="page-description">Who can sign in. Admins also manage users.</p></div><Button onClick={handleCreateClick}>Add user</Button></header>
+        <div className="user-list">{users.map((user) => <div className="user-row" key={user.username}><span className="user-avatar">{user.username.slice(0, 1).toUpperCase()}</span><strong>{user.username}{user.username === currentUser?.username && <span className="muted"> · you</span>}</strong><span className={user.role === 'admin' ? 'role-pill admin' : 'role-pill'}>{getRoleLabel(user.role)}</span><Button variant="outline" size="sm" onClick={() => handleEditClick(user)}>Edit</Button><Button variant="outline" size="sm" className="remove-user" disabled={user.username === currentUser?.username} onClick={() => handleDeleteClick(user)}>Remove</Button></div>)}</div>
       </div>
 
       {/* Create/Edit User Dialog */}

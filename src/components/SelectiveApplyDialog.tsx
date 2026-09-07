@@ -1,289 +1,111 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useMemo } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-
-interface SelectiveApplyDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onApplyComplete: () => void;
-}
-
+import { useEffect, useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
+import { flushConfigWrites } from '@/lib/store/configStore';
+import { useAuthStore } from '@/lib/store';
+import { reviewRows, selectedReviewCommands, type ReviewRow } from '@/components/console/model';
 export function SelectiveApplyDialog({
   open,
   onOpenChange,
-  onApplyComplete,
-}: SelectiveApplyDialogProps) {
-  const [commands, setCommands] = useState<string[]>([]);
-  const [selectedCommands, setSelectedCommands] = useState<Set<string>>(
-    new Set()
-  );
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isApplying, setIsApplying] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [wipeDatabase, setWipeDatabase] = useState(true);
-
-  // Fetch commands when dialog opens
+  onApplyComplete
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onApplyComplete: () => void;
+}) {
+  const [rows, setRows] = useState<ReviewRow[]>([]);
+  const [selected, setSelected] = useState(new Set<string>());
+  const [query, setQuery] = useState('');
+  const [wipe, setWipe] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [applying, setApplying] = useState(false);
+  const [error, setError] = useState('');
+  const [server, setServer] = useState('the server');
+  const [lastApplied, setLastApplied] = useState<{
+    at: string;
+    username: string;
+    commands: number;
+  } | null>(null);
+  const token = useAuthStore(state => state.token);
   useEffect(() => {
-    if (open) {
-      setIsLoading(true);
-      setFetchError(null);
-      setSearchQuery("");
-
-      fetch("/api/apply/preview")
-        .then((res) => {
-          if (!res.ok) {
-            throw new Error("Failed to fetch commands");
-          }
-          return res.json();
-        })
-        .then((data) => {
-          const cmds = data.commands as string[];
-          setCommands(cmds);
-          setSelectedCommands(new Set(cmds));
-        })
-        .catch((err) => {
-          setFetchError(
-            err instanceof Error ? err.message : "Failed to load commands"
-          );
-          setCommands([]);
-          setSelectedCommands(new Set());
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    }
-  }, [open]);
-
-  // Reset state when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setCommands([]);
-      setSelectedCommands(new Set());
-      setSearchQuery("");
-      setFetchError(null);
-      setWipeDatabase(true);
-    }
-  }, [open]);
-
-  // Filter and sort commands
-  const filteredCommands = useMemo(() => {
-    const sorted = [...commands].sort((a, b) =>
-      a.toLowerCase().localeCompare(b.toLowerCase())
-    );
-
-    if (!searchQuery.trim()) {
-      return sorted;
-    }
-
-    const query = searchQuery.toLowerCase();
-    // Search against display version (without "string ezconfig " prefix)
-    return sorted.filter((cmd) =>
-      cmd.replace(/^string ezconfig /i, "").toLowerCase().includes(query)
-    );
-  }, [commands, searchQuery]);
-
-  const handleToggleCommand = (command: string) => {
-    const newSelected = new Set(selectedCommands);
-    if (newSelected.has(command)) {
-      newSelected.delete(command);
-    } else {
-      newSelected.add(command);
-    }
-    setSelectedCommands(newSelected);
-  };
-
-  const handleSelectAll = () => {
-    setSelectedCommands(new Set(commands));
-  };
-
-  const handleDeselectAll = () => {
-    setSelectedCommands(new Set());
-  };
-
-  const handleApply = async () => {
-    // Allow proceeding with 0 commands if wipeDatabase is checked (wipe-only operation)
-    if (selectedCommands.size === 0 && !wipeDatabase) {
-      toast.error("No commands selected", { position: "bottom-right" });
-      return;
-    }
-
-    setIsApplying(true);
-
-    try {
-      const res = await fetch("/api/apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          commands: Array.from(selectedCommands),
-          wipeDatabase,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        toast.success(
-          `Applied config to game (${data.commandsSent} commands sent)`,
-          { position: "bottom-right" }
-        );
-        onOpenChange(false);
-        onApplyComplete();
-      } else {
-        toast.error(`Failed to apply: ${data.error || "Unknown error"}`, {
-          position: "bottom-right",
-        });
+    if (!open) return;
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setError('');
+      setQuery('');
+      setWipe(true);
+      try {
+        await flushConfigWrites();
+        const response = await fetch('/api/apply/preview');
+        if (!response.ok) throw new Error('Could not load the apply preview. Close this dialog and try again.');
+        const data = await response.json();
+        const rows = reviewRows(data.commands);
+        if (!cancelled) {
+          setRows(rows);
+          setSelected(new Set(rows.map(row => row.id)));
+          setServer(data.serverName || 'the server');
+          setLastApplied(data.lastApplied ?? null);
+        }
+      } catch (error) {
+        if (!cancelled) setError((error as Error).message);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+  const toggle = (ids: string[], checked: boolean) => setSelected(previous => {
+    const next = new Set(previous);
+    ids.forEach(id => checked ? next.add(id) : next.delete(id));
+    return next;
+  });
+  const databases = [...new Set(rows.map(row => row.database))];
+  const apply = async () => {
+    setApplying(true);
+    try {
+      const response = await fetch('/api/apply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? {
+            Authorization: `Bearer ${token}`
+          } : {})
+        },
+        body: JSON.stringify({
+          commands: selectedReviewCommands(rows, selected),
+          wipeDatabase: wipe
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Could not apply configuration');
+      toast.success(`Sent ${data.commandsSent} commands to ${server}`);
+      onOpenChange(false);
+      onApplyComplete();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to apply config",
-        { position: "bottom-right" }
-      );
+      toast.error((error as Error).message);
     } finally {
-      setIsApplying(false);
+      setApplying(false);
     }
   };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Apply to Game</DialogTitle>
-          <DialogDescription>
-            Select which configuration to send to the game server.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-          {/* Search input */}
-          <Input
-            type="text"
-            placeholder="Search commands..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="shrink-0"
-          />
-
-          {/* Select All / Deselect All buttons */}
-          <div className="flex shrink-0 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleSelectAll}
-              disabled={isLoading || commands.length === 0}
-            >
-              Select All
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleDeselectAll}
-              disabled={isLoading || commands.length === 0}
-            >
-              Deselect All
-            </Button>
-            <span className="text-muted-foreground ml-auto self-center text-sm">
-              {selectedCommands.size} of {commands.length} selected
-            </span>
-          </div>
-
-          {/* Wipe database option */}
-          <div className="flex shrink-0 items-center gap-2">
-            <Checkbox
-              id="wipe-database"
-              checked={wipeDatabase}
-              onCheckedChange={(checked) => setWipeDatabase(checked === true)}
-            />
-            <label
-              htmlFor="wipe-database"
-              className="cursor-pointer text-sm"
-            >
-              Wipe mod database before applying (removes previously applied settings)
-            </label>
-          </div>
-
-          {/* Command list */}
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-md border p-2">
-            {isLoading && (
-              <p className="text-muted-foreground py-4 text-center text-sm">
-                Loading commands...
-              </p>
-            )}
-
-            {fetchError && (
-              <p className="text-destructive py-4 text-center text-sm">
-                {fetchError}
-              </p>
-            )}
-
-            {!isLoading && !fetchError && filteredCommands.length === 0 && (
-              <p className="text-muted-foreground py-4 text-center text-sm">
-                {commands.length === 0
-                  ? "No configuration to apply. Customize some settings first."
-                  : "No commands match your search."}
-              </p>
-            )}
-
-            {!isLoading &&
-              !fetchError &&
-              filteredCommands.map((command) => {
-                const displayCommand = command.replace(/^string ezconfig /, "");
-                return (
-                  <div
-                    key={command}
-                    className="hover:bg-muted flex items-start gap-2 rounded px-2 py-1.5 min-w-0"
-                  >
-                    <Checkbox
-                      id={command}
-                      checked={selectedCommands.has(command)}
-                      onCheckedChange={() => handleToggleCommand(command)}
-                      className="mt-0.5 shrink-0"
-                    />
-                    <label
-                      htmlFor={command}
-                      className="min-w-0 flex-1 cursor-pointer truncate font-mono text-xs"
-                      title={displayCommand}
-                    >
-                      {displayCommand}
-                    </label>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-
-        <DialogFooter className="shrink-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleApply}
-            disabled={
-              isApplying || isLoading || (selectedCommands.size === 0 && !wipeDatabase) || !!fetchError
-            }
-          >
-            {isApplying
-              ? "Applying..."
-              : selectedCommands.size === 0
-                ? "Wipe Database"
-                : `Apply ${selectedCommands.size} Command${selectedCommands.size === 1 ? "" : "s"}`}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  const disabled = loading || applying || !!error;
+  return <Dialog open={open} onOpenChange={next => {
+    if (!applying) onOpenChange(next);
+  }}><DialogContent className="review-dialog"><DialogHeader><DialogTitle>Review &amp; apply</DialogTitle><DialogDescription>{loading ? 'Loading saved changes…' : error ? 'The saved changes could not be loaded.' : rows.length ? `${selected.size} of ${rows.length} changes will be sent to ${server} over RCON. Untick anything to hold it back; it stays saved here.` : 'No overrides are stored. Applying with wipe on clears whatever the mod currently holds.'}</DialogDescription></DialogHeader>
+    <div className="review-filter"><input aria-label="Filter by weapon or key" placeholder="Filter by weapon or key" value={query} onChange={event => setQuery(event.target.value)} /><div className="selection-buttons"><button disabled={disabled} onClick={() => setSelected(new Set(rows.map(row => row.id)))}>All</button><button disabled={disabled} onClick={() => setSelected(new Set())}>None</button></div></div>
+    <div className="review-list">{loading ? <p className="empty-state">Loading saved changes…</p> : error ? <p role="alert" className="empty-state danger">{error}</p> : databases.map(database => {
+          const all = rows.filter(row => row.database === database);
+          const visible = all.filter(row => `${row.database} ${row.category} ${row.key}`.toLowerCase().includes(query.toLowerCase()));
+          if (!visible.length) return null;
+          const count = all.filter(row => selected.has(row.id)).length;
+          return <section className="review-group" key={database}><label className="review-group-title"><Checkbox aria-label={`Select all ${database} changes`} disabled={disabled} checked={count === all.length ? true : count ? 'indeterminate' : false} onCheckedChange={checked => toggle(all.map(row => row.id), checked === true)} /><strong>{database}</strong><span>{count} of {all.length}</span></label>{visible.map(row => <label key={row.id} className={`review-row${selected.has(row.id) ? '' : ' unselected'}`}><Checkbox aria-label={`${row.database} ${row.category} ${row.key}`} disabled={disabled} checked={selected.has(row.id)} onCheckedChange={checked => toggle([row.id], checked === true)} /><span className="muted">{row.category}</span><span className="review-key" title={row.key}>{row.key}</span><span className="faint">Game default</span><span className="faint">→</span><span className="mono green" title={row.value}>{row.value}</span></label>)}</section>;
+        })}{!loading && !error && rows.length > 0 && !rows.some(row => `${row.database} ${row.category} ${row.key}`.toLowerCase().includes(query.toLowerCase())) && <p className="empty-state">No changes match your search.</p>}</div>
+    <footer className="review-footer"><label className="wipe-option"><Checkbox checked={wipe} disabled={disabled} onCheckedChange={checked => setWipe(checked === true)} />Wipe mod database first (recommended)</label>{lastApplied && <p className="last-applied">Last applied {new Date(lastApplied.at).toLocaleString()} by {lastApplied.username} · {lastApplied.commands} commands</p>}<div><button className="outline-button" disabled={applying} onClick={() => onOpenChange(false)}>Cancel</button><button className="primary-button" disabled={disabled || !selected.size && !wipe} onClick={apply}>{applying ? 'Applying…' : selected.size ? `Apply ${selected.size} changes` : wipe ? 'Wipe database only' : 'Nothing selected'}</button></div></footer>
+  </DialogContent></Dialog>;
 }

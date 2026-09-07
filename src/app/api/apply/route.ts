@@ -15,6 +15,8 @@
 import { NextResponse } from "next/server";
 import { buildRconCommands } from "@/lib/database/apply";
 import { executeBatchCommands } from "@/lib/rcon/service";
+import { writeApplyRecord } from '@/lib/database/applyRecord';
+import { validateToken } from '@/lib/auth/tokens';
 
 interface ApplyRequest {
   commands?: string[];
@@ -27,7 +29,10 @@ export async function POST(request: Request) {
 
     // Get commands: use provided commands or build from config
     let categoryCommands: string[];
-    if (body.commands && body.commands.length > 0) {
+    if (body.commands !== undefined) {
+      if (!Array.isArray(body.commands) || !body.commands.every((command) => typeof command === 'string')) {
+        return NextResponse.json({ success: false, error: 'Commands must be an array of strings' }, { status: 400 });
+      }
       // Selective apply: use provided commands
       categoryCommands = body.commands;
     } else {
@@ -48,6 +53,10 @@ export async function POST(request: Request) {
     }
 
     await executeBatchCommands(commands);
+    const token = request.headers.get('Authorization')?.replace(/^Bearer /, '');
+    const user = token ? validateToken(token) : null;
+    // RCON already succeeded; metadata failure must not encourage a duplicate apply.
+    await writeApplyRecord({ at: new Date().toISOString(), username: user?.username ?? 'unknown user', commands: commands.length }).catch((error) => console.error('Could not record last apply:', error));
 
     return NextResponse.json({
       success: true,

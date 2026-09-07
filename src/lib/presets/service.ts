@@ -114,6 +114,7 @@ export async function listStaticPresets(): Promise<PresetInfo[]> {
           presets.push({
             name: entry.name,
             manifest,
+            ...await presetMetadata(join(staticPath, entry.name), await loadPresetData(entry.name)),
           });
         } catch (error) {
           // Skip presets with invalid or missing manifests
@@ -266,6 +267,7 @@ export async function listUserPresets(): Promise<PresetInfo[]> {
           presets.push({
             name: entry.name,
             manifest,
+            ...await presetMetadata(join(userPath, entry.name), await loadUserPresetData(entry.name)),
           });
         } catch (error) {
           // Skip presets with invalid or missing manifests
@@ -444,4 +446,11 @@ if (import.meta.main) {
   }
 
   console.log('Tests complete!');
+}
+
+async function presetMetadata(path: string, data: PresetData) {
+  const count = (groups: Record<string, Record<string, ConfigValue>>) => Object.values(groups).reduce((sum, entries) => sum + Object.keys(entries).length, 0);
+  const files = ['manifest.json', ...await findJsonFiles(path)];
+  const mtimes = await Promise.all(files.map(async (file) => (await stat(join(path, file))).mtimeMs));
+  return { weaponCount: Object.values(data.weapons).filter((groups) => count(groups) > 0).length, keyCount: count(data.character) + Object.values(data.weapons).reduce((sum, groups) => sum + count(groups), 0), updatedAt: new Date(Math.max(...mtimes)).toISOString() };
 }

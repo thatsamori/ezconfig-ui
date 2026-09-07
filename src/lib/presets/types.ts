@@ -27,6 +27,9 @@ export interface PresetManifest {
 export interface PresetInfo {
   name: string;
   manifest: PresetManifest;
+  weaponCount?: number;
+  keyCount?: number;
+  updatedAt?: string;
 }
 
 /**

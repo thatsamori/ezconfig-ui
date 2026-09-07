@@ -64,3 +64,9 @@ Databases/**
 Presets/User/**
 users.json
 Notes/**
+
+# Isolated redesign verification data
+/.qa-redesign/
+
+# Generated browser-test bundle (source harness is tracked)
+/.scratch/attack-motion-ui/app.js

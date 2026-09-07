@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Bookmark } from "lucide-react";
+import { relativeTime } from "@/components/console/model";
 import JSZip from "jszip";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,13 +56,10 @@ export function PresetsTab() {
   const [importManifest, setImportManifest] = useState<PresetManifest | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
-  const values = useConfigStore((state) => state.values);
   const loadPreset = useConfigStore((state) => state.loadPreset);
 
   // Check if there's anything to save (values has content)
-  const hasSavedContent =
-    Object.keys(values.character).length > 0 ||
-    Object.keys(values.weapons).length > 0;
+
 
   // Wait for client mount to avoid hydration mismatch
   useEffect(() => {
@@ -348,9 +347,10 @@ export function PresetsTab() {
 
   return (
     <>
-      <div className="space-y-8 py-4">
+      <div className="presets-page space-y-8">
         {/* Header with Save and Import buttons */}
-        <div className="flex justify-end gap-2">
+        <div className="standalone-heading">
+          <div className="preset-page-heading"><h1>Presets</h1><p className="page-description">Snapshots of every override. Loading one replaces the working set (you review before anything is sent).</p></div>
           <input
             ref={importInputRef}
             type="file"
@@ -364,37 +364,38 @@ export function PresetsTab() {
             disabled={isImporting}
             variant="outline"
           >
-            {isImporting ? "Importing..." : "Import Preset"}
+            {isImporting ? "Importing..." : "Import .zip"}
           </Button>
           <Button
             onClick={() => setSaveDialogOpen(true)}
-            disabled={!hasSavedContent}
-            variant="outline"
+            disabled={isLoadingPreset}
+            variant="default"
           >
-            Save Current Config as Preset
+            Save current as preset
           </Button>
         </div>
 
         {/* User Presets Section */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Your Presets</h3>
+          <h3 className="preset-section-title">Yours</h3>
           {userPresets.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               No saved presets yet. Save your current configuration as a preset to see it here.
             </p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="preset-grid">
               {userPresets.map((preset) => (
-                <Card key={preset.name}>
+                <Card key={preset.name} className="preset-card">
                   <CardHeader>
-                    <CardTitle>{preset.manifest.title}</CardTitle>
+                    <CardTitle><span className="preset-icon"><Bookmark size={15} /></span>{preset.manifest.title}</CardTitle>
                     <CardDescription>{preset.manifest.description}</CardDescription>
+                    <p className="preset-meta">{preset.weaponCount ?? 0} weapons · {preset.keyCount ?? 0} keys{preset.updatedAt ? ` · edited ${relativeTime(preset.updatedAt)}` : ""}</p>
                   </CardHeader>
                   <CardContent className="flex gap-2">
                     <Button
                       onClick={() => handleLoadClick(preset, "user")}
                       variant="default"
-                      className="flex-1"
+                      className="preset-load"
                     >
                       Load
                     </Button>
@@ -407,7 +408,8 @@ export function PresetsTab() {
                     </Button>
                     <Button
                       onClick={() => handleDeleteClick(preset)}
-                      variant="destructive"
+                      variant="ghost"
+                      className="preset-delete"
                     >
                       Delete
                     </Button>
@@ -420,25 +422,27 @@ export function PresetsTab() {
 
         {/* Static Presets Section */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Built-in Presets</h3>
+          <h3 className="preset-section-title">Built-in</h3>
           {staticPresets.length === 0 ? (
             <p className="text-muted-foreground text-sm">No built-in presets available.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="preset-grid">
               {staticPresets.map((preset) => (
-                <Card key={preset.name}>
+                <Card key={preset.name} className="preset-card">
                   <CardHeader>
-                    <CardTitle>{preset.manifest.title}</CardTitle>
+                    <CardTitle><span className="preset-icon"><Bookmark size={15} /></span>{preset.manifest.title}</CardTitle>
                     <CardDescription>{preset.manifest.description}</CardDescription>
+                    <p className="preset-meta">{preset.weaponCount ?? 0} weapons · {preset.keyCount ?? 0} keys{preset.updatedAt ? ` · edited ${relativeTime(preset.updatedAt)}` : ""}</p>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex gap-2">
                     <Button
                       onClick={() => handleLoadClick(preset, "static")}
                       variant="default"
-                      className="w-full"
+                      className="preset-load"
                     >
                       Load
                     </Button>
+                    <Button variant="outline" onClick={() => handleLoadClick(preset, "static")}>Preview</Button>
                   </CardContent>
                 </Card>
               ))}

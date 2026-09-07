@@ -25,6 +25,7 @@ import type { ConfigValue } from "@/lib/store/configStore";
 import { useNotes } from "@/lib/hooks";
 import { getSchemaFromDatabase } from "@/lib/notes/types";
 import { Pencil, X, MessageCircle } from "lucide-react";
+import { ExplicitFloatOverride } from "@/components/config/ExplicitFloatOverride";
 
 export interface ConfigRowProps {
   configEntry: ConfigEntry;
@@ -56,6 +57,7 @@ export function ConfigRow({
   muted,
 }: ConfigRowProps) {
   const [notesOpen, setNotesOpen] = useState(false);
+  const [editingUnset, setEditingUnset] = useState(false);
   const isCustomized = value !== undefined;
 
   // Derive schema from database path (e.g., "Weapon/Greatsword" -> "weapon")
@@ -76,6 +78,10 @@ export function ConfigRow({
   const hasNotes = notes.length > 0;
 
   const handleEdit = () => {
+    if (configEntry.defaultVariesByMotion && configEntry.dataType === DataType.Float) {
+      setEditingUnset(true);
+      return;
+    }
     // When clicking Edit, set to the schema default value
     const defaultValue = configEntry.default;
     if (defaultValue !== undefined) {
@@ -196,10 +202,22 @@ export function ConfigRow({
                     </Button>
                   )}
                 </>
+              ) : editingUnset && !readonly ? (
+                <ExplicitFloatOverride
+                  configKey={configEntry.configKey}
+                  disabled={disabled}
+                  onConfirm={(newValue) => {
+                    onChange(newValue);
+                    setEditingUnset(false);
+                  }}
+                  onCancel={() => setEditingUnset(false)}
+                />
               ) : (
                 <>
                   <Badge variant="secondary" className="text-xs">
-                    Game Default
+                    {configEntry.defaultVariesByMotion
+                      ? "Game Default — varies by motion"
+                      : "Game Default"}
                   </Badge>
                   {!readonly && (
                     <Button

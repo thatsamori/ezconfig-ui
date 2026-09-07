@@ -1,153 +1,76 @@
-/**
- * Bulk Weapons API route handler
- *
- * POST /api/config/bulk-weapons - Apply a config entry to all weapons
- *
- * Request body:
- * {
- *   "category": "General" | "Strike" | "AltStrike" | "Stab" | "AltStab",
- *   "entry": { "ConfigKey": value }
- * }
- *
- * Response:
- * { "success": true, "data": { "weaponsUpdated": 15 } }
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { readCategory, writeCategory } from '@/lib/database/service';
 import { validateEntries } from '@/lib/database/validation';
-import { scanDatabaseStructure, type GroupedDatabase } from '@/lib/database/structure';
-import type { ConfigData, ConfigValue } from '@/lib/database/types';
+import { CategoryName, WeaponConfigGroupName } from '@/lib/config/weaponConfigSchema';
+import type { ConfigData } from '@/lib/database/types';
 
-// Valid weapon categories
-const VALID_CATEGORIES = ['General', 'Strike', 'AltStrike', 'Stab', 'AltStab'] as const;
-type ValidCategory = (typeof VALID_CATEGORIES)[number];
-
-function isValidCategory(category: string): category is ValidCategory {
-  return VALID_CATEGORIES.includes(category as ValidCategory);
-}
-
-/**
- * POST /api/config/bulk-weapons
- *
- * Apply a config entry to all weapons for a given category.
- */
+/** Accept either the legacy shared entry or entries specific to each weapon. */
 export async function POST(request: NextRequest) {
   try {
-    // Parse request body
-    let body: { category?: string; entry?: Record<string, ConfigValue> };
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json(
-        { success: false, error: 'Invalid JSON in request body' },
-        { status: 400 }
-      );
+    const body = await request.json();
+    if (!Object.values(WeaponConfigGroupName).includes(body.category)) return NextResponse.json({
+      success: false,
+      error: 'Invalid weapon category'
+    }, {
+      status: 400
+    });
+    const names = Object.values(CategoryName);
+    const weaponValues: Record<string, ConfigData> = body.weaponValues ?? Object.fromEntries(names.map(name => [name, body.entry]));
+    if (!weaponValues || typeof weaponValues !== 'object' || Array.isArray(weaponValues) || !Object.keys(weaponValues).length) return NextResponse.json({
+      success: false,
+      error: 'Provide weaponValues or an entry'
+    }, {
+      status: 400
+    });
+    // Validate the complete batch before making any changes.
+    for (const [weapon, entries] of Object.entries(weaponValues)) {
+      if (!names.includes(weapon as CategoryName) || !entries || typeof entries !== 'object' || Array.isArray(entries) || Object.keys(entries).length !== 1) return NextResponse.json({
+        success: false,
+        error: 'Each known weapon must have exactly one entry'
+      }, {
+        status: 400
+      });
+      const result = validateEntries(entries, weapon, body.category);
+      if (!result.valid) return NextResponse.json({
+        success: false,
+        error: 'Validation failed',
+        details: result.errors
+      }, {
+        status: 400
+      });
     }
-
-    // Validate category
-    if (!body.category || typeof body.category !== 'string') {
-      return NextResponse.json(
-        { success: false, error: 'Request body must contain "category" string' },
-        { status: 400 }
-      );
-    }
-
-    if (!isValidCategory(body.category)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Invalid category "${body.category}". Must be one of: ${VALID_CATEGORIES.join(', ')}`,
-        },
-        { status: 400 }
-      );
-    }
-
-    const category = body.category;
-
-    // Validate entry
-    if (!body.entry || typeof body.entry !== 'object' || Array.isArray(body.entry)) {
-      return NextResponse.json(
-        { success: false, error: 'Request body must contain "entry" object with single key-value pair' },
-        { status: 400 }
-      );
-    }
-
-    const entryKeys = Object.keys(body.entry);
-    if (entryKeys.length !== 1) {
-      return NextResponse.json(
-        { success: false, error: 'Entry must have exactly one key-value pair' },
-        { status: 400 }
-      );
-    }
-
-    const entry = body.entry as ConfigData;
-    const entryKey = entryKeys[0];
-    const entryValue = entry[entryKey];
-
-    // Validate entry against schema using any weapon name (schema is same for all weapons)
-    const validation = validateEntries(entry, 'AnyWeapon', category);
-    if (!validation.valid) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validation failed',
-          details: validation.errors,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Get all weapons from database structure
-    const structure = await scanDatabaseStructure();
-    const weaponGroup = structure['Weapon'];
-
-    if (!weaponGroup || Array.isArray(weaponGroup)) {
-      return NextResponse.json(
-        { success: false, error: 'No weapons found in database' },
-        { status: 404 }
-      );
-    }
-
-    const weapons = weaponGroup as GroupedDatabase;
-    const weaponNames = Object.keys(weapons);
-
-    if (weaponNames.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'No weapons found in database' },
-        { status: 404 }
-      );
-    }
-
-    // Apply entry to each weapon
-    let weaponsUpdated = 0;
-
-    for (const weaponName of weaponNames) {
+    const updatedWeapons: string[] = [];
+    const failedWeapons: string[] = [];
+    for (const [weapon, entries] of Object.entries(weaponValues)) {
       try {
-        // Read existing data
-        const existingData = await readCategory(weaponName, category);
-
-        // Merge the new entry into existing data
-        const newData: ConfigData = {
-          ...existingData,
-          [entryKey]: entryValue,
-        };
-
-        // Write back
-        await writeCategory(weaponName, category, newData);
-        weaponsUpdated++;
-      } catch (error) {
-        // Log error but continue with other weapons
-        console.error(`Failed to update ${weaponName}/${category}:`, error);
+        await writeCategory(weapon, body.category, {
+          ...(await readCategory(weapon, body.category)),
+          ...entries
+        });
+        updatedWeapons.push(weapon);
+      } catch {
+        failedWeapons.push(weapon);
       }
     }
-
     return NextResponse.json({
-      success: true,
-      data: { weaponsUpdated },
+      success: !failedWeapons.length,
+      data: {
+        weaponsUpdated: updatedWeapons.length,
+        updatedWeapons,
+        failedWeapons
+      },
+      ...(failedWeapons.length ? {
+        error: `Failed to save ${failedWeapons.join(', ')}. Other changes were saved.`
+      } : {})
+    }, {
+      status: failedWeapons.length ? 500 : 200
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      error: error instanceof SyntaxError ? 'Invalid JSON' : 'Could not save bulk changes'
+    }, {
+      status: error instanceof SyntaxError ? 400 : 500
+    });
   }
 }

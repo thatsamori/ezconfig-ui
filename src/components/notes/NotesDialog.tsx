@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -20,12 +21,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 import { RichTextEditor } from "./RichTextEditor";
+import { relativeTime } from "@/components/console/model";
 import type { Note } from "@/lib/notes/types";
 
 export interface NotesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   configKey: string;
+  context?: string;
   notes: Note[];
   onAddNote: (note: string) => Promise<boolean>;
   onEditNote: (noteId: string, note: string) => Promise<boolean>;
@@ -46,6 +49,7 @@ export function NotesDialog({
   open,
   onOpenChange,
   configKey,
+  context,
   notes,
   onAddNote,
   onEditNote,
@@ -107,28 +111,27 @@ export function NotesDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="console-sheet notes-sheet">
           <DialogHeader>
-            <DialogTitle>Notes for {configKey}</DialogTitle>
+            <DialogDescription>Notes{context ? ` · ${context}` : ''}</DialogDescription>
+            <DialogTitle>{configKey}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             {/* Notes list */}
             {notes.length > 0 ? (
-              <div className="space-y-3 max-h-60 overflow-y-auto">
+              <div className="notes-list space-y-3 overflow-y-auto">
                 {notes.map((note) => (
                   <div
                     key={note.id}
-                    className="p-3 bg-muted rounded-md space-y-1"
+                    className="note-item space-y-2"
                   >
                     <div
                       className="text-sm prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{ __html: note.note }}
                     />
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        by {note.createdBy}
-                      </span>
+                      <span className="note-author"><span className="note-avatar">{note.createdBy.slice(0, 1).toUpperCase()}</span>{note.createdBy}{/^\d{13}-/.test(note.id) && <time className="note-time" dateTime={new Date(Number(note.id.split("-")[0])).toISOString()}>{relativeTime(Number(note.id.split("-")[0]))}</time>}</span>
                       {note.createdBy === currentUsername && (
                         <div className="flex gap-1">
                           <Button
@@ -136,6 +139,7 @@ export function NotesDialog({
                             size="icon"
                             className="h-6 w-6"
                             onClick={() => handleEdit(note.id, note.note)}
+                            aria-label={`Edit note by ${note.createdBy}`}
                             disabled={editingNoteId !== null}
                           >
                             <Pencil className="h-3 w-3" />
@@ -145,6 +149,7 @@ export function NotesDialog({
                             size="icon"
                             className="h-6 w-6 text-destructive hover:text-destructive"
                             onClick={() => handleDeleteClick(note.id)}
+                            aria-label={`Delete note by ${note.createdBy}`}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -156,7 +161,7 @@ export function NotesDialog({
               </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-4">
-                No notes yet
+                No notes yet. Leave one so the next person knows why this value is set.
               </p>
             )}
 
@@ -174,7 +179,7 @@ export function NotesDialog({
                   </Button>
                 )}
                 <Button onClick={handleSubmit} disabled={isHtmlEmpty(noteText)}>
-                  {editingNoteId !== null ? "Save" : "Add Note"}
+                  {editingNoteId !== null ? "Save" : "Post note"}
                 </Button>
               </div>
             </div>

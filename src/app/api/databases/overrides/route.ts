@@ -6,15 +6,16 @@
  */
 
 import { NextResponse } from 'next/server';
-import { scanOverrides } from '@/lib/database/structure';
+import { scanOverrides, readAllConfigData } from '@/lib/database/structure';
 
 export async function GET() {
   try {
-    const overrides = await scanOverrides();
+    const [overrides, values] = await Promise.all([scanOverrides(), readAllConfigData()]);
 
     return NextResponse.json({
       success: true,
       data: overrides,
+      values,
     });
   } catch (error) {
     console.error('Error scanning overrides:', error);
