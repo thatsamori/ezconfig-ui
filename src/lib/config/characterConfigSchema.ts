@@ -716,7 +716,26 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
     },
   ],
   Combo: [],
-  Damage: [],
+  Damage: [
+    // TeamDamageReflect: team damage dealt back to the attacker (ticket 06). Toggle first.
+    {
+      configKey: "TeamDamageReflect",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      isFeatureToggle: true,
+      documentation:
+        "Feature toggle. When on, melee or ranged (non-generic) damage dealt to a teammate is also dealt to the attacker, scaled by TeamDamageReflectPercent. Does nothing in free-for-all (game state team count of 1 or less). Off is stock behaviour. Cswics: TeamDamageReflect (Cswics gated on a nonzero percent)",
+      default: false,
+    },
+    {
+      configKey: "TeamDamageReflectPercent",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Fraction of the team damage dealt back to the attacker, as a multiplier (1 = the full damage, 0.5 = half), truncated to a whole number of damage points; only read while TeamDamageReflect is on, stored regardless. Cswics: TeamDamageReflect",
+      default: 0,
+    },
+  ],
   Stun: [],
   Misc: [],
 };
