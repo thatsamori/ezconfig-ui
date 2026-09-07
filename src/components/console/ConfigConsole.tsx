@@ -151,13 +151,13 @@ function ConsoleContent() {
   };
   return <main className={`console-shell${configScreen ? '' : ' wide-page'}`}>
     <nav className="icon-rail" aria-label="Main navigation"><Logo />{[{
-        id: 'weapons',
-        label: 'Weapons',
-        icon: <Sword />
-      }, {
         id: 'character',
         label: 'Character',
         icon: <Helm />
+      }, {
+        id: 'weapons',
+        label: 'Weapons',
+        icon: <Sword />
       }, {
         id: 'presets',
         label: 'Presets',
