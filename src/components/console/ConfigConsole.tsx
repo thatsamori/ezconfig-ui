@@ -76,7 +76,7 @@ function KeyRow({
   </>;
 }
 function ConsoleContent() {
-  const [tab, setTab] = useState('weapons');
+  const [tab, setTab] = useState('character');
   const [weapon, setWeapon] = useState<string>('ArmingSword');
   const [charGroup, setCharGroup] = useState(characterGroups[0]);
   const [groups, setGroups] = useState<string[]>(['Strike']);
