@@ -1,5 +1,6 @@
 import { DataType, type ConfigEntry } from "./types";
 import { ATTACK_MOTION_CONFIG_OPTIONS } from "./attackMotionConfigSchema";
+import { BASE_PARRY_CONFIG_OPTIONS } from "./baseParryConfigSchema";
 
 export const CHARACTER_CATEGORY_NAME = "Character";
 
@@ -702,14 +703,15 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
     },
   ],
   Parry: [
-    // ExperimentalParry: parry window extended after a block (ticket 04). Toggle first.
+    ...BASE_PARRY_CONFIG_OPTIONS,
+    // ExperimentalParry: replace the base time remaining after a block. Toggle first.
     {
       configKey: "ExperimentalParry",
       dataType: DataType.Bool,
       isImplemented: true,
       isFeatureToggle: true,
       documentation:
-        "Feature toggle. When a player blocks an attack with a parry (OnBlockedMelee), the live parry motion's parry-up time is extended so the parry window stays open for an extra ExperimentalParryDuration seconds measured from the block. Off is stock behaviour; the other Parry keys are stored and sent regardless but only read while this is on. Cswics: useExperimentalParry",
+        "After a successful block, replaces the remaining base parry time with the current ExperimentalParryDuration. This can shorten or lengthen the parry; the successful-parry bonus can add more time. This toggle controls only ExperimentalParryDuration; base parry controls and other features work independently. Cswics mod: useExperimentalParry.",
       default: false,
     },
     {
@@ -718,7 +720,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       isImplemented: true,
       gatedBy: "ExperimentalParry",
       documentation:
-        "Seconds added to the parry-up time after a block; only read while ExperimentalParry is on, stored regardless. Cswics: ExperimentalParryDuration",
+        "Base parry time remaining after a successful block, in seconds: 0.05 means 50 milliseconds. Uses the current value when the block happens and replaces the remaining base time. The successful-parry bonus can extend the actual duration. Only used while ExperimentalParry is on. Cswics mod: ExperimentalParryDuration.",
       default: 0.05,
     },
     // KicksUnparryable: kicks cannot be parried (ticket 05).
@@ -738,7 +740,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       isImplemented: true,
       isFeatureToggle: true,
       documentation:
-        "Feature toggle. When on, a parry that begins inside the stock miss-parry window after being flinched (the parry motion's GiveMissParryIfFlinchedBeforeDuration) gets its recovery time replaced by TrueComboRecoveryTime and the parrier's stamina offset by TrueComboStamina. Off is stock behaviour; the other TrueCombo keys are stored and sent regardless but only read while this is on. Cswics: TrueComboValues (gated on the use flag)",
+        "Enables custom recovery and stamina changes for a parry within the post-flinch detection window. Timing starts at the last flinch, even if another motion occurs before the parry. GiveMissParryIfFlinchedBeforeDuration sets that window; zero disables qualification. Turning this feature off keeps the independently configured base parry rules. Cswics mod: TrueComboValues (the combined input also enabled its custom feature).",
       default: false,
     },
     {
@@ -747,7 +749,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       isImplemented: true,
       gatedBy: "TrueCombo",
       documentation:
-        "Parry recovery time in seconds applied to a parry made inside the post-flinch miss-parry window; only read while TrueCombo is on, stored regardless. Cswics: TrueComboValues.Y",
+        "Recovery after a parry made inside the post-flinch miss-parry window, in seconds: 0.25 means 250 milliseconds. Higher positive values prolong that recovery; lower positive values let you act again sooner. Zero uses normal parry recovery for this path. While TrueCombo is on, this replaces the base miss-parry recovery and silences its woosh. Ordinary and held-parry recovery keep their separate settings. Cswics mod: TrueComboValues.Y",
       default: 0.25,
     },
     {
@@ -756,7 +758,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       isImplemented: true,
       gatedBy: "TrueCombo",
       documentation:
-        "Stamina offset in whole points (negative drains) applied to the parrier on a parry made inside the post-flinch miss-parry window; 0 means none. Only read while TrueCombo is on, stored regardless. Cswics: TrueComboValues.Z",
+        "Stamina change applied once for a qualifying parry after the last flinch while TrueCombo is on. Negative values drain stamina; positive values restore it; zero makes no change. Fractional values are truncated to whole points. An intervening motion does not erase the flinch, but the detection window must still be active. Cswics mod: TrueComboValues.Z.",
       default: 0,
     },
   ],
