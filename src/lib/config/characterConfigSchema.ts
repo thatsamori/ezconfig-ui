@@ -714,6 +714,32 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
         "Feature toggle. When on, kicks cannot be parried: a parry against a kick fails as if it had not been attempted, so the kick lands. Off is stock behaviour. Cswics: DisableKickparry",
       default: false,
     },
+    // TrueCombo: parry inside the post-flinch miss-parry window gets a custom recovery time and stamina offset (ticket 11). Toggle first.
+    {
+      configKey: "TrueCombo",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      isFeatureToggle: true,
+      documentation:
+        "Feature toggle. When on, a parry that begins inside the stock miss-parry window after being flinched (the parry motion's GiveMissParryIfFlinchedBeforeDuration) gets its recovery time replaced by TrueComboRecoveryTime and the parrier's stamina offset by TrueComboStamina. Off is stock behaviour; the other TrueCombo keys are stored and sent regardless but only read while this is on. Cswics: TrueComboValues (gated on the use flag)",
+      default: false,
+    },
+    {
+      configKey: "TrueComboRecoveryTime",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Parry recovery time in seconds applied to a parry made inside the post-flinch miss-parry window; only read while TrueCombo is on, stored regardless. Cswics: TrueComboValues.Y",
+      default: 0.25,
+    },
+    {
+      configKey: "TrueComboStamina",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Stamina offset in whole points (negative drains) applied to the parrier on a parry made inside the post-flinch miss-parry window; 0 means none. Only read while TrueCombo is on, stored regardless. Cswics: TrueComboValues.Z",
+      default: 0,
+    },
   ],
   Combo: [],
   Damage: [
