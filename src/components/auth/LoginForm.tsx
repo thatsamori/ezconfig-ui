@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Sword } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 import { useAuthStore } from '@/lib/store';
 import { toast } from 'sonner';
 export function LoginForm() {
@@ -21,5 +21,5 @@ export function LoginForm() {
       setLoading(false);
     }
   };
-  return <main className="login-screen"><div className="login-column"><header><div className="console-logo"><Sword size={22} strokeWidth={1.75} /></div><h1>Sign in to EZConfig</h1><p>{process.env.NEXT_PUBLIC_SERVER_NAME ? `${process.env.NEXT_PUBLIC_SERVER_NAME} · ` : ''}Mordhau server console</p></header><form onSubmit={submit}><label>Username<input autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} disabled={loading} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} disabled={loading} required /></label><button className="primary-button" type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button></form><p>Accounts are created by an admin in Users. No self sign-up.</p></div></main>;
+  return <main className="login-screen"><div className="login-column"><header><Logo /><h1>Sign in to EZConfig</h1><p>{process.env.NEXT_PUBLIC_SERVER_NAME ? `${process.env.NEXT_PUBLIC_SERVER_NAME} · ` : ''}Mordhau server console</p></header><form onSubmit={submit}><label>Username<input autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} disabled={loading} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} disabled={loading} required /></label><button className="primary-button" type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button></form><p>Accounts are created by an admin in Users. No self sign-up.</p></div></main>;
 }

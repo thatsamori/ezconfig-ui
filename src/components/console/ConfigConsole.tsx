@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Bookmark, Sword, Users, Search, Check, X, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { AuthGate } from '@/components/auth';
+import { Logo } from '@/components/Logo';
 import { PresetsTab } from '@/components/presets';
 import { UsersTab } from '@/components/users';
 import { SavePresetDialog } from '@/components/presets/SavePresetDialog';
@@ -19,9 +20,6 @@ import { useNotes } from '@/lib/hooks';
 import { ValueEditor } from './ValueEditor';
 import { SweepPanel } from './SweepPanel';
 import { attackGroups, weapons, countEntries, countGroups, countOverrides, isOverride, showValue, toggleAttackGroup } from './model';
-export function Logo() {
-  return <div className="console-logo" aria-label="EZConfig"><Sword size={19} strokeWidth={1.75} /></div>;
-}
 function Helm() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12a8 8 0 0 1 16 0v2l-2 6H6l-2-6Z" /><path d="M13 12h7M13 12v8M12 4V2" /></svg>;
 }
