@@ -800,6 +800,24 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
         "Seconds after a disarm during which pickups are blocked; only read while DisarmPickupDelay is on, stored regardless. Cswics: disarmPickupDelayDuration",
       default: 0.001,
     },
+    // DelayedSuicide: the suicide key plays an emote and the character dies when it ends (ticket 08). Toggle first.
+    {
+      configKey: "DelayedSuicide",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      isFeatureToggle: true,
+      documentation:
+        "Feature toggle. When on, pressing the suicide key plays a suicide emote and the character dies only when it finishes, instead of dying instantly; while it is on the stock instant suicide request is blocked on the pawn. Off is stock behaviour. Cswics: useDelayedSuicide",
+      default: false,
+    },
+    {
+      configKey: "DelayedSuicideDuration",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Seconds the suicide emote plays before the character dies; only read while DelayedSuicide is on, stored regardless. Cswics: delayedSuicideDuration",
+      default: 3.0,
+    },
   ],
 };
 export const characterConfigFlatMap = Object.values(CHARACTER_CONFIG_OPTIONS)
