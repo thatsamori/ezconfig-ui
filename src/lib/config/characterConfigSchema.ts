@@ -735,6 +735,24 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
         "Fraction of the team damage dealt back to the attacker, as a multiplier (1 = the full damage, 0.5 = half), truncated to a whole number of damage points; only read while TeamDamageReflect is on, stored regardless. Cswics: TeamDamageReflect",
       default: 0,
     },
+    // TeamHitRecovery: extra hit-recovery time for the attacker after a team hit (ticket 07). Toggle first.
+    {
+      configKey: "TeamHitRecovery",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      isFeatureToggle: true,
+      documentation:
+        "Feature toggle. When on, a player who hits a teammate has TeamHitRecoveryExtraTime added to the hit-recovery motion they are put into, so team hits cost the attacker more. Off is stock behaviour. Cswics: (no alias; Cswics always applied its value)",
+      default: false,
+    },
+    {
+      configKey: "TeamHitRecoveryExtraTime",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation:
+        "Seconds added to the end of the attacker's hit-recovery motion after hitting a teammate; only read while TeamHitRecovery is on, stored regardless. Cswics: customTeamHitRecoveryTime",
+      default: 0.35,
+    },
   ],
   Stun: [],
   Misc: [],
