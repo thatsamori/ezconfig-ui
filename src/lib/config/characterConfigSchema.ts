@@ -757,7 +757,36 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       default: 0,
     },
   ],
-  Combo: [],
+  Combo: [
+    // MissComboPenalty: a combo started from a missed attack turns slower and gets a fixed feint window (ticket 10). Toggle first.
+    {
+      configKey: "MissComboPenalty",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      isFeatureToggle: true,
+      documentation:
+        "Feature toggle. When on, an attack that is a combo started from a missed attack (the motion's bIsComboFromMiss) has the attacker's turn rate cap and look-up rate cap multiplied by MissComboTurnCapMultiplier for that attack, and its feint window and combo feint window replaced by MissComboFeintWindow. Off is stock behaviour; the other MissComboPenalty keys are stored and sent regardless but only read while this is on. Cswics: UseMissComboPenalty (set true whenever the Cswics actor applies MissComboPenalty)",
+      default: false,
+    },
+    {
+      configKey: "MissComboTurnCapMultiplier",
+      dataType: DataType.Float,
+      isImplemented: true,
+      gatedBy: "MissComboPenalty",
+      documentation:
+        "Multiplier applied to the attacker's turn rate cap and look-up rate cap for a combo attack started from a miss; 1.0 leaves the caps stock, lower values make the attacker turn slower during that attack. Only read while MissComboPenalty is on, stored regardless. Cswics: MissComboPenalty.X",
+      default: 1.0,
+    },
+    {
+      configKey: "MissComboFeintWindow",
+      dataType: DataType.Float,
+      isImplemented: true,
+      gatedBy: "MissComboPenalty",
+      documentation:
+        "Feint window in seconds (both the feint window and the combo feint window) written onto a combo attack started from a miss, replacing the motion's stock windows; 0.05 is the Cswics default. Only read while MissComboPenalty is on, stored regardless. Cswics: MissComboPenalty.Y",
+      default: 0.05,
+    },
+  ],
   Damage: [
     // TeamDamageReflect: team damage dealt back to the attacker (ticket 06). Toggle first.
     {
