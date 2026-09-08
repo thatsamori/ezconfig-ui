@@ -1,6 +1,7 @@
 import { DataType, type ConfigEntry } from "./types";
 import { ATTACK_MOTION_CONFIG_OPTIONS } from "./attackMotionConfigSchema";
 import { BASE_PARRY_CONFIG_OPTIONS } from "./baseParryConfigSchema";
+import { RECOVERY_CONFIG_OPTIONS } from "./recoveryConfigSchema";
 
 export const CHARACTER_CATEGORY_NAME = "Character";
 
@@ -9,6 +10,7 @@ export enum CharacterConfigGroupName {
   Combat = "Combat",
   General = "General",
   AttackMotion = "AttackMotion",
+  Recovery = "Recovery",
   // Feature clusters (spec: .scratch/cswics-features). Keys arrive per feature ticket.
   Chftp = "Chftp",
   Chamber = "Chamber",
@@ -24,6 +26,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
   ConfigEntry[]
 > = {
   AttackMotion: ATTACK_MOTION_CONFIG_OPTIONS,
+  Recovery: RECOVERY_CONFIG_OPTIONS,
   Movement: [
     // Booleans
     {
@@ -819,7 +822,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       isImplemented: true,
       isFeatureToggle: true,
       documentation:
-        "Feature toggle. When on, a player who hits a teammate has TeamHitRecoveryExtraTime added to the hit-recovery motion they are put into, so team hits cost the attacker more. Off is stock behaviour. Cswics: (no alias; Cswics always applied its value)",
+        "Adds extra recovery time when a player hits a teammate and the hit stops their attack. The setting is captured at the teammate hit; later updates or wipes affect later hits. Cswics mod: no separate toggle; Cswics always applied its value.",
       default: false,
     },
     {
@@ -828,7 +831,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       isImplemented: true,
       gatedBy: "TeamHitRecovery",
       documentation:
-        "Seconds added to the end of the attacker's hit-recovery motion after hitting a teammate; only read while TeamHitRecovery is on, stored regardless. Cswics: customTeamHitRecoveryTime",
+        "Seconds added to the attacker's recovery after a teammate hit. Higher positive values make that recovery last longer. Captured at the hit while TeamHitRecovery is on, so an update or wipe afterward does not change that hit's extra time. Cswics mod: customTeamHitRecoveryTime.",
       default: 0.35,
     },
   ],
