@@ -1,4 +1,5 @@
 import { DataType, type ConfigEntry } from "./types";
+import { characterDefaults } from "./defaults";
 import { ATTACK_MOTION_CONFIG_OPTIONS } from "./attackMotionConfigSchema";
 import { BASE_PARRY_CONFIG_OPTIONS } from "./baseParryConfigSchema";
 import { RECOVERY_CONFIG_OPTIONS } from "./recoveryConfigSchema";
@@ -889,6 +890,10 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
     },
   ],
 };
+for (const group of Object.values(CharacterConfigGroupName)) {
+  for (const entry of CHARACTER_CONFIG_OPTIONS[group]) Object.assign(entry, characterDefaults(entry));
+}
+
 export const characterConfigFlatMap = Object.values(CHARACTER_CONFIG_OPTIONS)
   .reduce((acc, group) => [...acc, ...group], [])
   .reduce(

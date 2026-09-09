@@ -382,3 +382,5 @@ body { -webkit-font-smoothing: antialiased; }
 .sweep-row [data-slot=checkbox]:disabled { border: 1px dashed rgba(224,168,60,.6); opacity: 1; }
 .note-time { color: #6b6c72; font-size: 11.5px; font-weight: 400; }
 .notes-sheet .tiptap { background: #0f1012; border-radius: 0 0 10px 10px; }
+.default-caption { display: block; color: #888a91; font-size: 10px; margin-top: 3px; overflow-wrap: anywhere; }
+.game-default { height: auto; min-height: 30px; padding: 5px 8px; color: #9a9ba1; white-space: normal; text-align: left; overflow-wrap: anywhere; }

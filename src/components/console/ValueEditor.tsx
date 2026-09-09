@@ -9,6 +9,7 @@ import { useDebouncedCallback } from '@/lib/hooks';
 import { SaveIndicator } from '@/components/config/SaveIndicator';
 import { ExplicitFloatOverride } from '@/components/config/ExplicitFloatOverride';
 import { isOverride } from './model';
+import { defaultLabel, defaultDetails, resolveDefault } from '@/lib/config/defaults';
 function NumberField({
   value,
   onChange,
@@ -35,6 +36,8 @@ function NumberField({
 }
 export function ValueEditor({
   entry,
+  database,
+  category,
   value,
   onChange,
   onReset,
@@ -43,6 +46,8 @@ export function ValueEditor({
   debounceMs = 1000
 }: {
   entry: ConfigEntry;
+  database?: string;
+  category?: string;
   value: ConfigValue | undefined;
   onChange: (value: ConfigValue) => void;
   onReset?: () => void;
@@ -52,6 +57,9 @@ export function ValueEditor({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  const baseline = resolveDefault(entry, database, category).defaultValue;
+  const baselineLabel = defaultLabel(entry, database, category);
+  const baselineDetails = defaultDetails(entry, database, category);
   const commitDraft = () => {
     if (draft.trim() && Number.isFinite(Number(draft))) onChange(Number(draft));
     setEditing(false);
@@ -71,9 +79,16 @@ export function ValueEditor({
         setDraft('');
       }
     }} />;
-    return <button className="game-default" disabled={disabled} title={`Customize ${label}`} onClick={() => {
-      if (entry.dataType === DataType.Float) setEditing(true);else onChange(entry.dataType === DataType.Bool ? true : entry.dataType === DataType.FloatArray ? [0] : structuredClone(entry.default));
-    }}>{entry.defaultVariesByMotion ? 'Game default — varies by motion' : 'Game default'}</button>;
+    return <button className="game-default" disabled={disabled} title={`${baselineDetails}\nCustomize ${label}`} onClick={() => {
+      if (entry.dataType === DataType.Float) {
+        setDraft(typeof baseline === 'number' ? String(baseline) : '');
+        setEditing(true);
+      } else if (baseline !== undefined) onChange(structuredClone(baseline) as ConfigValue);
+      else if (entry.dataType === DataType.Bool) onChange(true);
+      else if (entry.dataType === DataType.FloatArray) onChange([]);
+      else if (entry.dataType === DataType.String) onChange(entry.choices?.[0] ?? '');
+      else onChange(entry.dataType === DataType.Vector ? { x: 0, y: 0, z: 0 } : { x: 0, y: 0 });
+    }}>{baselineLabel}</button>;
   }
   const number = (n: number, change: (n: number) => void, name = label) => <NumberField value={n} onChange={change} label={name} disabled={disabled} debounceMs={debounceMs} />;
   let control;
@@ -100,5 +115,5 @@ export function ValueEditor({
             } as ConfigValue), `${label} ${axis}`)}</label>)}</div>;
       }
   }
-  return <div className="value-editor">{control}{onReset && <button className="icon-button reset-value" disabled={disabled} title="Back to game default" aria-label={`Reset ${label} to game default`} onClick={onReset}><RotateCcw size={13} /></button>}</div>;
+  return <div className="value-with-default"><div className="value-editor">{control}{onReset && <button className="icon-button reset-value" disabled={disabled} title={`Reset — ${baselineDetails}`} aria-label={`Reset ${label} to game default`} onClick={onReset}><RotateCcw size={13} /></button>}</div>{onReset && <small className="default-caption" title={baselineDetails}>{baselineLabel}</small>}</div>;
 }

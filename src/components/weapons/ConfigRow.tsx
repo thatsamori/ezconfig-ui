@@ -26,6 +26,7 @@ import { useNotes } from "@/lib/hooks";
 import { getSchemaFromDatabase } from "@/lib/notes/types";
 import { Pencil, X, MessageCircle } from "lucide-react";
 import { ExplicitFloatOverride } from "@/components/config/ExplicitFloatOverride";
+import { defaultLabel, defaultDetails, resolveDefault } from "@/lib/config/defaults";
 
 export interface ConfigRowProps {
   configEntry: ConfigEntry;
@@ -58,7 +59,8 @@ export function ConfigRow({
 }: ConfigRowProps) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [editingUnset, setEditingUnset] = useState(false);
-  const isCustomized = value !== undefined;
+  const isCustomized = value !== undefined && value !== null;
+  const baseline = resolveDefault(configEntry, database, category).defaultValue;
 
   // Derive schema from database path (e.g., "Weapon/Greatsword" -> "weapon")
   const schema = getSchemaFromDatabase(database);
@@ -83,9 +85,9 @@ export function ConfigRow({
       return;
     }
     // When clicking Edit, set to the schema default value
-    const defaultValue = configEntry.default;
+    const defaultValue = baseline;
     if (defaultValue !== undefined) {
-      onChange(defaultValue);
+      onChange(structuredClone(defaultValue) as ConfigValue);
     }
   };
 
@@ -136,7 +138,7 @@ export function ConfigRow({
         return (
           <StringSelectInput
             value={value as string}
-            choices={configEntry.choices ?? [String(configEntry.default)]}
+            choices={configEntry.choices ?? [String(baseline)]}
             onChange={onChange}
             disabled={disabled}
           />
@@ -214,10 +216,8 @@ export function ConfigRow({
                 />
               ) : (
                 <>
-                  <Badge variant="secondary" className="text-xs">
-                    {configEntry.defaultVariesByMotion
-                      ? "Game Default — varies by motion"
-                      : "Game Default"}
+                  <Badge variant="secondary" className="text-xs" title={defaultDetails(configEntry, database, category)}>
+                    {defaultLabel(configEntry, database, category)}
                   </Badge>
                   {!readonly && (
                     <Button

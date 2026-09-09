@@ -7,12 +7,23 @@
    default: false,
  }
  */
-export type ConfigEntry = {
+export type DefaultValue = boolean | number | string | number[] | { x: number; y: number; z?: number };
+export type DefaultMetadata = {
+  /** Verified base value, before live perks, loadout and other modifiers. */
+  defaultValue?: DefaultValue;
+  /** Actual values when there is no single default across contexts. */
+  defaultVariants?: { value: DefaultValue; contexts: string[] }[];
+  /** Weapon name -> attack/general category -> verified base value. */
+  defaultValues?: Record<string, Record<string, DefaultValue>>;
+};
+
+export type ConfigEntry = DefaultMetadata & {
   configKey: string;
   dataType: DataType;
   isImplemented: boolean;
   documentation: string;
-  default?: any;
+  /** Legacy edit seed. Display and new schemas use defaultValue/defaultVariants. */
+  default?: DefaultValue;
   /** Stock values differ by motion; Customize must ask for an explicit value. */
   defaultVariesByMotion?: boolean;
   /** Customize opens an unsaved numeric draft instead of seeding a default. */

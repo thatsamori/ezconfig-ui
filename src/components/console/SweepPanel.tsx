@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { defaultLabel } from '@/lib/config/defaults';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -44,7 +45,10 @@ export function SweepPanel({
   });
   const untouched = rows.filter(row => row.before.some(value => !isOverride(value))).length;
   const total = rows.reduce((sum, row) => sum + row.changes, 0);
-  const summary = (items: (ConfigValue | undefined)[], mixed: string) => items.every(value => sameValue(value, items[0])) ? showValue(items[0]) : mixed;
+  const summary = (items: (ConfigValue | undefined)[], weapon?: string) => {
+    const labels = items.map((value, index) => isOverride(value) ? showValue(value) : weapon ? defaultLabel(entry, weapon, groups[index]) : '—');
+    return labels.every(value => value === labels[0]) ? labels[0] : labels.map((value, index) => `${groups[index]}: ${value}`).join(' · ');
+  };
   const switchMode = (next: SweepMode) => {
     setMode(next);
     setValue(next === 'multiply' ? 0.9 : next === 'add' ? 0.05 : source);
@@ -120,7 +124,7 @@ export function SweepPanel({
             const next = new Set(previous);
             if (checked) next.add(row.name);else next.delete(row.name);
             return next;
-          })} /><span className="sweep-weapon">{row.name}</span><span className={row.before.some(isOverride) ? 'mono' : 'faint'} title={summary(row.before, 'mixed')}>{summary(row.before, 'mixed')}</span><span className="faint">→</span><span className={`mono${row.changes ? ' green' : ''}`} title={summary(row.after, 'varies')}>{row.enabled && isOverride(value) ? summary(row.after, 'varies') : '—'}</span><span className={row.noBase ? 'amber' : row.changes ? 'green' : 'faint'}>{row.noBase ? 'no base value' : !row.enabled ? 'skipped' : row.changes ? 'will change' : 'no change'}</span></div>)}</div>
+          })} /><span className="sweep-weapon">{row.name}</span><span className={row.before.some(isOverride) ? 'mono' : 'faint'} title={summary(row.before, row.name)}>{summary(row.before, row.name)}</span><span className="faint">→</span><span className={`mono${row.changes ? ' green' : ''}`} title={summary(row.after)}>{row.enabled && isOverride(value) ? summary(row.after) : '—'}</span><span className={row.noBase ? 'amber' : row.changes ? 'green' : 'faint'}>{row.noBase ? 'no base value' : !row.enabled ? 'skipped' : row.changes ? 'will change' : 'no change'}</span></div>)}</div>
     <footer className="sheet-footer"><p>Stages changes locally. Nothing reaches the server until Review &amp; apply.</p><div><button className="outline-button" disabled={staging} onClick={onClose}>Cancel</button><button className="primary-button" disabled={!total || staging} onClick={stage}>{staging ? 'Staging…' : `Stage ${total} changes`}</button></div></footer>
   </DialogContent></Dialog>;
 }

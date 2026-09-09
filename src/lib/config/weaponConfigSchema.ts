@@ -1,4 +1,5 @@
-import { DataType } from "./types";
+import { DataType, type ConfigEntry } from "./types";
+import { weaponDefaults } from "./defaults";
 
 export enum CategoryName {
   ArmingSword = "ArmingSword",
@@ -53,7 +54,7 @@ export enum WeaponConfigGroupName {
   AltStab = "AltStab",
 }
 
-export const WEAPON_CONFIG_OPTIONS = {
+export const WEAPON_CONFIG_OPTIONS: Record<'Attack' | 'General', ConfigEntry[]> = {
   Attack: [
     // Booleans
     {
@@ -517,6 +518,9 @@ export const WEAPON_CONFIG_OPTIONS = {
     },
   ],
 };
+
+WEAPON_CONFIG_OPTIONS.Attack = WEAPON_CONFIG_OPTIONS.Attack.map(entry => weaponDefaults(entry, false));
+WEAPON_CONFIG_OPTIONS.General = WEAPON_CONFIG_OPTIONS.General.map(entry => weaponDefaults(entry, true));
 
 export const weaponConfigFlatMap = Object.values(WEAPON_CONFIG_OPTIONS)
   .reduce((acc, group) => [...acc, ...group], [])
