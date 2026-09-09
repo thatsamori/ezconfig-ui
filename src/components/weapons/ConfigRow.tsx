@@ -78,7 +78,7 @@ export function ConfigRow({
   const hasNotes = notes.length > 0;
 
   const handleEdit = () => {
-    if (configEntry.defaultVariesByMotion && configEntry.dataType === DataType.Float) {
+    if ((configEntry.requiresExplicitValue || configEntry.defaultVariesByMotion) && configEntry.dataType === DataType.Float) {
       setEditingUnset(true);
       return;
     }

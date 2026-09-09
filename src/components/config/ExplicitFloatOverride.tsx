@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-/** An unset motion rule has no universal numeric default to seed. */
+/** Keep an explicit numeric draft unsaved until the user confirms it. */
 export function ExplicitFloatOverride({
   configKey,
   disabled,

@@ -58,7 +58,7 @@ export function ValueEditor({
     setDraft('');
   };
   if (!isOverride(value)) {
-    if (editing && entry.defaultVariesByMotion) return <ExplicitFloatOverride
+    if (editing && (entry.requiresExplicitValue || entry.defaultVariesByMotion)) return <ExplicitFloatOverride
       configKey={label}
       disabled={disabled}
       onConfirm={next => { onChange(next); setEditing(false); }}

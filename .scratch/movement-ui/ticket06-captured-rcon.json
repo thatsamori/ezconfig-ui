@@ -1,0 +1,27 @@
+{
+  "source": "Real store -> temporary persistence -> review -> selected apply -> captured RCON transport",
+  "movementValues": {
+    "MaxWalkSpeed": 120,
+    "MaxWalkSpeedCrouched": 81,
+    "MaxWalkSpeedCrouchedWithRatPerk": 163,
+    "BackpedalModifier": 0.47,
+    "StrafeModifier": 0.61,
+    "PartialSprintModifier": 1.13,
+    "SprintModifier": 1.83,
+    "SprintAcceleration": 800,
+    "SupersprintModifier": 1.7,
+    "SubSprintSpeedBonusEquipped": 0.12,
+    "SecondSubSprintSpeedBonusEquipped": -0.04,
+    "AttackSupersprintDuration": 0.42,
+    "SecondAttackSupersprintDuration": 0.18,
+    "TimeToMaxSprint": 0.53
+  },
+  "recoveryValues": {
+    "WorldRecoveryTime": 0.65
+  },
+  "commands": [
+    "string ezconfig WipeDatabases",
+    "string ezconfig Character Movement {\"AttackSupersprintDuration\":\"0.42\",\"BackpedalModifier\":\"0.47\",\"MaxWalkSpeed\":\"120.00\",\"MaxWalkSpeedCrouched\":\"81.00\",\"MaxWalkSpeedCrouchedWithRatPerk\":\"163.00\",\"PartialSprintModifier\":\"1.13\",\"SecondAttackSupersprintDuration\":\"0.18\",\"SecondSubSprintSpeedBonusEquipped\":\"-0.04\",\"SprintAcceleration\":\"800.00\",\"SprintModifier\":\"1.83\",\"StrafeModifier\":\"0.61\",\"SubSprintSpeedBonusEquipped\":\"0.12\",\"SupersprintModifier\":\"1.70\",\"TimeToMaxSprint\":\"0.53\"}",
+    "string ezconfig Character Recovery {\"WorldRecoveryTime\":\"0.65\"}"
+  ]
+}

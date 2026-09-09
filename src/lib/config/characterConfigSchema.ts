@@ -2,6 +2,7 @@ import { DataType, type ConfigEntry } from "./types";
 import { ATTACK_MOTION_CONFIG_OPTIONS } from "./attackMotionConfigSchema";
 import { BASE_PARRY_CONFIG_OPTIONS } from "./baseParryConfigSchema";
 import { RECOVERY_CONFIG_OPTIONS } from "./recoveryConfigSchema";
+import { MOVEMENT_CONFIG_OPTIONS } from "./movementConfigSchema";
 
 export const CHARACTER_CATEGORY_NAME = "Character";
 
@@ -28,6 +29,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
   AttackMotion: ATTACK_MOTION_CONFIG_OPTIONS,
   Recovery: RECOVERY_CONFIG_OPTIONS,
   Movement: [
+    ...MOVEMENT_CONFIG_OPTIONS,
     // Booleans
     {
       configKey: "CanDodge",
@@ -41,8 +43,8 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
     {
       configKey: "TimeToMaxSprint",
       dataType: DataType.Float,
-      isImplemented: false,
-      documentation: "",
+      isImplemented: true,
+      documentation: "Sets the time in seconds for the native full-sprint speed target to ramp from partial sprint toward the full-sprint modifier. Acceleration and loadout can make actual speed lag behind that target. This is separate from SprintAcceleration. Updates and Reset affect ongoing movement; native eligibility can restart the ramp when movement no longer qualifies for full sprint. Cswics mod: TimeToMaxSprint.",
       default: 0.96,
     },
     {
