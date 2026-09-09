@@ -1,0 +1,38 @@
+{
+  "source": "Real store -> temporary persistence -> review -> selected apply -> captured RCON",
+  "initialCommands": [
+    "string ezconfig WipeDatabases",
+    "string ezconfig Greatsword Strike {\"Windup\":\"0.73\"}",
+    "string ezconfig MeatCleaver General {\"CanBlock\":\"False\"}",
+    "string ezconfig MeatCleaver Strike {\"Windup\":\"0.83\"}",
+    "string ezconfig Polehammer General {\"CanBlock\":\"False\"}",
+    "string ezconfig Polehammer Strike {\"Windup\":\"0.91\"}"
+  ],
+  "updateCommands": [
+    "string ezconfig MeatCleaver General {\"CanBlock\":\"False\"}",
+    "string ezconfig MeatCleaver Strike {\"Windup\":\"1.07\"}"
+  ],
+  "values": {
+    "MeatCleaver": {
+      "Strike": {
+        "Windup": 0.83
+      },
+      "General": {
+        "CanBlock": false
+      }
+    },
+    "Polehammer": {
+      "Strike": {
+        "Windup": 0.91
+      },
+      "General": {
+        "CanBlock": false
+      }
+    },
+    "Greatsword": {
+      "Strike": {
+        "Windup": 0.73
+      }
+    }
+  }
+}

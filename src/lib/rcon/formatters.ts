@@ -41,10 +41,12 @@ export function formatVector2D(value: { x: number; y: number }): string {
 
 /**
  * Format a FloatArray value for RCON commands
- * Output format: "(0.00,0.00,0.00)"
+ * The mod's RCON parser expects comma-separated numbers without parentheses.
+ * This differs from the parenthesized Game.ini import format.
+ * Output format: "0.00,0.00,0.00"; an empty array is an empty string.
  */
 export function formatFloatArray(values: number[]): string {
-  return `(${values.map((v) => v.toFixed(2)).join(",")})`;
+  return values.map((v) => v.toFixed(2)).join(",");
 }
 
 /**

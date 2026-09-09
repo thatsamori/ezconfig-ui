@@ -1,0 +1,122 @@
+{
+  "source": "Real store -> temporary persistence -> review -> selected apply -> captured RCON",
+  "initialCommands": [
+    "string ezconfig WipeDatabases",
+    "string ezconfig Spear AltStab {\"ForcesRearingFromFront\":\"True\"}",
+    "string ezconfig Spear AltStrike {\"ForcesRearingFromFront\":\"False\"}",
+    "string ezconfig Spear General {\"BlockStaminaClamp\":\"X=0.00,Y=19.00,Z=0.00\",\"BlockStaminaNegation\":\"0.00\",\"CanBlock\":\"False\",\"ParryBoxTransformLocation\":\"X=11.00,Y=22.00,Z=33.00\",\"ParryBoxTransformRotation\":\"X=5.00,Y=7.00,Z=9.00\",\"ParryBoxTransformScale\":\"X=1.10,Y=1.20,Z=1.30\",\"SecondBlockStaminaNegation\":\"17.50\"}",
+    "string ezconfig Spear Stab {\"ForcesRearingFromFront\":\"True\"}",
+    "string ezconfig Spear Strike {\"ForcesRearingFromFront\":\"True\"}"
+  ],
+  "removalCommands": [
+    "string ezconfig WipeDatabases",
+    "string ezconfig Spear AltStab {\"ForcesRearingFromFront\":\"True\"}",
+    "string ezconfig Spear AltStrike {\"ForcesRearingFromFront\":\"False\"}",
+    "string ezconfig Spear General {\"BlockStaminaClamp\":\"X=0.00,Y=19.00,Z=0.00\",\"BlockStaminaNegation\":\"0.00\",\"CanBlock\":\"False\",\"ParryBoxTransformRotation\":\"X=5.00,Y=7.00,Z=9.00\",\"ParryBoxTransformScale\":\"X=1.10,Y=1.20,Z=1.30\",\"SecondBlockStaminaNegation\":\"17.50\"}",
+    "string ezconfig Spear Strike {\"ForcesRearingFromFront\":\"True\"}"
+  ],
+  "rearingStages": {
+    "enabled": [
+      "string ezconfig Spear Stab {\"ForcesRearingFromFront\":\"True\"}"
+    ],
+    "disabled": [
+      "string ezconfig Spear Stab {\"ForcesRearingFromFront\":\"False\"}"
+    ]
+  },
+  "rearingCategoryBatches": {
+    "allTrue": [
+      "string ezconfig Spear AltStab {\"ForcesRearingFromFront\":\"True\"}",
+      "string ezconfig Spear AltStrike {\"ForcesRearingFromFront\":\"True\"}",
+      "string ezconfig Spear Stab {\"ForcesRearingFromFront\":\"True\"}",
+      "string ezconfig Spear Strike {\"ForcesRearingFromFront\":\"True\"}"
+    ],
+    "allFalse": [
+      "string ezconfig Spear AltStab {\"ForcesRearingFromFront\":\"False\"}",
+      "string ezconfig Spear AltStrike {\"ForcesRearingFromFront\":\"False\"}",
+      "string ezconfig Spear Stab {\"ForcesRearingFromFront\":\"False\"}",
+      "string ezconfig Spear Strike {\"ForcesRearingFromFront\":\"False\"}"
+    ]
+  },
+  "rearingRemovalBatches": {
+    "Strike": {
+      "before": [
+        "string ezconfig Spear AltStab {\"ForcesRearingFromFront\":\"False\"}",
+        "string ezconfig Spear AltStrike {\"ForcesRearingFromFront\":\"True\"}",
+        "string ezconfig Spear Stab {\"ForcesRearingFromFront\":\"False\"}",
+        "string ezconfig Spear Strike {\"ForcesRearingFromFront\":\"True\"}"
+      ],
+      "remove": [
+        "string ezconfig WipeDatabases",
+        "string ezconfig Spear AltStab {\"ForcesRearingFromFront\":\"False\"}",
+        "string ezconfig Spear AltStrike {\"ForcesRearingFromFront\":\"True\"}",
+        "string ezconfig Spear Stab {\"ForcesRearingFromFront\":\"False\"}"
+      ]
+    },
+    "AltStrike": {
+      "before": [
+        "string ezconfig Spear AltStab {\"ForcesRearingFromFront\":\"False\"}",
+        "string ezconfig Spear AltStrike {\"ForcesRearingFromFront\":\"True\"}",
+        "string ezconfig Spear Stab {\"ForcesRearingFromFront\":\"False\"}",
+        "string ezconfig Spear Strike {\"ForcesRearingFromFront\":\"True\"}"
+      ],
+      "remove": [
+        "string ezconfig WipeDatabases",
+        "string ezconfig Spear AltStab {\"ForcesRearingFromFront\":\"False\"}",
+        "string ezconfig Spear Stab {\"ForcesRearingFromFront\":\"False\"}",
+        "string ezconfig Spear Strike {\"ForcesRearingFromFront\":\"True\"}"
+      ]
+    },
+    "Stab": {
+      "before": [
+        "string ezconfig Spear AltStab {\"ForcesRearingFromFront\":\"False\"}",
+        "string ezconfig Spear AltStrike {\"ForcesRearingFromFront\":\"True\"}",
+        "string ezconfig Spear Stab {\"ForcesRearingFromFront\":\"False\"}",
+        "string ezconfig Spear Strike {\"ForcesRearingFromFront\":\"True\"}"
+      ],
+      "remove": [
+        "string ezconfig WipeDatabases",
+        "string ezconfig Spear AltStab {\"ForcesRearingFromFront\":\"False\"}",
+        "string ezconfig Spear AltStrike {\"ForcesRearingFromFront\":\"True\"}",
+        "string ezconfig Spear Strike {\"ForcesRearingFromFront\":\"True\"}"
+      ]
+    },
+    "AltStab": {
+      "before": [
+        "string ezconfig Spear AltStab {\"ForcesRearingFromFront\":\"False\"}",
+        "string ezconfig Spear AltStrike {\"ForcesRearingFromFront\":\"True\"}",
+        "string ezconfig Spear Stab {\"ForcesRearingFromFront\":\"False\"}",
+        "string ezconfig Spear Strike {\"ForcesRearingFromFront\":\"True\"}"
+      ],
+      "remove": [
+        "string ezconfig WipeDatabases",
+        "string ezconfig Spear AltStrike {\"ForcesRearingFromFront\":\"True\"}",
+        "string ezconfig Spear Stab {\"ForcesRearingFromFront\":\"False\"}",
+        "string ezconfig Spear Strike {\"ForcesRearingFromFront\":\"True\"}"
+      ]
+    }
+  },
+  "values": {
+    "CanBlock": false,
+    "BlockStaminaNegation": 0,
+    "SecondBlockStaminaNegation": 17.5,
+    "BlockStaminaClamp": {
+      "x": 0,
+      "y": 19
+    },
+    "ParryBoxTransformLocation": {
+      "x": 11,
+      "y": 22,
+      "z": 33
+    },
+    "ParryBoxTransformRotation": {
+      "x": 5,
+      "y": 7,
+      "z": 9
+    },
+    "ParryBoxTransformScale": {
+      "x": 1.1,
+      "y": 1.2,
+      "z": 1.3
+    }
+  }
+}
