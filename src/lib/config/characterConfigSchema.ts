@@ -36,7 +36,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       isImplemented: true,
       defaultValue: false,
       documentation:
-        "Allows players to display active parry colliders with the local console command ezvisualizeblockcollider 1. Use 0 to turn the display off, or status for diagnostics. Green outlines show the active box; red outlines show its forward-parry region. This is an EZConfig mesh overlay, independent of m.VisualizeBlockCollider, and does not change collision. Turning this option off or resetting it clears the display and requires players to opt in again. Shows each client's observed geometry, not a synchronized server hit trace. Requires the updated client pak; multiplayer visual validation is pending.",
+        "Allows players to display active parry colliders with the local console command ezvisualizeblockcollider 1. Use 0 to turn the display off, or status for current counts and the peak count since enabling it. Green outlines show the server's active box; red outlines show its forward-parry region. The server sends snapshots 20 times per second, so the display includes network delay; it is not a hit-history or rewind trace. This EZConfig mesh overlay is independent of m.VisualizeBlockCollider and does not change collision. Turning this option off or resetting it clears the display and requires players to opt in again. Requires the updated server and client paks.",
     },
   ],
   AttackMotion: ATTACK_MOTION_CONFIG_OPTIONS,
