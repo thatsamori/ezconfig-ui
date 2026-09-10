@@ -59,6 +59,32 @@ The UI follows `design_handoff_ezconfig_redesign/README.md`: choose a weapon or 
 
 Edits are saved to the web app's database. **All weapons →** opens Sweep for Set, Multiply, or Add, with a per-weapon preview. Relative operations skip weapons with missing values in any selected attack type unless you provide a base. **Review & apply** lets you select individual keys and groups before sending commands over RCON. Unselected overrides remain saved in the web app. With wipe enabled, previous mod settings are cleared before the selected commands are sent.
 
+### Shared editing
+
+The console checks `/api/config/revision` every two seconds while visible and
+checks immediately when you return. Two seconds balances quick collaboration
+with a small request rate (30 lightweight checks per minute per visible client).
+Background tabs pause polling using the [Page Visibility API](https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API).
+The complete config is fetched only when the saved revision changes. The header
+shows the last save time; refresh failures keep existing values visible and retry.
+
+Every app config write, reset, sweep, and preset write updates
+`Databases/.revision.json` with a UTC save timestamp and unique revision. The
+revision avoids missed updates from timestamp collisions. Existing databases
+show “No saves yet” until their first save after this feature is installed.
+Ordinary edits use field-level PATCH requests: different fields merge, while
+the last completed save wins when two people edit the same field. Preset loading
+intentionally replaces the working set. Focused fields keep their drafts while
+other fields update; deferred values catch up after focus leaves. Pending local
+saves invalidate older reads, and failed local saves pause synchronization until
+retried so edits are not silently discarded.
+
+The write/snapshot lock supports this app's single Node server process. Multiple
+server processes sharing a directory need a cross-process lock or transactional
+database before using this mechanism. Direct filesystem edits do not update the
+revision; use the config API for live collaboration. This refreshes the web app's
+saved overrides; applying settings to the game remains a separate action.
+
 The action bar counts every stored override as unapplied because the backend does not track an applied baseline. Apply history records the last successful request in `Databases/.last-apply.json`. Notes remain shared by schema key, using the existing rich-text editor and author edit/delete controls. Presets snapshot all stored overrides and loading one replaces the working set.
 
 Set `NEXT_PUBLIC_SERVER_NAME` for the sign-in label and `SERVER_NAME` for the review destination. `NEXT_BUILD_DIR` can point to a separate build directory for an isolated preview while another development server is running.

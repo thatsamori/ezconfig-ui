@@ -7,16 +7,23 @@
 
 import { NextResponse } from 'next/server';
 import { scanOverrides, readAllConfigData } from '@/lib/database/structure';
+import { readConfigRevision, withConfigLock } from '@/lib/database/revision';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const [overrides, values] = await Promise.all([scanOverrides(), readAllConfigData()]);
+    const { overrides, values, metadata } = await withConfigLock(async () => {
+      const [overrides, values, metadata] = await Promise.all([scanOverrides(), readAllConfigData(), readConfigRevision()]);
+      return { overrides, values, metadata };
+    });
 
     return NextResponse.json({
       success: true,
       data: overrides,
       values,
-    });
+      ...metadata,
+    }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('Error scanning overrides:', error);
 

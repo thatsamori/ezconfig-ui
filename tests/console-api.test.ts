@@ -21,6 +21,15 @@ mock.module('../src/lib/database/applyRecord', () => ({
   readApplyRecord: async () => null
 }));
 mock.module('../src/lib/database/service', () => ({
+  patchCategory: async (weapon: string, category: string, patch: Record<string, unknown>) => {
+    if (weapon === failWeapon) throw new Error('Disk failure');
+    const entries: Record<string, unknown> = { CanCombo: true };
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === null) delete entries[key];
+      else entries[key] = value;
+    }
+    writes.push({ weapon, category, entries });
+  },
   readCategory: async () => ({
     CanCombo: true
   }),

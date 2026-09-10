@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DataType, type ConfigEntry } from '@/lib/config/types';
-import { useConfigStore, flushConfigWrites, type ConfigValue } from '@/lib/store/configStore';
+import { useConfigStore, flushConfigWrites, beginConfigMutation, type ConfigValue } from '@/lib/store/configStore';
 import { ValueEditor } from './ValueEditor';
 import { weapons, isOverride, sameValue, showValue, sweepValue, type SweepMode } from './model';
 export function SweepPanel({
@@ -58,6 +58,7 @@ export function SweepPanel({
   const stage = async () => {
     if (!total || staging) return;
     setStaging(true);
+    const finish = beginConfigMutation();
     try {
       await flushConfigWrites();
       // Persist one batch per attack type. Only changed cells are included.
@@ -116,6 +117,7 @@ export function SweepPanel({
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
+      finish();
       setStaging(false);
     }
   };

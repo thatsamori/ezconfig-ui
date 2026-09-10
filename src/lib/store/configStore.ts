@@ -45,6 +45,20 @@ export interface ConfigState {
  * Fire-and-forget pattern - returns promise but callers don't need to await
  */
 const categoryWrites = new Map<string, Promise<boolean>>();
+let mutationEpoch = 0;
+let pendingMutations = 0;
+const failedCategories = new Map<string, { entries: Record<string, ConfigValue>; method: 'POST' | 'PATCH' }>();
+
+/** Invalidate older snapshots and keep polling away from in-flight local saves. */
+export function beginConfigMutation(): () => void {
+  mutationEpoch++;
+  pendingMutations++;
+  return () => { pendingMutations--; mutationEpoch++; };
+}
+
+export function getConfigMutationState() {
+  return { epoch: mutationEpoch, pending: pendingMutations > 0, failed: failedCategories.size > 0 };
+}
 
 /** Wait for writes before taking a preset snapshot or reviewing saved overrides. */
 export async function flushConfigWrites(): Promise<void> {
@@ -52,10 +66,20 @@ export async function flushConfigWrites(): Promise<void> {
   if (results.some((success) => !success)) throw new Error('Some changes could not be saved. Retry the edits before continuing.');
 }
 
-function saveToApi(database: string, category: string, entries: Record<string, ConfigValue>): Promise<boolean> {
+function saveToApi(database: string, category: string, entries: Record<string, ConfigValue>, method: 'POST' | 'PATCH' = 'PATCH'): Promise<boolean> {
   const path = `${database}/${category}`;
-  // Serialize snapshots of the same category so rapid edits cannot finish out of order.
-  const write = (categoryWrites.get(path) ?? Promise.resolve(true)).then(() => writeToApi(database, category, entries));
+  const finish = beginConfigMutation();
+  // Serialize edits of the same category so rapid changes cannot finish out of order.
+  const write = (categoryWrites.get(path) ?? Promise.resolve(true)).then(async () => {
+    const failed = failedCategories.get(path);
+    const retryEntries = method === 'PATCH' ? { ...failed?.entries, ...entries } : entries;
+    const retryMethod = method === 'PATCH' && failed ? failed.method : method;
+    const success = await writeToApi(database, category, retryEntries, retryMethod);
+    if (success) failedCategories.delete(path);
+    else failedCategories.set(path, { entries: retryEntries, method: retryMethod });
+    finish();
+    return success;
+  });
   categoryWrites.set(path, write);
   return write;
 }
@@ -63,11 +87,12 @@ function saveToApi(database: string, category: string, entries: Record<string, C
 async function writeToApi(
   database: string,
   category: string,
-  entries: Record<string, ConfigValue>
+  entries: Record<string, ConfigValue>,
+  method: 'POST' | 'PATCH'
 ): Promise<boolean> {
   try {
     const res = await fetch(`/api/config/${database}/${category}`, {
-      method: 'POST',
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ entries }),
     });
@@ -140,12 +165,7 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
     });
 
     // Fire-and-forget API write
-    const state = get();
-    const entries = isCharacter
-      ? state.values.character[category] || {}
-      : state.values.weapons[database]?.[category] || {};
-
-    saveToApi(database, category, entries).then((success) => {
+    saveToApi(database, category, { [key]: value }).then((success) => {
       if (!success) {
         toast.error(`Failed to save ${database}/${category}`);
       }
@@ -202,13 +222,8 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
       return { values: newValues, workingValues: newValues, savedValues: newValues };
     });
 
-    // Fire-and-forget API write with updated entries (excluding removed key)
-    const state = get();
-    const entries = isCharacter
-      ? state.values.character[category] || {}
-      : state.values.weapons[database]?.[category] || {};
-
-    saveToApi(database, category, entries).then((success) => {
+    // Null removes just this key without replacing another person's entries.
+    saveToApi(database, category, { [key]: null }).then((success) => {
       if (!success) {
         toast.error(`Failed to save ${database}/${category}`);
       }
@@ -262,10 +277,8 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
     });
 
     // Fire-and-forget API writes for each weapon
-    const state = get();
     for (const weaponName of weaponNames) {
-      const entries = state.values.weapons[weaponName]?.[category] || {};
-      saveToApi(weaponName, category, entries).then((success) => {
+      saveToApi(weaponName, category, { [key]: value }).then((success) => {
         if (!success) {
           toast.error(`Failed to save ${weaponName}/${category}`);
         }
@@ -327,60 +340,66 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
     }),
 
   loadPreset: async (presetData) => {
-    // Finish earlier edits before replacing the working set on disk.
-    await Promise.all([...categoryWrites.values()]);
-    // Build new values from preset data
-    const newValues: ConfigState['values'] = {
-      character: {},
-      weapons: {},
-    };
+    const finish = beginConfigMutation();
+    try {
+      // Finish earlier edits before replacing the working set on disk.
+      await Promise.all([...categoryWrites.values()]);
+      // Build new values from preset data
+      const newValues: ConfigState['values'] = {
+        character: {},
+        weapons: {},
+      };
 
-    // Copy preset character values
-    for (const [category, entries] of Object.entries(presetData.character)) {
-      newValues.character[category] = { ...entries };
-    }
-
-    // Copy preset weapon values
-    for (const [weapon, categories] of Object.entries(presetData.weapons)) {
-      newValues.weapons[weapon] = {};
-      for (const [category, entries] of Object.entries(categories)) {
-        newValues.weapons[weapon][category] = { ...entries };
+      // Copy preset character values
+      for (const [category, entries] of Object.entries(presetData.character)) {
+        newValues.character[category] = { ...entries };
       }
-    }
 
-    // Step 1: Clear all existing database files
-    const clearRes = await fetch('/api/config/clear', { method: 'DELETE' });
-    if (!clearRes.ok) throw new Error('Failed to clear existing config');
-    categoryWrites.clear();
-    set({ values: newValues, workingValues: newValues, savedValues: newValues, loadedCategories: new Set<string>() });
-
-    // Step 2: Write only the preset data (skip empty categories)
-    const apiPromises: Promise<boolean>[] = [];
-
-    // Character categories
-    for (const [category, entries] of Object.entries(presetData.character)) {
-      if (Object.keys(entries).length > 0) {
-        apiPromises.push(saveToApi('Character', category, entries));
-      }
-    }
-
-    // Weapon categories
-    for (const [weapon, categories] of Object.entries(presetData.weapons)) {
-      for (const [category, entries] of Object.entries(categories)) {
-        if (Object.keys(entries).length > 0) {
-          apiPromises.push(saveToApi(weapon, category, entries));
+      // Copy preset weapon values
+      for (const [weapon, categories] of Object.entries(presetData.weapons)) {
+        newValues.weapons[weapon] = {};
+        for (const [category, entries] of Object.entries(categories)) {
+          newValues.weapons[weapon][category] = { ...entries };
         }
       }
-    }
 
-    // Wait for all API writes to complete
-    if (apiPromises.length > 0) {
-      const results = await Promise.all(apiPromises);
-      const failures = results.filter((success) => !success).length;
+      // Step 1: Clear all existing database files
+      const clearRes = await fetch('/api/config/clear', { method: 'DELETE' });
+      if (!clearRes.ok) throw new Error('Failed to clear existing config');
+      categoryWrites.clear();
+      failedCategories.clear();
+      set({ values: newValues, workingValues: newValues, savedValues: newValues, loadedCategories: new Set<string>() });
 
-      if (failures > 0) {
-        throw new Error(`Failed to save ${failures} config file(s). Load the preset again to retry.`);
+      // Step 2: Write only the preset data (skip empty categories)
+      const apiPromises: Promise<boolean>[] = [];
+
+      // Character categories
+      for (const [category, entries] of Object.entries(presetData.character)) {
+        if (Object.keys(entries).length > 0) {
+          apiPromises.push(saveToApi('Character', category, entries, 'POST'));
+        }
       }
+
+      // Weapon categories
+      for (const [weapon, categories] of Object.entries(presetData.weapons)) {
+        for (const [category, entries] of Object.entries(categories)) {
+          if (Object.keys(entries).length > 0) {
+            apiPromises.push(saveToApi(weapon, category, entries, 'POST'));
+          }
+        }
+      }
+
+      // Wait for all API writes to complete
+      if (apiPromises.length > 0) {
+        const results = await Promise.all(apiPromises);
+        const failures = results.filter((success) => !success).length;
+
+        if (failures > 0) {
+          throw new Error(`Failed to save ${failures} config file(s). Load the preset again to retry.`);
+        }
+      }
+    } finally {
+      finish();
     }
   },
 

@@ -17,6 +17,7 @@ import { WEAPON_CONFIG_OPTIONS } from '@/lib/config/weaponConfigSchema';
 import { CHARACTER_CONFIG_OPTIONS, CharacterConfigGroupName } from '@/lib/config/characterConfigSchema';
 import type { ConfigEntry } from '@/lib/config/types';
 import { useNotes } from '@/lib/hooks';
+import { useConfigPolling } from '@/lib/hooks/useConfigPolling';
 import { ValueEditor } from './ValueEditor';
 import { SweepPanel } from './SweepPanel';
 import { GlobalSearch } from './GlobalSearch';
@@ -73,7 +74,7 @@ function KeyRow({
   return <>
     <div role="row" tabIndex={-1} data-config-key={entry.configKey} className={`config-grid config-row${overridden ? ' has-override' : ''}${muted ? ' feature-muted' : ''}${highlighted ? ' search-destination' : ''}`} title={muted ? 'Feature parameter: stored and sent, but only read while the feature toggle is on.' : undefined}>
       <div role="cell" className="key-cell"><div className="key-label"><span title={entry.documentation || entry.configKey}>{entry.configKey}</span>{entry.isFeatureToggle && <span className="feature-badge">feature</span>}<button className={`notes-button${notes.length ? ' has-notes' : ''}`} title={notes.length ? `${notes.length} notes` : 'Add a note'} aria-label={`Notes for ${entry.configKey}`} onClick={() => setNotesOpen(true)}><MessageCircle size={12} />{notes.length || ''}</button></div>{muted && <small>needs {entry.gatedBy}</small>}</div>
-      {groups.map((group, index) => <div role="cell" key={group}><ValueEditor entry={entry} database={database} category={group} value={rowValues[index]} label={`${database} ${group} ${entry.configKey}`} onChange={value => setValue(database, group, entry.configKey, value)} onReset={() => removeValue(database, group, entry.configKey)} /></div>)}
+      {groups.map((group, index) => <div role="cell" key={group} data-config-database={database} data-config-category={group} data-config-key={entry.configKey}><ValueEditor entry={entry} database={database} category={group} value={rowValues[index]} label={`${database} ${group} ${entry.configKey}`} onChange={value => setValue(database, group, entry.configKey, value)} onReset={() => removeValue(database, group, entry.configKey)} /></div>)}
       <div role="cell" className="row-actions">{groups.length > 1 && isOverride(first) && <button className="set-all" title={`Write ${showValue(first)} to ${groups.join(', ')}`} onClick={() => groups.forEach(group => setValue(database, group, entry.configKey, structuredClone(first)))}>Set all {groups.length}</button>}{database !== 'Character' && <button className="sweep-link" onClick={() => onSweep(entry)}>All weapons →</button>}</div>
     </div>
     {notesOpen && <NotesDialog open={notesOpen} onOpenChange={setNotesOpen} configKey={entry.configKey} context={database === 'Character' ? `Character · ${groups[0]}` : database} notes={notes} onAddNote={addNote} onEditNote={editNote} onDeleteNote={deleteNote} currentUsername={currentUsername} />}
@@ -88,8 +89,6 @@ function ConsoleContent() {
   const [searchDestination, setSearchDestination] = useState<SearchDestination | null>(null);
   const contentRef = useRef<HTMLElement>(null);
   const [onlyOverrides, setOnlyOverrides] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
   const [sweep, setSweep] = useState<ConfigEntry | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [presetOpen, setPresetOpen] = useState(false);
@@ -97,30 +96,9 @@ function ConsoleContent() {
   const logout = useAuthStore(state => state.logout);
   const values = useConfigStore(state => state.values);
   const [reload, setReload] = useState(0);
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/databases/overrides').then(async response => {
-      if (!response.ok) throw new Error('Could not load saved overrides.');
-      const data = await response.json();
-      if (!data.success || !data.values) throw new Error('Could not load saved overrides.');
-      if (cancelled) return;
-      const values = data.values as ConfigState['values'];
-      useConfigStore.setState({
-        values,
-        savedValues: values,
-        workingValues: values,
-        loadedCategories: new Set([...weapons.flatMap(name => attackGroups.map(group => `${name}/${group}`)), ...characterGroups.map(group => `Character/${group}`)])
-      });
-      setLoadError('');
-    }).catch(error => {
-      if (!cancelled) setLoadError(error.message);
-    }).finally(() => {
-      if (!cancelled) setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [reload]);
+  const sync = useConfigPolling(reload);
+  const loading = sync.loading && !sync.error;
+  const loadError = sync.loading ? sync.error : '';
   const isCharacter = tab === 'character';
   const configScreen = tab === 'weapons' || isCharacter;
   const database = isCharacter ? 'Character' : weapon;
@@ -199,9 +177,8 @@ function ConsoleContent() {
       <section className="config-content" ref={contentRef}><header className="config-header"><div className="content-heading"><div><p className="crumb">{isCharacter ? 'Character' : 'Weapons'}</p><h1>{title}</h1></div><div className="header-actions">{globalSearch}<button className="outline-button" disabled={loading || !!loadError} onClick={resetScope}>Reset {isCharacter ? 'group' : 'weapon'}</button></div></div>{isCharacter ? <p className="character-hint">Server-wide values. Rows marked feature are toggles; the parameters under them are stored and sent regardless, but the mod only reads them while the toggle is on.</p> : <div className="attack-toolbar"><div className="attack-chips">{attackGroups.map(group => {
                 const n = countEntries(values.weapons[weapon]?.[group]);
                 return <button key={group} className={groups.includes(group) ? 'selected' : ''} aria-pressed={groups.includes(group)} onClick={() => setGroups(toggleAttackGroup(groups, group))}>{group !== 'General' && <span className="chip-checkbox">{groups.includes(group) && <Check size={9} />}</span>}{group}{n > 0 && <b>{n}</b>}</button>;
-              })}</div><span>{groups[0] === 'General' ? 'General has its own keys' : `${groups.length} of 4 attack types shown`}</span></div>}</header>
+              })}</div><span>{groups[0] === 'General' ? 'General has its own keys' : `${groups.length} of 4 attack types shown`}</span></div>}<p className="config-sync-status" role="status">{sync.error || (sync.loading ? 'Connecting live updates…' : <>{'Live updates · '}{sync.savedAt ? <>Last saved <time dateTime={sync.savedAt} title={new Date(sync.savedAt).toLocaleString()}>{new Date(sync.savedAt).toLocaleTimeString()}</time></> : 'No saves yet'}</>)}</p></header>
       <div className="config-scroll">{loading ? <p className="empty-state">Loading saved overrides…</p> : loadError ? <div className="empty-state" role="alert">{loadError} <button className="outline-button" onClick={() => {
-              setLoading(true);
               setReload(n => n + 1);
             }}>Retry</button></div> : <div className="config-table" role="table" aria-label={`${title} configuration`} style={{
             '--columns': visibleGroups.length

@@ -257,6 +257,7 @@ input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-app
 .attack-chips b { border-radius: 99px; background: rgba(95,207,140,.14); color: #5fcf8c; font-size: 11px; padding: 0 5px; }
 .attack-chips .selected b { background: rgba(0,0,0,.12); color: #0f1012; }
 .character-hint { font-size: 13px; color: #9a9ba1; max-width: 720px; line-height: 1.55; }
+.config-sync-status { margin-top: 8px; font-size: 12px; line-height: 1.5; color: var(--muted-foreground); overflow-wrap: anywhere; }
 .config-scroll { padding: 14px 32px 96px; overflow: auto; flex: 1; min-height: 0; }
 .config-table { background: #16171a; border: 1px solid rgba(255,255,255,.06); border-radius: 14px; overflow-x: auto; }
 .config-table-inner { min-width: calc(200px + 150px * var(--columns) + 128px + 36px); }

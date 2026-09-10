@@ -11,8 +11,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { readCategory, writeCategory } from '@/lib/database/service';
-import { validateEntries } from '@/lib/database/validation';
+import { readCategory, writeCategory, patchCategory } from '@/lib/database/service';
+import { getSchemaForCategory, validateEntries } from '@/lib/database/validation';
 import type { ConfigData } from '@/lib/database/types';
 
 /**
@@ -107,7 +107,13 @@ export async function POST(
     }
 
     // Validate entries against schema
-    const validation = validateEntries(body.entries, database, category);
+    const isPatch = request.method === 'PATCH';
+    const checked = isPatch ? Object.fromEntries(Object.entries(body.entries).filter(([, value]) => value !== null)) : body.entries;
+    const schema = getSchemaForCategory(database, category) ?? {};
+    if (isPatch && Object.keys(body.entries).some(key => !Object.hasOwn(schema, key))) {
+      return NextResponse.json({ success: false, error: 'Unknown config key' }, { status: 400 });
+    }
+    const validation = validateEntries(checked, database, category);
     if (!validation.valid) {
       return NextResponse.json(
         {
@@ -120,7 +126,7 @@ export async function POST(
     }
 
     // Write to file
-    await writeCategory(database, category, body.entries);
+    await (isPatch ? patchCategory : writeCategory)(database, category, body.entries);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -128,3 +134,5 @@ export async function POST(
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
+
+export const PATCH = POST;

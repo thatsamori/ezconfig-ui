@@ -4,7 +4,7 @@ const originalFetch = globalThis.fetch;
 afterEach(() => {
   globalThis.fetch = originalFetch;
 });
-test('rapid category writes finish in order and retain adjacent keys', async () => {
+test('rapid category edits finish in order and send only changed keys', async () => {
   const bodies: Record<string, unknown>[] = [];
   const resolvers: (() => void)[] = [];
   globalThis.fetch = (async (_url: unknown, init: RequestInit) => {
@@ -22,7 +22,6 @@ test('rapid category writes finish in order and retain adjacent keys', async () 
   resolvers[0]();
   await new Promise(resolve => setTimeout(resolve, 0));
   expect(bodies[1]).toEqual({
-    Windup: 0.4,
     CanCombo: false
   });
   resolvers[1]();

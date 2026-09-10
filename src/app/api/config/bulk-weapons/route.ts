@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readCategory, writeCategory } from '@/lib/database/service';
+import { patchCategory } from '@/lib/database/service';
 import { getSchemaForCategory, validateEntries } from '@/lib/database/validation';
 import { CategoryName, WeaponConfigGroupName } from '@/lib/config/weaponConfigSchema';
 import type { ConfigData } from '@/lib/database/types';
@@ -46,12 +46,7 @@ export async function POST(request: NextRequest) {
     const failedWeapons: string[] = [];
     for (const [weapon, entries] of Object.entries(weaponValues)) {
       try {
-        const saved = { ...(await readCategory(weapon, body.category)) };
-        for (const [key, value] of Object.entries(entries)) {
-          if (value === null) delete saved[key];
-          else saved[key] = value;
-        }
-        await writeCategory(weapon, body.category, saved);
+        await patchCategory(weapon, body.category, entries);
         updatedWeapons.push(weapon);
       } catch {
         failedWeapons.push(weapon);

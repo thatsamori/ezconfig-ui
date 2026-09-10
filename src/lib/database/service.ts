@@ -10,6 +10,7 @@ import { join, resolve, dirname } from 'path';
 import { env } from '@/lib/env';
 import type { ConfigData } from './types';
 import { CategoryName } from '@/lib/config/weaponConfigSchema';
+import { recordConfigSave, withConfigLock } from './revision';
 
 // Set of known weapon names for routing to Weapon/ directory
 const WEAPON_NAMES: Set<string> = new Set(Object.values(CategoryName));
@@ -182,6 +183,30 @@ export async function writeCategory(
   category: string,
   data: ConfigData
 ): Promise<void> {
+  return withConfigLock(async () => {
+    await writeCategoryFile(database, category, data);
+    await recordConfigSave();
+  });
+}
+
+/** Merge only edited fields while holding the same lock as snapshots and resets. */
+export async function patchCategory(database: string, category: string, entries: Record<string, ConfigData[string] | null>): Promise<void> {
+  return withConfigLock(async () => {
+    const data = { ...await readCategory(database, category) };
+    for (const [key, value] of Object.entries(entries)) {
+      if (value === null) delete data[key];
+      else data[key] = value;
+    }
+    await writeCategoryFile(database, category, data);
+    await recordConfigSave();
+  });
+}
+
+async function writeCategoryFile(
+  database: string,
+  category: string,
+  data: ConfigData
+): Promise<void> {
   const filePath = await resolveCategoryPath(database, category);
   const dir = dirname(filePath);
 
@@ -227,6 +252,13 @@ export async function categoryExists(database: string, category: string): Promis
  * Used when loading a preset to start fresh
  */
 export async function clearAllDatabases(): Promise<void> {
+  return withConfigLock(async () => {
+    await clearDatabaseFiles();
+    await recordConfigSave();
+  });
+}
+
+async function clearDatabaseFiles(): Promise<void> {
   const root = getDatabasesRoot();
 
   try {
