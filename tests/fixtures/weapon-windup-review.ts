@@ -1,3 +1,4 @@
+import { successfulProcessingFixture } from './acknowledged-transport';
 // Real persistence/review/apply with only external RCON mocked and isolated data.
 import { mock } from 'bun:test';
 import assert from 'node:assert/strict';
@@ -10,7 +11,7 @@ process.env.DATABASES_PATH = root;
 const sent: string[][] = [];
 const originalFetch = globalThis.fetch;
 mock.module('../../src/lib/rcon/service', () => ({
-  executeBatchCommands: async (commands: string[]) => { sent.push(commands); },
+  executeAcknowledgedBatch: async (commands: string[]) => { sent.push(commands); return successfulProcessingFixture(commands); },
 }));
 try {
   const { POST: save } = await import('../../src/app/api/config/[...path]/route');

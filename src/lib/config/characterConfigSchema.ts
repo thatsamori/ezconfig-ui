@@ -4,6 +4,7 @@ import { ATTACK_MOTION_CONFIG_OPTIONS } from "./attackMotionConfigSchema";
 import { BASE_PARRY_CONFIG_OPTIONS } from "./baseParryConfigSchema";
 import { RECOVERY_CONFIG_OPTIONS } from "./recoveryConfigSchema";
 import { MOVEMENT_CONFIG_OPTIONS } from "./movementConfigSchema";
+import { STUN_CONFIG_OPTIONS } from "./stunConfigSchema";
 
 export const CHARACTER_CATEGORY_NAME = "Character";
 
@@ -838,7 +839,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       default: 0.35,
     },
   ],
-  Stun: [],
+  Stun: STUN_CONFIG_OPTIONS,
   Misc: [
     // NoJumpInParryRecovery: owning-client Jump gate (ticket 13).
     {

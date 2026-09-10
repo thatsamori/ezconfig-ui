@@ -1,0 +1,72 @@
+[
+  {
+    "command": "ezconfig WipeDatabases",
+    "encodedResult": "EZCONFIG_RESULT {\"protocol\":\"EZConfig/1\",\"command\":\"ezconfig WipeDatabases\",\"error\":\"\",\"success\":true,\"accepted\":0,\"ignored\":0}",
+    "success": true,
+    "accepted": 0,
+    "ignored": 0
+  },
+  {
+    "command": "ezconfig Character Combat {\"StaminaCostModifier\":\"1.51\",\"MeleeWindupModifier\":\"bad\"}",
+    "encodedResult": "EZCONFIG_RESULT {\"protocol\":\"EZConfig/1\",\"command\":\"ezconfig Character Combat {\\\"StaminaCostModifier\\\":\\\"1.51\\\",\\\"MeleeWindupModifier\\\":\\\"bad\\\"}\",\"error\":\"COULD NOT PARSE DATA TYPE FOR KEY: MeleeWindupModifier\",\"success\":false,\"accepted\":0,\"ignored\":0}",
+    "success": false,
+    "accepted": 0,
+    "ignored": 0
+  },
+  {
+    "command": "ezconfig Character Combat {\"MeleeWindupModifier\":\"1.22\"}",
+    "encodedResult": "EZCONFIG_RESULT {\"protocol\":\"EZConfig/1\",\"command\":\"ezconfig Character Combat {\\\"MeleeWindupModifier\\\":\\\"1.22\\\"}\",\"error\":\"\",\"success\":true,\"accepted\":1,\"ignored\":0}",
+    "success": true,
+    "accepted": 1,
+    "ignored": 0
+  },
+  {
+    "command": "ezconfig Character Combat {\"MeleeWindupModifier\":\"1.22\",\"Unknown\":\"x\"}",
+    "encodedResult": "EZCONFIG_RESULT {\"protocol\":\"EZConfig/1\",\"command\":\"ezconfig Character Combat {\\\"MeleeWindupModifier\\\":\\\"1.22\\\",\\\"Unknown\\\":\\\"x\\\"}\",\"error\":\"\",\"success\":true,\"accepted\":1,\"ignored\":1}",
+    "success": true,
+    "accepted": 1,
+    "ignored": 1
+  },
+  {
+    "command": "ezconfig Character Combat {}",
+    "encodedResult": "EZCONFIG_RESULT {\"protocol\":\"EZConfig/1\",\"command\":\"ezconfig Character Combat {}\",\"error\":\"\",\"success\":true,\"accepted\":0,\"ignored\":0}",
+    "success": true,
+    "accepted": 0,
+    "ignored": 0
+  },
+  {
+    "command": "ezconfig Character Combat {\"Unknown\":\"x\"}",
+    "encodedResult": "EZCONFIG_RESULT {\"protocol\":\"EZConfig/1\",\"command\":\"ezconfig Character Combat {\\\"Unknown\\\":\\\"x\\\"}\",\"error\":\"\",\"success\":true,\"accepted\":0,\"ignored\":1}",
+    "success": true,
+    "accepted": 0,
+    "ignored": 1
+  },
+  {
+    "command": "ezconfig ArmingSword Strike {\"Damage\":\"2,3,4,5\",\"Windup\":\"bad\"}",
+    "encodedResult": "EZCONFIG_RESULT {\"protocol\":\"EZConfig/1\",\"command\":\"ezconfig ArmingSword Strike {\\\"Damage\\\":\\\"2,3,4,5\\\",\\\"Windup\\\":\\\"bad\\\"}\",\"error\":\"COULD NOT PARSE DATA TYPE FOR KEY: Windup\",\"success\":false,\"accepted\":0,\"ignored\":0}",
+    "success": false,
+    "accepted": 0,
+    "ignored": 0
+  },
+  {
+    "command": "ezconfig ArmingSword Strike {\"Damage\":[]}",
+    "encodedResult": "EZCONFIG_RESULT {\"protocol\":\"EZConfig/1\",\"command\":\"ezconfig ArmingSword Strike {\\\"Damage\\\":[]}\",\"error\":\"Recognized config values must be serialized strings\",\"success\":false,\"accepted\":0,\"ignored\":0}",
+    "success": false,
+    "accepted": 0,
+    "ignored": 0
+  },
+  {
+    "command": "ezconfig ArmingSword Strike {\"Damage\":\"2,3,4,5\"}",
+    "encodedResult": "EZCONFIG_RESULT {\"protocol\":\"EZConfig/1\",\"command\":\"ezconfig ArmingSword Strike {\\\"Damage\\\":\\\"2,3,4,5\\\"}\",\"error\":\"\",\"success\":true,\"accepted\":1,\"ignored\":0}",
+    "success": true,
+    "accepted": 1,
+    "ignored": 0
+  },
+  {
+    "command": "ezconfig WipeDatabases",
+    "encodedResult": "EZCONFIG_RESULT {\"protocol\":\"EZConfig/1\",\"command\":\"ezconfig WipeDatabases\",\"error\":\"\",\"success\":true,\"accepted\":0,\"ignored\":0}",
+    "success": true,
+    "accepted": 0,
+    "ignored": 0
+  }
+]

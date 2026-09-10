@@ -24,6 +24,8 @@ export type ConfigEntry = DefaultMetadata & {
   documentation: string;
   /** Legacy edit seed. Display and new schemas use defaultValue/defaultVariants. */
   default?: DefaultValue;
+  /** Optional finite numeric minimum; unset preserves legacy numeric policy. */
+  minimum?: number;
   /** Stock values differ by motion; Customize must ask for an explicit value. */
   defaultVariesByMotion?: boolean;
   /** Customize opens an unsaved numeric draft instead of seeding a default. */

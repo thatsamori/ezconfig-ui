@@ -1,0 +1,132 @@
+{
+  "provenance": "Actual official Mordhau dedicated server v702625635 with fingerprinted cooked EZConfig test pak; trial-cookedresults5.json, 2026-09-09. Authentication/configuration excluded. Wire bytes unchanged.",
+  "pakSha256": "237236a1dc2d4107b812cc9cfb4142595b13b477f9c1554e7069980f2fa23053",
+  "exchanges": [
+    {
+      "command": "string ezconfig Character Stun {\"OutOfStaminaStunDuration\":\"0.6\",\"UnknownNativeProbe_7017cc9b14224ec494f897a8bc1ddfd4\":\"1\"}",
+      "id": 1007,
+      "frames": [
+        {
+          "id": 54328,
+          "type": 0,
+          "body": "Custom: EZCONFIG_RESULT {\"protocol\":\"EZConfig/1\",\"command\":\"ezconfig Character Stun {\\\"OutOfStaminaStunDuration\\\":\\\"0.6\\\",\\\"UnknownNativeProbe_7017cc9b14224ec494f897a8bc1ddfd4\\\":\\\"1\\\"}\",\"error\":\"\",\"success\":true,\"accepted\":1,\"ignored\":1}",
+          "wire_hex": "f700000038d4000000000000437573746f6d3a20455a434f4e4649475f524553554c54207b2270726f746f636f6c223a22455a436f6e6669672f31222c22636f6d6d616e64223a22657a636f6e66696720436861726163746572205374756e207b5c224f75744f665374616d696e615374756e4475726174696f6e5c223a5c22302e365c222c5c22556e6b6e6f776e4e617469766550726f62655f37303137636339623134323234656334393466383937613862633164646664345c223a5c22315c227d222c226572726f72223a22222c2273756363657373223a747275652c226163636570746564223a312c2269676e6f726564223a317d0000"
+        },
+        {
+          "id": 1007,
+          "type": 0,
+          "body": "Processed string command successfully\n",
+          "wire_hex": "30000000ef0300000000000050726f63657373656420737472696e6720636f6d6d616e64207375636365737366756c6c790a0000"
+        }
+      ]
+    },
+    {
+      "command": "string ezconfig Character Stun {\"OutOfStaminaStunDuration\":\"1oops\"}",
+      "id": 1008,
+      "frames": [
+        {
+          "id": 54328,
+          "type": 0,
+          "body": "Custom: EZCONFIG_RESULT {\"protocol\":\"EZConfig/1\",\"command\":\"ezconfig Character Stun {\\\"OutOfStaminaStunDuration\\\":\\\"1oops\\\"}\",\"error\":\"Invalid numeric representation\",\"success\":false,\"accepted\":0,\"ignored\":0}",
+          "wire_hex": "da00000038d4000000000000437573746f6d3a20455a434f4e4649475f524553554c54207b2270726f746f636f6c223a22455a436f6e6669672f31222c22636f6d6d616e64223a22657a636f6e66696720436861726163746572205374756e207b5c224f75744f665374616d696e615374756e4475726174696f6e5c223a5c22316f6f70735c227d222c226572726f72223a22496e76616c6964206e756d6572696320726570726573656e746174696f6e222c2273756363657373223a66616c73652c226163636570746564223a302c2269676e6f726564223a307d0000"
+        },
+        {
+          "id": 1008,
+          "type": 0,
+          "body": "Processed string command successfully\n",
+          "wire_hex": "30000000f00300000000000050726f63657373656420737472696e6720636f6d6d616e64207375636365737366756c6c790a0000"
+        }
+      ]
+    },
+    {
+      "command": "string ezconfig WipeDatabases",
+      "id": 1009,
+      "frames": [
+        {
+          "id": 54328,
+          "type": 0,
+          "body": "Custom: EZCONFIG_RESULT {\"protocol\":\"EZConfig/1\",\"command\":\"ezconfig WipeDatabases\",\"error\":\"\",\"success\":true,\"accepted\":0,\"ignored\":0}",
+          "wire_hex": "9100000038d4000000000000437573746f6d3a20455a434f4e4649475f524553554c54207b2270726f746f636f6c223a22455a436f6e6669672f31222c22636f6d6d616e64223a22657a636f6e6669672057697065446174616261736573222c226572726f72223a22222c2273756363657373223a747275652c226163636570746564223a302c2269676e6f726564223a307d0000"
+        },
+        {
+          "id": 1009,
+          "type": 0,
+          "body": "Processed string command successfully\n",
+          "wire_hex": "30000000f10300000000000050726f63657373656420737472696e6720636f6d6d616e64207375636365737366756c6c790a0000"
+        }
+      ]
+    },
+    {
+      "command": "string ezconfig batch {\"v\":\"1\",\"op\":\"begin\",\"request\":\"native-7017cc9b14224ec494f897a8bc1ddfd4\",\"commands\":\"2\"}",
+      "id": 1010,
+      "frames": [
+        {
+          "id": 54328,
+          "type": 0,
+          "body": "Custom: EZCONFIG_BATCH_RESULT {\"protocol\":\"EZConfigBatch/1\",\"request\":\"native-7017cc9b14224ec494f897a8bc1ddfd4\",\"op\":\"begin\",\"token\":\"9084BABC47D5B278C95078A091AB8A37\",\"state\":\"active\",\"reason\":\"\",\"success\":true,\"cleared\":false,\"seq\":0,\"accepted\":0,\"ignored\":0,\"totalAccepted\":0,\"totalIgnored\":0,\"processed\":0,\"maxCommands\":2048,\"idleTimeoutSeconds\":30}",
+          "wire_hex": "6b01000038d4000000000000437573746f6d3a20455a434f4e4649475f42415443485f524553554c54207b2270726f746f636f6c223a22455a436f6e66696742617463682f31222c2272657175657374223a226e61746976652d3730313763633962313432323465633439346638393761386263316464666434222c226f70223a22626567696e222c22746f6b656e223a223930383442414243343744354232373843393530373841303931414238413337222c227374617465223a22616374697665222c22726561736f6e223a22222c2273756363657373223a747275652c22636c6561726564223a66616c73652c22736571223a302c226163636570746564223a302c2269676e6f726564223a302c22746f74616c4163636570746564223a302c22746f74616c49676e6f726564223a302c2270726f636573736564223a302c226d6178436f6d6d616e6473223a323034382c2269646c6554696d656f75745365636f6e6473223a33307d0000"
+        },
+        {
+          "id": 1010,
+          "type": 0,
+          "body": "Processed string command successfully\n",
+          "wire_hex": "30000000f20300000000000050726f63657373656420737472696e6720636f6d6d616e64207375636365737366756c6c790a0000"
+        }
+      ]
+    },
+    {
+      "command": "string ezconfig batch {\"v\":\"1\",\"op\":\"command\",\"request\":\"native-7017cc9b14224ec494f897a8bc1ddfd4-1\",\"token\":\"9084BABC47D5B278C95078A091AB8A37\",\"seq\":\"1\",\"command\":\"ezconfig WipeDatabases\"}",
+      "id": 1011,
+      "frames": [
+        {
+          "id": 54328,
+          "type": 0,
+          "body": "Custom: EZCONFIG_BATCH_RESULT {\"protocol\":\"EZConfigBatch/1\",\"request\":\"native-7017cc9b14224ec494f897a8bc1ddfd4-1\",\"op\":\"command\",\"token\":\"9084BABC47D5B278C95078A091AB8A37\",\"state\":\"active\",\"reason\":\"\",\"success\":true,\"cleared\":true,\"seq\":1,\"accepted\":0,\"ignored\":0,\"totalAccepted\":0,\"totalIgnored\":0,\"processed\":1,\"maxCommands\":2048,\"idleTimeoutSeconds\":30}",
+          "wire_hex": "6e01000038d4000000000000437573746f6d3a20455a434f4e4649475f42415443485f524553554c54207b2270726f746f636f6c223a22455a436f6e66696742617463682f31222c2272657175657374223a226e61746976652d37303137636339623134323234656334393466383937613862633164646664342d31222c226f70223a22636f6d6d616e64222c22746f6b656e223a223930383442414243343744354232373843393530373841303931414238413337222c227374617465223a22616374697665222c22726561736f6e223a22222c2273756363657373223a747275652c22636c6561726564223a747275652c22736571223a312c226163636570746564223a302c2269676e6f726564223a302c22746f74616c4163636570746564223a302c22746f74616c49676e6f726564223a302c2270726f636573736564223a312c226d6178436f6d6d616e6473223a323034382c2269646c6554696d656f75745365636f6e6473223a33307d0000"
+        },
+        {
+          "id": 1011,
+          "type": 0,
+          "body": "Processed string command successfully\n",
+          "wire_hex": "30000000f30300000000000050726f63657373656420737472696e6720636f6d6d616e64207375636365737366756c6c790a0000"
+        }
+      ]
+    },
+    {
+      "command": "string ezconfig batch {\"v\":\"1\",\"op\":\"command\",\"request\":\"native-7017cc9b14224ec494f897a8bc1ddfd4-2\",\"token\":\"9084BABC47D5B278C95078A091AB8A37\",\"seq\":\"2\",\"command\":\"ezconfig Character Stun {\\\"OutOfStaminaStunDuration\\\":\\\"0.6\\\"}\"}",
+      "id": 1012,
+      "frames": [
+        {
+          "id": 54328,
+          "type": 0,
+          "body": "Custom: EZCONFIG_BATCH_RESULT {\"protocol\":\"EZConfigBatch/1\",\"request\":\"native-7017cc9b14224ec494f897a8bc1ddfd4-2\",\"op\":\"command\",\"token\":\"9084BABC47D5B278C95078A091AB8A37\",\"state\":\"active\",\"reason\":\"\",\"success\":true,\"cleared\":true,\"seq\":2,\"accepted\":1,\"ignored\":0,\"totalAccepted\":1,\"totalIgnored\":0,\"processed\":2,\"maxCommands\":2048,\"idleTimeoutSeconds\":30}",
+          "wire_hex": "6e01000038d4000000000000437573746f6d3a20455a434f4e4649475f42415443485f524553554c54207b2270726f746f636f6c223a22455a436f6e66696742617463682f31222c2272657175657374223a226e61746976652d37303137636339623134323234656334393466383937613862633164646664342d32222c226f70223a22636f6d6d616e64222c22746f6b656e223a223930383442414243343744354232373843393530373841303931414238413337222c227374617465223a22616374697665222c22726561736f6e223a22222c2273756363657373223a747275652c22636c6561726564223a747275652c22736571223a322c226163636570746564223a312c2269676e6f726564223a302c22746f74616c4163636570746564223a312c22746f74616c49676e6f726564223a302c2270726f636573736564223a322c226d6178436f6d6d616e6473223a323034382c2269646c6554696d656f75745365636f6e6473223a33307d0000"
+        },
+        {
+          "id": 1012,
+          "type": 0,
+          "body": "Processed string command successfully\n",
+          "wire_hex": "30000000f40300000000000050726f63657373656420737472696e6720636f6d6d616e64207375636365737366756c6c790a0000"
+        }
+      ]
+    },
+    {
+      "command": "string ezconfig batch {\"v\":\"1\",\"op\":\"end\",\"request\":\"native-7017cc9b14224ec494f897a8bc1ddfd4-end\",\"token\":\"9084BABC47D5B278C95078A091AB8A37\",\"seq\":\"3\"}",
+      "id": 1013,
+      "frames": [
+        {
+          "id": 54328,
+          "type": 0,
+          "body": "Custom: EZCONFIG_BATCH_RESULT {\"protocol\":\"EZConfigBatch/1\",\"request\":\"native-7017cc9b14224ec494f897a8bc1ddfd4-end\",\"op\":\"end\",\"token\":\"9084BABC47D5B278C95078A091AB8A37\",\"state\":\"complete\",\"reason\":\"\",\"success\":true,\"cleared\":true,\"seq\":3,\"accepted\":0,\"ignored\":0,\"totalAccepted\":1,\"totalIgnored\":0,\"processed\":2,\"maxCommands\":2048,\"idleTimeoutSeconds\":30}",
+          "wire_hex": "6e01000038d4000000000000437573746f6d3a20455a434f4e4649475f42415443485f524553554c54207b2270726f746f636f6c223a22455a436f6e66696742617463682f31222c2272657175657374223a226e61746976652d37303137636339623134323234656334393466383937613862633164646664342d656e64222c226f70223a22656e64222c22746f6b656e223a223930383442414243343744354232373843393530373841303931414238413337222c227374617465223a22636f6d706c657465222c22726561736f6e223a22222c2273756363657373223a747275652c22636c6561726564223a747275652c22736571223a332c226163636570746564223a302c2269676e6f726564223a302c22746f74616c4163636570746564223a312c22746f74616c49676e6f726564223a302c2270726f636573736564223a322c226d6178436f6d6d616e6473223a323034382c2269646c6554696d656f75745365636f6e6473223a33307d0000"
+        },
+        {
+          "id": 1013,
+          "type": 0,
+          "body": "Processed string command successfully\n",
+          "wire_hex": "30000000f50300000000000050726f63657373656420737472696e6720636f6d6d616e64207375636365737366756c6c790a0000"
+        }
+      ]
+    }
+  ]
+}

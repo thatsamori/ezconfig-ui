@@ -204,6 +204,12 @@
     "ForceRagdollIfDmgAgent": {
       "defaultValue": false
     },
+    "FreeStun": {
+      "defaultValue": false
+    },
+    "FreeStunDuration": {
+      "defaultValue": 1.075
+    },
     "GiveMissParryIfFlinchedBeforeDuration": {
       "defaultValue": 0.15
     },
@@ -368,6 +374,9 @@
     },
     "OutOfBoundsKillTime": {
       "defaultValue": 5.0
+    },
+    "OutOfStaminaStunDuration": {
+      "defaultValue": 1.075
     },
     "ParriedRecoveryTimeMax": {
       "defaultValue": 0.55
@@ -860,6 +869,11 @@
       "/Game/Mordhau/Blueprints/Motions/AttackMotions/BP_Shield_RightStrikeMotion.BP_Shield_RightStrikeMotion_C",
       "/Game/Mordhau/Blueprints/Motions/AttackMotions/Horde/BP_Polearm_RightStrikeMotion_Ogre.BP_Polearm_RightStrikeMotion_Ogre_C"
     ],
+    "freeStunDuration": {
+      "asset": "/Game/Mordhau/Maps/WeaponRemovalMap_VersionA/BP_ModificationActor_VersionA",
+      "property": "ReplicatedStamOutStunDuration"
+    },
+    "ordinaryStaminaStun": "/Game/Mordhau/Blueprints/Motions/BP_StunMotion",
     "parryMotions": [
       "/Game/Mordhau/Blueprints/Motions/ParryMotions/BP_1HParryMotion.BP_1HParryMotion_C",
       "/Game/Mordhau/Blueprints/Motions/ParryMotions/BP_2HSwordParryMotion.BP_2HSwordParryMotion_C",
@@ -11375,7 +11389,7 @@
     }
   },
   "provenance": {
-    "extractedOn": "2026-09-08",
+    "extractedOn": "2026-09-09",
     "source": "Mordhau SDK class defaults; EZ character and weapons, stock motions referenced by runtime profiles",
     "precision": "six decimal places; no live player/loadout/perk adjustments"
   }

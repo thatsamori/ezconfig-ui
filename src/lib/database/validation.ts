@@ -16,6 +16,7 @@ import {
   WeaponConfigAttackName,
 } from "@/lib/config/weaponConfigSchema";
 import type { ConfigData, ConfigValue } from "./types";
+import { constrainedFloatError } from '@/lib/config/numericConstraints';
 
 /**
  * Schema lookup result - a flat map of config key to schema entry
@@ -209,6 +210,12 @@ export function validateConfigEntry(
       valid: false,
       error: `Expected ${expected}, got ${actual}`,
     };
+  }
+
+  // Opt-in numeric limits preserve the policy of existing controls.
+  if (schemaEntry.dataType === DataType.Float && schemaEntry.minimum !== undefined) {
+    const error = constrainedFloatError(value, schemaEntry.minimum);
+    if (error) return { valid: false, error };
   }
 
   // String entries only accept a listed choice

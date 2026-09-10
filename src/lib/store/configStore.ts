@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import type { PresetData } from '@/lib/presets/types';
+import { getSchemaForCategory, validateConfigEntry } from '@/lib/database/validation';
 
 // Config values can be various types from the schema
 // null is used as a tombstone to mark saved values for deletion (reset to game default)
@@ -94,6 +95,14 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
   ...initialState,
 
   setValue: (database, category, key, value) => {
+    const schema = getSchemaForCategory(database, category);
+    if (value !== null && schema?.[key]?.minimum !== undefined) {
+      const validation = validateConfigEntry(key, value, schema);
+      if (!validation.valid) {
+        toast.error(`${key}: ${validation.error}`);
+        return;
+      }
+    }
     const isCharacter = database === 'Character';
 
     // Optimistic update - update local state immediately

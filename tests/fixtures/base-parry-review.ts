@@ -1,3 +1,4 @@
+import { successfulProcessingFixture } from './acknowledged-transport';
 // Real route handlers and review model, with isolated storage and only RCON mocked.
 import { mock } from 'bun:test';
 import assert from 'node:assert/strict';
@@ -10,7 +11,7 @@ const root = await mkdtemp(join(tempParent, 'ezconfig-parry-review-'));
 process.env.DATABASES_PATH = root;
 const sent: string[][] = [];
 mock.module('../../src/lib/rcon/service', () => ({
-  executeBatchCommands: async (commands: string[]) => { sent.push(commands); },
+  executeAcknowledgedBatch: async (commands: string[]) => { sent.push(commands); return successfulProcessingFixture(commands); },
 }));
 try {
   const { POST: save } = await import('../../src/app/api/config/[...path]/route');

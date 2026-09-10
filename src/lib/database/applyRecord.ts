@@ -5,6 +5,8 @@ export interface ApplyRecord {
   at: string;
   username: string;
   commands: number;
+  values?: number;
+  ignored?: number;
 }
 const recordPath = () => join(getDatabasesRoot(), '.last-apply.json');
 export async function readApplyRecord(): Promise<ApplyRecord | null> {

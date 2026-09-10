@@ -1,3 +1,4 @@
+import { successfulProcessingFixture } from './fixtures/acknowledged-transport';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { NextRequest } from 'next/server';
 const sent: string[][] = [];
@@ -8,8 +9,8 @@ const writes: {
 }[] = [];
 let failWeapon = '';
 mock.module('../src/lib/rcon/service', () => ({
-  executeBatchCommands: async (commands: string[]) => {
-    sent.push(commands);
+  executeAcknowledgedBatch: async (commands: string[]) => {
+    sent.push(commands); return successfulProcessingFixture(commands);
   }
 }));
 mock.module('../src/lib/database/apply', () => ({

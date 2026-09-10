@@ -1,3 +1,4 @@
+import { successfulProcessingFixture } from './acknowledged-transport';
 // Isolated process: exercise the real save, preview, review selection and apply
 // handlers without touching user data or opening a connection to a game server.
 import { mock } from 'bun:test';
@@ -11,7 +12,7 @@ const root = await mkdtemp(join(tempParent, 'ezconfig-attack-review-'));
 process.env.DATABASES_PATH = root;
 const sent: string[][] = [];
 mock.module('../../src/lib/rcon/service', () => ({
-  executeBatchCommands: async (commands: string[]) => { sent.push(commands); },
+  executeAcknowledgedBatch: async (commands: string[]) => { sent.push(commands); return successfulProcessingFixture(commands); },
 }));
 try {
   const { POST: save } = await import('../../src/app/api/config/[...path]/route');

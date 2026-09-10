@@ -1,3 +1,4 @@
+import { successfulProcessingFixture } from './acknowledged-transport';
 import { mock } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -9,7 +10,7 @@ const root = await mkdtemp(join(tempParent, 'ezconfig-recovery-parried-'));
 process.env.DATABASES_PATH = root;
 const sent: string[][] = [];
 mock.module('../../src/lib/rcon/service', () => ({
-  executeBatchCommands: async (commands: string[]) => { sent.push(commands); },
+  executeAcknowledgedBatch: async (commands: string[]) => { sent.push(commands); return successfulProcessingFixture(commands); },
 }));
 try {
   const { POST: save } = await import('../../src/app/api/config/[...path]/route');

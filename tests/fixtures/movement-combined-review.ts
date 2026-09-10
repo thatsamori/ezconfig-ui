@@ -1,3 +1,4 @@
+import { successfulProcessingFixture } from './acknowledged-transport';
 // Final integrated Movement boundary: real store/handlers, temporary persistence, mocked RCON only.
 import { mock } from 'bun:test';
 import assert from 'node:assert/strict';
@@ -11,7 +12,7 @@ process.env.DATABASES_PATH = root;
 const sent: string[][] = [];
 const originalFetch = globalThis.fetch;
 mock.module('../../src/lib/rcon/service', () => ({
-  executeBatchCommands: async (commands: string[]) => { sent.push(commands); },
+  executeAcknowledgedBatch: async (commands: string[]) => { sent.push(commands); return successfulProcessingFixture(commands); },
 }));
 try {
   const { POST: save } = await import('../../src/app/api/config/[...path]/route');
@@ -22,12 +23,13 @@ try {
   const { CHARACTER_CONFIG_OPTIONS } = await import('../../src/lib/config/characterConfigSchema');
   const { WEAPON_CONFIG_OPTIONS } = await import('../../src/lib/config/weaponConfigSchema');
   const { MOVEMENT_CONFIG_OPTIONS } = await import('../../src/lib/config/movementConfigSchema');
+  const { STUN_CONFIG_OPTIONS } = await import('../../src/lib/config/stunConfigSchema');
   const { DataType } = await import('../../src/lib/config/types');
   assert.equal(CHARACTER_CONFIG_OPTIONS.Movement.length, 22);
   assert.equal(Object.keys(CHARACTER_CONFIG_OPTIONS).length, 12);
-  assert.equal(Object.values(CHARACTER_CONFIG_OPTIONS).flat().length, 170);
+  assert.equal(Object.values(CHARACTER_CONFIG_OPTIONS).flat().length, 170 + STUN_CONFIG_OPTIONS.length);
   assert.equal(Object.values(WEAPON_CONFIG_OPTIONS).flat().length, 63);
-  assert.equal(new Set(Object.values(CHARACTER_CONFIG_OPTIONS).flat().map(entry => entry.configKey)).size, 170);
+  assert.equal(new Set(Object.values(CHARACTER_CONFIG_OPTIONS).flat().map(entry => entry.configKey)).size, 170 + STUN_CONFIG_OPTIONS.length);
   globalThis.fetch = (async (url: string, init: RequestInit) => {
     assert(url.startsWith('/api/config/'));
     return save(new Request('http://localhost' + url, init) as never, {

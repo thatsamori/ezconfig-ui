@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { flushConfigWrites } from '@/lib/store/configStore';
 import { useAuthStore } from '@/lib/store';
 import { reviewRows, selectedReviewCommands, type ReviewRow } from '@/components/console/model';
+import { applyFeedback } from '@/lib/rcon/apply-feedback';
 export function SelectiveApplyDialog({
   open,
   onOpenChange,
@@ -29,6 +30,7 @@ export function SelectiveApplyDialog({
     at: string;
     username: string;
     commands: number;
+    values?: number;
   } | null>(null);
   const token = useAuthStore(state => state.token);
   useEffect(() => {
@@ -85,8 +87,9 @@ export function SelectiveApplyDialog({
         })
       });
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || 'Could not apply configuration');
-      toast.success(`Sent ${data.commandsSent} commands to ${server}`);
+      if (!response.ok || (!data.success && data.serverState !== 'complete')) throw new Error(data.status ? applyFeedback(data, server) : data.error || 'Could not apply configuration');
+      if (!data.success || data.metadataWarning) toast.warning(`${applyFeedback(data, server)}${data.metadataWarning ? ` ${data.metadataWarning}` : ''}`);
+      else toast.success(applyFeedback(data, server));
       onOpenChange(false);
       onApplyComplete();
     } catch (error) {
@@ -107,6 +110,6 @@ export function SelectiveApplyDialog({
           const count = all.filter(row => selected.has(row.id)).length;
           return <section className="review-group" key={database}><label className="review-group-title"><Checkbox aria-label={`Select all ${database} changes`} disabled={disabled} checked={count === all.length ? true : count ? 'indeterminate' : false} onCheckedChange={checked => toggle(all.map(row => row.id), checked === true)} /><strong>{database}</strong><span>{count} of {all.length}</span></label>{visible.map(row => <label key={row.id} className={`review-row${selected.has(row.id) ? '' : ' unselected'}`}><Checkbox aria-label={`${row.database} ${row.category} ${row.key}`} disabled={disabled} checked={selected.has(row.id)} onCheckedChange={checked => toggle([row.id], checked === true)} /><span className="muted">{row.category}</span><span className="review-key" title={row.key}>{row.key}</span><span className="faint" title={defaultDetails(lookupDefault(row.database, row.category, row.key))}>{defaultLabel(lookupDefault(row.database, row.category, row.key))}</span><span className="faint">→</span><span className="mono green" title={row.value}>{row.value}</span></label>)}</section>;
         })}{!loading && !error && rows.length > 0 && !rows.some(row => `${row.database} ${row.category} ${row.key}`.toLowerCase().includes(query.toLowerCase())) && <p className="empty-state">No changes match your search.</p>}</div>
-    <footer className="review-footer"><label className="wipe-option"><Checkbox checked={wipe} disabled={disabled} onCheckedChange={checked => setWipe(checked === true)} />Wipe mod database first (recommended)</label>{lastApplied && <p className="last-applied">Last applied {new Date(lastApplied.at).toLocaleString()} by {lastApplied.username} · {lastApplied.commands} commands</p>}<div><button className="outline-button" disabled={applying} onClick={() => onOpenChange(false)}>Cancel</button><button className="primary-button" disabled={disabled || !selected.size && !wipe} onClick={apply}>{applying ? 'Applying…' : selected.size ? `Apply ${selected.size} changes` : wipe ? 'Wipe database only' : 'Nothing selected'}</button></div></footer>
+    <footer className="review-footer"><label className="wipe-option"><Checkbox checked={wipe} disabled={disabled} onCheckedChange={checked => setWipe(checked === true)} />Wipe mod database first (recommended)</label>{lastApplied && <p className="last-applied">Last applied {new Date(lastApplied.at).toLocaleString()} by {lastApplied.username} · {lastApplied.values === undefined ? `${lastApplied.commands} commands` : `${lastApplied.values} config values`}</p>}<div><button className="outline-button" disabled={applying} onClick={() => onOpenChange(false)}>Cancel</button><button className="primary-button" disabled={disabled || !selected.size && !wipe} onClick={apply}>{applying ? 'Applying…' : selected.size ? `Apply ${selected.size} changes` : wipe ? 'Wipe database only' : 'Nothing selected'}</button></div></footer>
   </DialogContent></Dialog>;
 }

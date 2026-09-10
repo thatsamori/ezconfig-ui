@@ -1,0 +1,7 @@
+import { expect, test } from 'bun:test';
+import { join } from 'node:path';
+
+test('FreeStun retains independent toggle and durations through real persistence/review/selected apply', () => {
+  const result = Bun.spawnSync(['bun', join(import.meta.dir, 'fixtures', 'free-stun-review.ts')], { cwd: join(import.meta.dir, '..'), env: process.env });
+  expect(result.exitCode, new TextDecoder().decode(result.stderr) + new TextDecoder().decode(result.stdout)).toBe(0);
+});

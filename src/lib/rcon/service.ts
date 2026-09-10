@@ -1,5 +1,8 @@
 import { Rcon } from "rcon-client";
 import { env } from "@/lib/env";
+import type { Socket } from "node:net";
+import { prepareProcessingResultReceiver, sendBatchFrameWithProcessingResult } from "./processing";
+import { runAcknowledgedBatch, type BatchApplyResult } from "./batch";
 
 export interface RconConfig {
   host: string;
@@ -66,5 +69,48 @@ export async function executeCommand(command: string): Promise<string> {
       rcon.end(),
       new Promise((resolve) => setTimeout(resolve, 1000)),
     ]);
+  }
+}
+
+/**
+ * Explicit acknowledged apply path. Incompatible servers fail admission before wipe.
+ * Generic executeCommand/executeBatchCommands remain available independently.
+ */
+export async function executeAcknowledgedBatch(
+  commands: readonly string[],
+  { signal }: { signal?: AbortSignal } = {},
+): Promise<BatchApplyResult> {
+  return executeAcknowledgedBatchAt(env.rcon, commands, { signal });
+}
+
+/** Explicit server configuration for the managed responder and isolated tests. */
+export async function executeAcknowledgedBatchAt(
+  config: RconConfig,
+  commands: readonly string[],
+  { signal }: { signal?: AbortSignal } = {},
+): Promise<BatchApplyResult> {
+  const rcon = new Rcon({ ...config, timeout: 5_000 });
+  // Install before authentication: the library forwards socket errors to its
+  // public EventEmitter, which otherwise throws without a listener.
+  rcon.on("error", () => {});
+  let phase = "RCON connection";
+  try {
+    if (signal?.aborted) throw new Error("Apply was cancelled");
+    await rcon.connect();
+    prepareProcessingResultReceiver(rcon);
+    if (signal?.aborted) throw new Error("Apply was cancelled");
+    phase = "processing-result subscription";
+    // Native subscription command: generic output is not considered capability
+    // proof. The following matching admission is required before any mutation.
+    await rcon.send("listen custom");
+    return await runAcknowledgedBatch(commands, (frame, options) => sendBatchFrameWithProcessingResult(rcon, frame, options), { signal });
+  } catch (error) {
+    return { success: false, status: "rejected", commandsSent: 0, commandsSucceeded: 0, acceptedValues: 0, ignoredKeys: 0, configurationCleared: false, error: error instanceof Error ? error.message : "Could not establish acknowledged processing", failedAt: phase };
+  } finally {
+    const socket = (rcon as unknown as { socket?: Socket }).socket;
+    await Promise.race([rcon.end().catch(() => undefined), new Promise((resolve) => setTimeout(resolve, 1_000))]);
+    // This function owns the connection. End's bounded wait must not leave a
+    // half-closed socket/receiver alive if the remote endpoint stops responding.
+    if (socket && !socket.destroyed) socket.destroy();
   }
 }

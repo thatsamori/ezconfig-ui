@@ -14,7 +14,7 @@
 
 import { NextResponse } from "next/server";
 import { buildRconCommands } from "@/lib/database/apply";
-import { executeBatchCommands } from "@/lib/rcon/service";
+import { executeAcknowledgedBatch } from "@/lib/rcon/service";
 import { writeApplyRecord } from '@/lib/database/applyRecord';
 import { validateToken } from '@/lib/auth/tokens';
 
@@ -52,15 +52,22 @@ export async function POST(request: Request) {
       console.log(`  - ${cmd.substring(0, 100)}${cmd.length > 100 ? "..." : ""}`);
     }
 
-    await executeBatchCommands(commands);
+    const result = await executeAcknowledgedBatch(commands, { signal: request.signal });
+    const serverConfirmedComplete = result.serverState === 'complete' && result.commandsSucceeded === commands.length;
+    if (!result.success && !serverConfirmedComplete) return NextResponse.json(result, { status: result.failedAt === 'validation' ? 400 : result.status === 'rejected' ? 409 : 502 });
     const token = request.headers.get('Authorization')?.replace(/^Bearer /, '');
     const user = token ? validateToken(token) : null;
-    // RCON already succeeded; metadata failure must not encourage a duplicate apply.
-    await writeApplyRecord({ at: new Date().toISOString(), username: user?.username ?? 'unknown user', commands: commands.length }).catch((error) => console.error('Could not record last apply:', error));
+    // The server confirmed terminal processing; metadata failure is separate
+    // and must not encourage replaying an already completed apply.
+    let metadataWarning: string | undefined;
+    await writeApplyRecord({ at: new Date().toISOString(), username: user?.username ?? 'unknown user', commands: result.commandsSucceeded, values: result.acceptedValues, ignored: result.ignoredKeys }).catch((error) => {
+      console.error('Could not record last apply:', error);
+      metadataWarning = 'Configuration was processed, but apply history could not be saved.';
+    });
 
     return NextResponse.json({
-      success: true,
-      commandsSent: commands.length,
+      ...result,
+      ...(metadataWarning ? { metadataWarning } : {}),
     });
   } catch (error) {
     console.error("Error in apply endpoint:", error);

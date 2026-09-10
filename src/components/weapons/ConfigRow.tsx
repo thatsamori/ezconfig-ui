@@ -108,6 +108,7 @@ export function ConfigRow({
             value={value as number}
             onChange={onChange}
             disabled={disabled}
+            min={configEntry.minimum}
           />
         );
       case DataType.Vector:

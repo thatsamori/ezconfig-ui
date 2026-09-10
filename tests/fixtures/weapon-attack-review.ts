@@ -1,3 +1,4 @@
+import { successfulProcessingFixture } from './acknowledged-transport';
 import { mock } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -8,7 +9,7 @@ const root = await mkdtemp(join(parent, 'ezconfig-weapon-attack-'));
 process.env.DATABASES_PATH = root;
 const sent: string[][] = [];
 const originalFetch = globalThis.fetch;
-mock.module('../../src/lib/rcon/service', () => ({ executeBatchCommands: async (commands: string[]) => { sent.push(commands); } }));
+mock.module('../../src/lib/rcon/service', () => ({ executeAcknowledgedBatch: async (commands: string[]) => { sent.push(commands); return successfulProcessingFixture(commands); } }));
 try {
   const { POST: save } = await import('../../src/app/api/config/[...path]/route');
   const { GET: preview } = await import('../../src/app/api/apply/preview/route');

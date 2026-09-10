@@ -3,6 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { useDebouncedCallback } from "@/lib/hooks";
 import { SaveIndicator } from "./SaveIndicator";
+import { constrainedFloatError } from '@/lib/config/numericConstraints';
 
 export interface FloatInputProps {
   value: number;
@@ -24,13 +25,15 @@ export function FloatInput({
   const [localValue, setLocalValue, saveState] = useDebouncedCallback(
     String(value),
     (strValue) => {
-      const parsed = parseFloat(strValue);
-      if (!isNaN(parsed)) {
+      const parsed = min === undefined ? parseFloat(strValue) : Number(strValue);
+      if (!isNaN(parsed) && (min === undefined || (strValue.trim() !== '' && !constrainedFloatError(parsed, min)))) {
         onChange(parsed);
       }
     },
     1000
   );
+  const error = min === undefined ? undefined : localValue.trim() === '' ? 'Enter a value.' : constrainedFloatError(Number(localValue), min);
+  const invalid = error !== undefined;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalValue(e.target.value);
@@ -45,10 +48,11 @@ export function FloatInput({
         disabled={disabled}
         step={step}
         min={min}
+        aria-invalid={invalid || undefined}
         max={max}
         className="w-24"
       />
-      <SaveIndicator state={saveState} />
+      {invalid ? <span role="alert" className="text-xs text-destructive">{error}</span> : <SaveIndicator state={saveState} />}
     </div>
   );
 }
