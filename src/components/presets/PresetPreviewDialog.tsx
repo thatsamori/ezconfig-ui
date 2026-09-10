@@ -107,63 +107,65 @@ export function PresetPreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{preset?.manifest.title ?? "Preview Preset"}</DialogTitle>
-          <DialogDescription>
-            {preset?.manifest.description ?? "Loading preset information..."}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden">
+        <div className="min-h-0 overflow-y-auto overscroll-contain [overflow-wrap:anywhere]">
+          <DialogHeader className="pr-6">
+            <DialogTitle>{preset?.manifest.title ?? "Preview Preset"}</DialogTitle>
+            <DialogDescription>
+              {preset?.manifest.description ?? "Loading preset information..."}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="py-4">
-          {isFetching && (
-            <p className="text-muted-foreground text-sm">Loading preset contents...</p>
-          )}
+          <div className="py-4">
+            {isFetching && (
+              <p className="text-muted-foreground text-sm">Loading preset contents...</p>
+            )}
 
-          {fetchError && (
-            <p className="text-destructive text-sm">{fetchError}</p>
-          )}
+            {fetchError && (
+              <p className="text-destructive text-sm">{fetchError}</p>
+            )}
 
-          {summary && (
-            <div className="space-y-4">
-              {/* Character Settings */}
-              {summary.character.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm mb-2">Character Settings</h4>
-                  <p className="text-muted-foreground text-sm">
-                    {summary.character
-                      .map((cat) => `${cat.category} (${cat.count} ${cat.count === 1 ? "setting" : "settings"})`)
-                      .join(", ")}
-                  </p>
-                </div>
-              )}
+            {summary && (
+              <div className="space-y-4">
+                {/* Character Settings */}
+                {summary.character.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-sm mb-2">Character Settings</h4>
+                    <p className="text-muted-foreground text-sm">
+                      {summary.character
+                        .map((cat) => `${cat.category} (${cat.count} ${cat.count === 1 ? "setting" : "settings"})`)
+                        .join(", ")}
+                    </p>
+                  </div>
+                )}
 
-              {/* Weapon Settings */}
-              {summary.weapons.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm mb-2">Weapon Settings</h4>
-                  <p className="text-muted-foreground text-sm">
-                    {summary.weapons.length} {summary.weapons.length === 1 ? "weapon" : "weapons"} configured
-                  </p>
-                  <ul className="text-muted-foreground text-sm mt-1 list-disc list-inside">
-                    {summary.weapons.map((weapon) => (
-                      <li key={weapon.name}>
-                        {weapon.name} ({weapon.categoryCount} {weapon.categoryCount === 1 ? "category" : "categories"})
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                {/* Weapon Settings */}
+                {summary.weapons.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-sm mb-2">Weapon Settings</h4>
+                    <p className="text-muted-foreground text-sm">
+                      {summary.weapons.length} {summary.weapons.length === 1 ? "weapon" : "weapons"} configured
+                    </p>
+                    <ul className="text-muted-foreground text-sm mt-1 list-disc list-inside">
+                      {summary.weapons.map((weapon) => (
+                        <li key={weapon.name}>
+                          {weapon.name} ({weapon.categoryCount} {weapon.categoryCount === 1 ? "category" : "categories"})
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-              {/* Empty preset */}
-              {summary.character.length === 0 && summary.weapons.length === 0 && (
-                <p className="text-muted-foreground text-sm">This preset contains no configuration data.</p>
-              )}
-            </div>
-          )}
+                {/* Empty preset */}
+                {summary.character.length === 0 && summary.weapons.length === 0 && (
+                  <p className="text-muted-foreground text-sm">This preset contains no configuration data.</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
