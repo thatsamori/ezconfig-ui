@@ -119,7 +119,7 @@ export function CharacterConfigTab() {
     return (
       <CollapsibleSection
         key={categoryName}
-        title={categoryName}
+        title={categoryName === CharacterConfigGroupName.DebugTools ? "Debug tools" : categoryName}
         defaultOpen={defaultOpen}
         onOpenChange={(open) => handleSectionOpen(categoryName, open)}
       >

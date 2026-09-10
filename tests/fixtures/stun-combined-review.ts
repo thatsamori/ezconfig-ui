@@ -57,7 +57,7 @@ try {
   const { CHARACTER_CONFIG_OPTIONS } = await import('../../src/lib/config/characterConfigSchema');
   const keys = Object.values(CHARACTER_CONFIG_OPTIONS).flat().map((entry) => entry.configKey);
   assert(required.every((key) => keys.includes(key)), 'Ticket03 must register all three new keys before this integration fixture runs');
-  assert.equal(keys.length, 173);
+  assert.equal(keys.length, 174);
   const { POST: save, GET: read } = await import('../../src/app/api/config/[...path]/route');
   const { GET: preview } = await import('../../src/app/api/apply/preview/route');
   const { POST: apply } = await import('../../src/app/api/apply/route');
@@ -147,7 +147,7 @@ try {
     boundary: 'Real isolated UI store/persistence/review/API/batch driver; controlled result exchange. Native replay is separate.',
     initialPersisted, initialRows: initial.rows, captures,
   }, null, 2));
-  console.log('PASS: combined173-key UI capture; full/selected, unchanged, zero, disabled parameter, replacement/removal, unknowns and incomplete mixed batch');
+  console.log('PASS: combined174-key UI capture; full/selected, unchanged, zero, disabled parameter, replacement/removal, unknowns and incomplete mixed batch');
 } finally {
   globalThis.fetch = originalFetch;
   const target = resolve(root);

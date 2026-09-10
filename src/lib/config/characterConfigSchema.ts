@@ -22,12 +22,23 @@ export enum CharacterConfigGroupName {
   Damage = "Damage",
   Stun = "Stun",
   Misc = "Misc",
+  DebugTools = "DebugTools",
 }
 
 export const CHARACTER_CONFIG_OPTIONS: Record<
   CharacterConfigGroupName,
   ConfigEntry[]
 > = {
+  DebugTools: [
+    {
+      configKey: "AllowVisualizeBlockCollider",
+      dataType: DataType.Bool,
+      isImplemented: true,
+      defaultValue: false,
+      documentation:
+        "Allows players to display active parry colliders with the local console command ezvisualizeblockcollider 1. Use 0 to turn the display off, or status for diagnostics. Green outlines show the active box; red outlines show its forward-parry region. This is an EZConfig mesh overlay, independent of m.VisualizeBlockCollider, and does not change collision. Turning this option off or resetting it clears the display and requires players to opt in again. Shows each client's observed geometry, not a synchronized server hit trace. Requires the updated client pak; multiplayer visual validation is pending.",
+    },
+  ],
   AttackMotion: ATTACK_MOTION_CONFIG_OPTIONS,
   Recovery: RECOVERY_CONFIG_OPTIONS,
   Movement: [

@@ -12,6 +12,9 @@
     "AllowVehicles": {
       "defaultValue": true
     },
+    "AllowVisualizeBlockCollider": {
+      "defaultValue": false
+    },
     "AttackActiveParryWindow": {
       "defaultValue": 0.15
     },

@@ -26,10 +26,11 @@ try {
   const { STUN_CONFIG_OPTIONS } = await import('../../src/lib/config/stunConfigSchema');
   const { DataType } = await import('../../src/lib/config/types');
   assert.equal(CHARACTER_CONFIG_OPTIONS.Movement.length, 22);
-  assert.equal(Object.keys(CHARACTER_CONFIG_OPTIONS).length, 12);
-  assert.equal(Object.values(CHARACTER_CONFIG_OPTIONS).flat().length, 170 + STUN_CONFIG_OPTIONS.length);
+  assert.equal(Object.keys(CHARACTER_CONFIG_OPTIONS).length, 13);
+  const characterEntries = Object.values(CHARACTER_CONFIG_OPTIONS).flat();
+  assert.equal(characterEntries.length, 171 + STUN_CONFIG_OPTIONS.length);
   assert.equal(Object.values(WEAPON_CONFIG_OPTIONS).flat().length, 63);
-  assert.equal(new Set(Object.values(CHARACTER_CONFIG_OPTIONS).flat().map(entry => entry.configKey)).size, 170 + STUN_CONFIG_OPTIONS.length);
+  assert.equal(new Set(characterEntries.map(entry => entry.configKey)).size, characterEntries.length);
   globalThis.fetch = (async (url: string, init: RequestInit) => {
     assert(url.startsWith('/api/config/'));
     return save(new Request('http://localhost' + url, init) as never, {
@@ -129,7 +130,7 @@ try {
       commands: sent[sent.length - 1],
     }, null, 2) + '\n', 'utf8');
   }
-  console.log('PASS: 13 combined Movement additions, 22/170/63 contract counts, independent selection, signed/zero values, partial/all Reset with wipe ordering and TimeToMaxSprint/Recovery preservation');
+  console.log('PASS: 13 combined Movement additions, complete unique schema, independent selection, signed/zero values, partial/all Reset with wipe ordering and TimeToMaxSprint/Recovery preservation');
 } finally {
   globalThis.fetch = originalFetch;
   const target = resolve(root);
