@@ -81,6 +81,36 @@ describe('apply endpoint', () => {
   });
 });
 describe('bulk weapon endpoint', () => {
+  test('resets only the requested key on selected weapons without sending RCON', async () => {
+    const response = await bulk(request({
+      category: 'Strike',
+      weaponValues: { ArmingSword: { CanCombo: null }, Greatsword: { CanCombo: null } }
+    }) as NextRequest);
+    expect(response.status).toBe(200);
+    expect(writes).toEqual([
+      { weapon: 'ArmingSword', category: 'Strike', entries: {} },
+      { weapon: 'Greatsword', category: 'Strike', entries: {} }
+    ]);
+    expect(sent).toHaveLength(0);
+  });
+  test('reset preserves unrelated keys and validates unknown keys before writing', async () => {
+    expect((await bulk(request({ category: 'Strike', weaponValues: { ArmingSword: { Windup: null } } }) as NextRequest)).status).toBe(200);
+    expect(writes[0].entries).toEqual({ CanCombo: true });
+    writes.length = 0;
+    expect((await bulk(request({ category: 'Strike', weaponValues: {
+      ArmingSword: { CanCombo: null }, Greatsword: { UnknownKey: null }
+    } }) as NextRequest)).status).toBe(400);
+    expect(writes).toHaveLength(0);
+  });
+  test('reset reports partial failures without claiming failed weapons were saved', async () => {
+    failWeapon = 'Greatsword';
+    const response = await bulk(request({ category: 'Strike', weaponValues: {
+      ArmingSword: { CanCombo: null }, Greatsword: { CanCombo: null }
+    } }) as NextRequest);
+    expect(response.status).toBe(500);
+    expect((await response.json()).data.updatedWeapons).toEqual(['ArmingSword']);
+    expect(writes).toEqual([{ weapon: 'ArmingSword', category: 'Strike', entries: {} }]);
+  });
   test('saves different values while preserving other keys and unselected weapons', async () => {
     const response = await bulk(request({
       category: 'Strike',

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readCategory, writeCategory } from '@/lib/database/service';
-import { validateEntries } from '@/lib/database/validation';
+import { getSchemaForCategory, validateEntries } from '@/lib/database/validation';
 import { CategoryName, WeaponConfigGroupName } from '@/lib/config/weaponConfigSchema';
 import type { ConfigData } from '@/lib/database/types';
 
-/** Accept either the legacy shared entry or entries specific to each weapon. */
+/** Accept shared or per-weapon entries; null removes an override. */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       status: 400
     });
     const names = Object.values(CategoryName);
-    const weaponValues: Record<string, ConfigData> = body.weaponValues ?? Object.fromEntries(names.map(name => [name, body.entry]));
+    const weaponValues: Record<string, Record<string, ConfigData[string] | null>> = body.weaponValues ?? Object.fromEntries(names.map(name => [name, body.entry]));
     if (!weaponValues || typeof weaponValues !== 'object' || Array.isArray(weaponValues) || !Object.keys(weaponValues).length) return NextResponse.json({
       success: false,
       error: 'Provide weaponValues or an entry'
@@ -30,7 +30,10 @@ export async function POST(request: NextRequest) {
       }, {
         status: 400
       });
-      const result = validateEntries(entries, weapon, body.category);
+      const [key, value] = Object.entries(entries)[0];
+      const result = value === null
+        ? { valid: Object.hasOwn(getSchemaForCategory(weapon, body.category) ?? {}, key), errors: [`Unknown config key: ${key}`] }
+        : validateEntries(entries as ConfigData, weapon, body.category);
       if (!result.valid) return NextResponse.json({
         success: false,
         error: 'Validation failed',
@@ -43,10 +46,12 @@ export async function POST(request: NextRequest) {
     const failedWeapons: string[] = [];
     for (const [weapon, entries] of Object.entries(weaponValues)) {
       try {
-        await writeCategory(weapon, body.category, {
-          ...(await readCategory(weapon, body.category)),
-          ...entries
-        });
+        const saved = { ...(await readCategory(weapon, body.category)) };
+        for (const [key, value] of Object.entries(entries)) {
+          if (value === null) delete saved[key];
+          else saved[key] = value;
+        }
+        await writeCategory(weapon, body.category, saved);
         updatedWeapons.push(weapon);
       } catch {
         failedWeapons.push(weapon);
