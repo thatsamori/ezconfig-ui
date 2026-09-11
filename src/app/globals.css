@@ -266,6 +266,8 @@ input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-app
 .table-heading > span { display: flex; align-items: center; gap: 6px; }
 .table-heading .icon-button { height: 14px; width: 14px; }
 .config-row { padding: 7px 18px; min-height: 48px; border-bottom: 1px solid rgba(255,255,255,.05); }
+.config-section-heading { padding: 14px 18px 7px; border-bottom: 1px solid rgba(255,255,255,.08); background: #17181b; }
+.config-section-heading h2 { margin: 0; font-size: 12px; font-weight: 600; color: #b8b9c1; }
 .config-row:last-child { border-bottom: 0; }
 .config-row:hover { background: #1a1b1f; }
 .config-row.has-override { box-shadow: inset 3px 0 0 #5fcf8c; }

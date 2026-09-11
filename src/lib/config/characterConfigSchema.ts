@@ -5,6 +5,7 @@ import { BASE_PARRY_CONFIG_OPTIONS } from "./baseParryConfigSchema";
 import { RECOVERY_CONFIG_OPTIONS } from "./recoveryConfigSchema";
 import { MOVEMENT_CONFIG_OPTIONS } from "./movementConfigSchema";
 import { STUN_CONFIG_OPTIONS } from "./stunConfigSchema";
+import { FORWARD_GEOMETRY_CONFIG_OPTIONS, BUBBLE_GEOMETRY_CONFIG_OPTIONS } from "./geometryConfigSchema";
 
 export const CHARACTER_CATEGORY_NAME = "Character";
 
@@ -43,6 +44,7 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
   Recovery: RECOVERY_CONFIG_OPTIONS,
   Movement: [
     ...MOVEMENT_CONFIG_OPTIONS,
+    ...BUBBLE_GEOMETRY_CONFIG_OPTIONS,
     // Booleans
     {
       configKey: "CanDodge",
@@ -459,51 +461,6 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
       default: 1.0,
     },
 
-    // Vectors - Low Block Collider Relative Offset
-    {
-      configKey: "LowBlockColliderRelativeOffsetLocation",
-      dataType: DataType.Vector,
-      isImplemented: false,
-      documentation: "",
-      default: { x: 75.0, y: 0.0, z: -35.0 },
-    },
-    {
-      configKey: "LowBlockColliderRelativeOffsetRotation",
-      dataType: DataType.Vector,
-      isImplemented: false,
-      documentation: "",
-      default: { x: 0.0, y: 59.999985, z: 0.0 },
-    },
-    {
-      configKey: "LowBlockColliderRelativeOffsetScale",
-      dataType: DataType.Vector,
-      isImplemented: false,
-      documentation: "",
-      default: { x: 1.0, y: 1.0, z: 0.81 },
-    },
-
-    // Vectors - High Block Collider Relative Offset
-    {
-      configKey: "HighBlockColliderRelativeOffsetLocation",
-      dataType: DataType.Vector,
-      isImplemented: false,
-      documentation: "",
-      default: { x: 10.0, y: 0.0, z: -100.0 },
-    },
-    {
-      configKey: "HighBlockColliderRelativeOffsetRotation",
-      dataType: DataType.Vector,
-      isImplemented: false,
-      documentation: "",
-      default: { x: 0.0, y: -44.999989, z: 0.0 },
-    },
-    {
-      configKey: "HighBlockColliderRelativeOffsetScale",
-      dataType: DataType.Vector,
-      isImplemented: false,
-      documentation: "",
-      default: { x: 1.0, y: 1.0, z: 1.1 },
-    },
   ],
 
   General: [
@@ -722,6 +679,52 @@ export const CHARACTER_CONFIG_OPTIONS: Record<
   ],
   Parry: [
     ...BASE_PARRY_CONFIG_OPTIONS,
+    ...FORWARD_GEOMETRY_CONFIG_OPTIONS,
+    // Vectors - Low Block Collider Relative Offset
+    {
+      configKey: "LowBlockColliderRelativeOffsetLocation",
+      dataType: DataType.Vector,
+      isImplemented: false,
+      documentation: "",
+      default: { x: 75.0, y: 0.0, z: -35.0 },
+    },
+    {
+      configKey: "LowBlockColliderRelativeOffsetRotation",
+      dataType: DataType.Vector,
+      isImplemented: false,
+      documentation: "",
+      default: { x: 0.0, y: 59.999985, z: 0.0 },
+    },
+    {
+      configKey: "LowBlockColliderRelativeOffsetScale",
+      dataType: DataType.Vector,
+      isImplemented: false,
+      documentation: "",
+      default: { x: 1.0, y: 1.0, z: 0.81 },
+    },
+
+    // Vectors - High Block Collider Relative Offset
+    {
+      configKey: "HighBlockColliderRelativeOffsetLocation",
+      dataType: DataType.Vector,
+      isImplemented: false,
+      documentation: "",
+      default: { x: 10.0, y: 0.0, z: -100.0 },
+    },
+    {
+      configKey: "HighBlockColliderRelativeOffsetRotation",
+      dataType: DataType.Vector,
+      isImplemented: false,
+      documentation: "",
+      default: { x: 0.0, y: -44.999989, z: 0.0 },
+    },
+    {
+      configKey: "HighBlockColliderRelativeOffsetScale",
+      dataType: DataType.Vector,
+      isImplemented: false,
+      documentation: "",
+      default: { x: 1.0, y: 1.0, z: 1.1 },
+    },
     // ExperimentalParry: replace the base time remaining after a block. Toggle first.
     {
       configKey: "ExperimentalParry",

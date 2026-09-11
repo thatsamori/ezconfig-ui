@@ -25,7 +25,7 @@ function App() {
     <Example entry={find('MaxWalkSpeed')} group="Movement" />
     <Example entry={find('RiposteWindowBase')} group="Parry" />
     <Example entry={find('AllowDrop')} group="General" />
-    <Example entry={find('HighBlockColliderRelativeOffsetLocation')} group="Combat" />
+    <Example entry={find('HighBlockColliderRelativeOffsetLocation')} group="Parry" />
     {['Strike', 'AltStrike', 'Stab', 'AltStab'].map(group => <Example key={group} entry={WEAPON_CONFIG_OPTIONS.Attack.find(e => e.configKey === 'Windup')!} weapon="ArmingSword" group={group} />)}
     <Example entry={WEAPON_CONFIG_OPTIONS.Attack.find(e => e.configKey === 'Damage')!} weapon="Greatsword" group="Strike" />
   </main>;

@@ -25,10 +25,10 @@ try {
   const { MOVEMENT_CONFIG_OPTIONS } = await import('../../src/lib/config/movementConfigSchema');
   const { STUN_CONFIG_OPTIONS } = await import('../../src/lib/config/stunConfigSchema');
   const { DataType } = await import('../../src/lib/config/types');
-  assert.equal(CHARACTER_CONFIG_OPTIONS.Movement.length, 22);
+  assert.equal(CHARACTER_CONFIG_OPTIONS.Movement.length, 25);
   assert.equal(Object.keys(CHARACTER_CONFIG_OPTIONS).length, 13);
   const characterEntries = Object.values(CHARACTER_CONFIG_OPTIONS).flat();
-  assert.equal(characterEntries.length, 171 + STUN_CONFIG_OPTIONS.length);
+  assert.equal(characterEntries.length, 176 + STUN_CONFIG_OPTIONS.length);
   assert.equal(Object.values(WEAPON_CONFIG_OPTIONS).flat().length, 63);
   assert.equal(new Set(characterEntries.map(entry => entry.configKey)).size, characterEntries.length);
   globalThis.fetch = (async (url: string, init: RequestInit) => {

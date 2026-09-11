@@ -23,6 +23,7 @@ import { SweepPanel } from './SweepPanel';
 import { GlobalSearch } from './GlobalSearch';
 import type { SearchDestination } from './search';
 import { attackGroups, weapons, countEntries, countGroups, countOverrides, isOverride, showValue, toggleAttackGroup } from './model';
+import { parrySections } from './parry-sections';
 function Helm() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12a8 8 0 0 1 16 0v2l-2 6H6l-2-6Z" /><path d="M13 12h7M13 12v8M12 4V2" /></svg>;
 }
@@ -110,6 +111,8 @@ function ConsoleContent() {
     const featureOrder = (a.gatedBy || a.configKey).localeCompare(b.gatedBy || b.configKey);
     return featureOrder || Number(!!a.gatedBy) - Number(!!b.gatedBy) || a.configKey.localeCompare(b.configKey);
   });
+  const rowSections = isCharacter && charGroup === CharacterConfigGroupName.Parry
+    ? parrySections(rows) : [{ title: '', entries: rows }];
   const weaponCount = Object.values(values.weapons).filter(groups => countGroups(groups) > 0).length;
   const total = countOverrides(values);
   const count = (name: string) => isCharacter ? countEntries(values.character[name]) : countGroups(values.weapons[name]);
@@ -182,7 +185,7 @@ function ConsoleContent() {
               setReload(n => n + 1);
             }}>Retry</button></div> : <div className="config-table" role="table" aria-label={`${title} configuration`} style={{
             '--columns': visibleGroups.length
-          } as React.CSSProperties}><div className="config-table-inner"><div className="config-grid table-heading" role="row"><span role="columnheader">Config key</span>{visibleGroups.map(group => <span role="columnheader" key={group}>{isCharacter ? 'Value' : group}{visibleGroups.length > 1 && <button className="icon-button" aria-label={`Hide ${group}`} onClick={() => setGroups(toggleAttackGroup(groups, group))}><X size={12} /></button>}</span>)}<span role="columnheader" className="sr-only">Actions</span></div>{rows.map(entry => <KeyRow key={`${database}/${visibleGroups.join('/')}/${entry.configKey}`} entry={entry} database={database} groups={visibleGroups} values={values} onSweep={setSweep} highlighted={searchDestination?.configKey === entry.configKey && searchDestination.tab === tab && searchDestination.group === visibleGroups[0] && (isCharacter || searchDestination.weapon === weapon)} />)}{rows.length === 0 && <p className="empty-state">No keys in this group</p>}</div></div>}</div>
+          } as React.CSSProperties}><div className="config-table-inner"><div className="config-grid table-heading" role="row"><span role="columnheader">Config key</span>{visibleGroups.map(group => <span role="columnheader" key={group}>{isCharacter ? 'Value' : group}{visibleGroups.length > 1 && <button className="icon-button" aria-label={`Hide ${group}`} onClick={() => setGroups(toggleAttackGroup(groups, group))}><X size={12} /></button>}</span>)}<span role="columnheader" className="sr-only">Actions</span></div>{rowSections.map(section => <div role="rowgroup" key={section.title}>{section.title && <div role="row" className="config-section-heading"><div role="cell" aria-colspan={visibleGroups.length + 2}><h2>{section.title}</h2></div></div>}{section.entries.map(entry => <KeyRow key={`${database}/${visibleGroups.join('/')}/${entry.configKey}`} entry={entry} database={database} groups={visibleGroups} values={values} onSweep={setSweep} highlighted={searchDestination?.configKey === entry.configKey && searchDestination.tab === tab && searchDestination.group === visibleGroups[0] && (isCharacter || searchDestination.weapon === weapon)} />)}</div>)}{rows.length === 0 && <p className="empty-state">No keys in this group</p>}</div></div>}</div>
       <footer className="floating-bar"><span className={`status-dot${total ? ' changed' : ''}`} /><div className="bar-copy"><strong>{total ? `${total} unapplied changes` : 'Everything at game default'}</strong>{total > 0 && <span>across {weaponCount ? `${weaponCount} weapon${weaponCount === 1 ? '' : 's'}` : ''}{countGroups(values.character) ? `${weaponCount ? ' and ' : ''}character` : ''}</span>}</div><button className="outline-button" disabled={loading || !!loadError} onClick={() => setPresetOpen(true)}>Save as preset</button><button className="primary-button" disabled={loading || !!loadError} onClick={() => setReviewOpen(true)}>Review &amp; apply</button></footer></section>
     </> : <section className="standalone-page" ref={contentRef}><div className="header-actions standalone-search">{globalSearch}</div>{tab === 'presets' ? <PresetsTab /> : user?.role === 'admin' ? <UsersTab /> : null}</section>}
     {sweep && <SweepPanel entry={sweep} weapon={weapon} groups={groups} onClose={() => setSweep(null)} />}

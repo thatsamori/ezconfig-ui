@@ -57,7 +57,7 @@ try {
   const { CHARACTER_CONFIG_OPTIONS } = await import('../../src/lib/config/characterConfigSchema');
   const keys = Object.values(CHARACTER_CONFIG_OPTIONS).flat().map((entry) => entry.configKey);
   assert(required.every((key) => keys.includes(key)), 'Ticket03 must register all three new keys before this integration fixture runs');
-  assert.equal(keys.length, 174);
+  assert.equal(keys.length, 179);
   const { POST: save, GET: read } = await import('../../src/app/api/config/[...path]/route');
   const { GET: preview } = await import('../../src/app/api/apply/preview/route');
   const { POST: apply } = await import('../../src/app/api/apply/route');
