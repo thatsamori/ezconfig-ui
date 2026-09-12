@@ -1,5 +1,5 @@
 import { DataType, type ConfigEntry } from "./types";
-import { weaponDefaults } from "./defaults";
+import { weaponDefaults, weaponLengthDefaults } from "./defaults";
 
 export enum CategoryName {
   ArmingSword = "ArmingSword",
@@ -515,6 +515,26 @@ export const WEAPON_CONFIG_OPTIONS: Record<'Attack' | 'General', ConfigEntry[]> 
       isImplemented: false,
       documentation: "",
       default: { x: 1.0, y: 1.0, z: 1.0 },
+    },
+    {
+      configKey: "WeaponLength",
+      label: "Main length (cm)",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation: "Absolute main-grip weapon length in centimeters.",
+      minimum: 1,
+      supportedWeapons: Object.keys(weaponLengthDefaults),
+    },
+    {
+      configKey: "AltWeaponLength",
+      label: "Alternate length (cm)",
+      dataType: DataType.Float,
+      isImplemented: true,
+      documentation: "Absolute alternate-grip weapon length in centimeters.",
+      minimum: 1,
+      supportedWeapons: Object.entries(weaponLengthDefaults)
+        .filter(([, defaults]) => defaults.AltWeaponLength !== undefined)
+        .map(([weapon]) => weapon),
     },
   ],
 };

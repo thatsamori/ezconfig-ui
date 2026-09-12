@@ -39,13 +39,29 @@ describe('verified default coverage', () => {
     expect(Object.keys(snapshot.weapons).sort()).toEqual(Object.values(CategoryName).sort());
     for (const weapon of Object.values(CategoryName)) {
       for (const group of Object.values(WeaponConfigGroupName)) {
-        for (const entry of WEAPON_CONFIG_OPTIONS[group === 'General' ? 'General' : 'Attack']) {
+        for (const entry of WEAPON_CONFIG_OPTIONS[group === 'General' ? 'General' : 'Attack'].filter(entry => !entry.supportedWeapons || entry.supportedWeapons.includes(weapon))) {
           const resolved = resolveDefault(entry, weapon, group);
           checkType(entry, resolved.defaultValue);
           expect(lookupDefault(weapon, group, entry.configKey)).toEqual(resolved);
         }
       }
     }
+  });
+  test('Spear exposes verified independent main and alternate centimeter defaults', () => {
+    const main = WEAPON_CONFIG_OPTIONS.General.find(entry => entry.configKey === 'WeaponLength')!;
+    const alternate = WEAPON_CONFIG_OPTIONS.General.find(entry => entry.configKey === 'AltWeaponLength')!;
+    expect(main).toMatchObject({ label: 'Main length (cm)', minimum: 1 });
+    expect(alternate).toMatchObject({ label: 'Alternate length (cm)', minimum: 1 });
+    expect(main.supportedWeapons?.sort()).toEqual(Object.values(CategoryName).sort());
+    expect(alternate.supportedWeapons).toHaveLength(17);
+    expect(alternate.supportedWeapons).toContain('Spear');
+    expect(alternate.supportedWeapons).not.toContain('ArmingSword');
+    expect(main.maximum).toBeUndefined();
+    expect(alternate.maximum).toBeUndefined();
+    expect(resolveDefault(main, 'Spear', 'General').defaultValue).toBe(180);
+    expect(resolveDefault(alternate, 'Spear', 'General').defaultValue).toBe(135);
+    expect(resolveDefault(main, 'ArmingSword', 'General').defaultValue).toBe(75);
+    expect(resolveDefault(alternate, 'ArmingSword', 'General').defaultValue).toBeUndefined();
   });
   test('weapon and alternate mode values are not replaced by generic seeds', () => {
     const entry = WEAPON_CONFIG_OPTIONS.Attack.find(entry => entry.configKey === 'Windup')!;

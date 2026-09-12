@@ -9,6 +9,7 @@
 import {
   DataType,
   type ConfigEntry as SchemaConfigEntry,
+  supportsWeapon,
 } from "@/lib/config/types";
 import { CHARACTER_CONFIG_OPTIONS } from "@/lib/config/characterConfigSchema";
 import {
@@ -54,7 +55,7 @@ export function getSchemaForCategory(
   // "Strike", "AltStrike", "Stab", "AltStab" -> WEAPON_CONFIG_OPTIONS.Attack
   if (category === "General") {
     return WEAPON_CONFIG_OPTIONS.General.reduce((acc, entry) => {
-      acc[entry.configKey] = entry;
+      if (supportsWeapon(entry, database)) acc[entry.configKey] = entry;
       return acc;
     }, {} as SchemaMap);
   }
@@ -63,7 +64,7 @@ export function getSchemaForCategory(
   const attackCategories: string[] = Object.values(WeaponConfigAttackName);
   if (attackCategories.includes(category)) {
     return WEAPON_CONFIG_OPTIONS.Attack.reduce((acc, entry) => {
-      acc[entry.configKey] = entry;
+      if (supportsWeapon(entry, database)) acc[entry.configKey] = entry;
       return acc;
     }, {} as SchemaMap);
   }

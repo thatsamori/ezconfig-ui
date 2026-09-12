@@ -1,5 +1,6 @@
 import { CHARACTER_CONFIG_OPTIONS, CharacterConfigGroupName } from '@/lib/config/characterConfigSchema';
 import { WEAPON_CONFIG_OPTIONS } from '@/lib/config/weaponConfigSchema';
+import { supportsWeapon } from '@/lib/config/types';
 import { attackGroups, weapons } from './model';
 
 export interface SearchDestination {
@@ -32,8 +33,8 @@ for (const group of Object.values(CharacterConfigGroupName)) {
 for (const weapon of weapons) {
   destinations.push({ id: `weapons/${weapon}`, label: weapon, path: 'Weapons', tab: 'weapons', weapon });
   for (const group of attackGroups) {
-    for (const entry of WEAPON_CONFIG_OPTIONS[group === 'General' ? 'General' : 'Attack']) destinations.push({
-      id: `weapons/${weapon}/${group}/${entry.configKey}`, label: entry.configKey,
+    for (const entry of WEAPON_CONFIG_OPTIONS[group === 'General' ? 'General' : 'Attack'].filter(entry => supportsWeapon(entry, weapon))) destinations.push({
+      id: `weapons/${weapon}/${group}/${entry.configKey}`, label: entry.label ?? entry.configKey,
       path: `${weapon} · ${group}`, tab: 'weapons', weapon, group, configKey: entry.configKey,
     });
   }
@@ -41,7 +42,7 @@ for (const weapon of weapons) {
 const index = destinations.map(destination => ({
   destination,
   label: normalize(destination.label),
-  text: normalize(`${destination.tab} ${destination.path} ${destination.label}`),
+  text: normalize(`${destination.tab} ${destination.path} ${destination.label} ${destination.configKey ?? ''}`),
 }));
 
 export function searchGlobal(query: string, context: { weapon: string; isAdmin: boolean }) {

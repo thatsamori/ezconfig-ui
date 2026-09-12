@@ -3,6 +3,7 @@ import type { ConfigEntry, DefaultMetadata, DefaultValue } from './types';
 
 const characters: Record<string, DefaultMetadata> = snapshot.character;
 const weapons: Record<string, Record<string, Record<string, DefaultValue>>> = snapshot.weapons;
+export const weaponLengthDefaults: Record<string, Record<string, number>> = snapshot.weaponLengths;
 
 export function characterDefaults(entry: ConfigEntry): ConfigEntry {
   return { ...entry, ...characters[entry.configKey] };
@@ -14,6 +15,11 @@ export function weaponDefaults(entry: ConfigEntry, general: boolean): ConfigEntr
     for (const [group, values] of Object.entries(groups)) {
       if ((group === 'General') !== general || values[entry.configKey] === undefined) continue;
       (defaultValues[weapon] ??= {})[group] = values[entry.configKey];
+    }
+  }
+  if (general && (entry.configKey === 'WeaponLength' || entry.configKey === 'AltWeaponLength')) {
+    for (const [weapon, values] of Object.entries(weaponLengthDefaults)) {
+      if (values[entry.configKey] !== undefined) (defaultValues[weapon] ??= {}).General = values[entry.configKey];
     }
   }
   return { ...entry, defaultValues };
@@ -61,6 +67,10 @@ export function defaultDetails(entry: DefaultMetadata, database?: string, catego
 
 export function lookupDefault(database: string, category: string, key: string): DefaultMetadata {
   if (database === 'Character') return characters[key] ?? {};
+  if (category === 'General' && (key === 'WeaponLength' || key === 'AltWeaponLength')) {
+    const value = weaponLengthDefaults[database.replace(/^Weapon\//, '')]?.[key];
+    return value === undefined ? {} : { defaultValue: value };
+  }
   const value = weapons[database.replace(/^Weapon\//, '')]?.[category]?.[key];
   return value === undefined ? {} : { defaultValue: value };
 }

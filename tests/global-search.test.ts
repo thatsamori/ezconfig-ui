@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { searchGlobal } from '../src/components/console/search';
+import { getSupportedConfigOptions } from '../src/components/weapons/WeaponAccordion';
 
 const context = { weapon: 'ArmingSword', isAdmin: false };
 
@@ -29,6 +30,22 @@ describe('global search', () => {
     const { results } = searchGlobal('ArmingSword General', context);
     expect(results.length).toBeGreaterThan(0);
     expect(results.every(result => result.weapon === 'ArmingSword' && result.group === 'General')).toBe(true);
+  });
+
+  test('indexes main length for the roster and alternate length only for native alternate weapons', () => {
+    const main = searchGlobal('WeaponLength', context).results;
+    expect(main.some(result => result.weapon === 'Spear' && result.configKey === 'WeaponLength')).toBe(true);
+    expect(main.some(result => result.weapon === 'ArmingSword' && result.configKey === 'WeaponLength')).toBe(true);
+    const alternate = searchGlobal('Alternate length cm', context).results;
+    expect(alternate.some(result => result.weapon === 'Spear' && result.configKey === 'AltWeaponLength')).toBe(true);
+    expect(alternate.some(result => result.weapon === 'Greatsword' && result.configKey === 'AltWeaponLength')).toBe(true);
+    expect(alternate.some(result => result.weapon === 'ArmingSword' && result.configKey === 'AltWeaponLength')).toBe(false);
+  });
+
+  test('unloaded override filtering exposes main length roster-wide but alternate only where native', () => {
+    expect(getSupportedConfigOptions('ArmingSword', 'General', 'WeaponLength').map(entry => entry.configKey)).toEqual(['WeaponLength']);
+    expect(getSupportedConfigOptions('ArmingSword', 'General', 'AltWeaponLength')).toEqual([]);
+    expect(getSupportedConfigOptions('Spear', 'General', 'WeaponLength').map(entry => entry.configKey)).toEqual(['WeaponLength', 'AltWeaponLength']);
   });
 
   test('empty search offers navigation and never lists thousands of config keys', () => {

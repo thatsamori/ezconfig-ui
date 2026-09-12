@@ -21,6 +21,9 @@ try {
   const { reviewRows, selectedReviewCommands, weapons } = await import('../../src/components/console/model');
   const { useConfigStore, flushConfigWrites } = await import('../../src/lib/store/configStore');
   const { lookupDefault } = await import('../../src/lib/config/defaults');
+  const { WEAPON_CONFIG_OPTIONS } = await import('../../src/lib/config/weaponConfigSchema');
+  const { supportsWeapon } = await import('../../src/lib/config/types');
+  const { getSchemaForCategory, validateEntries } = await import('../../src/lib/database/validation');
   globalThis.fetch = (async (url: string, init: RequestInit) => {
     assert(url.startsWith('/api/config/'));
     return save(new Request('http://localhost' + url, init) as never, {
@@ -134,6 +137,112 @@ try {
     assert.equal(before.length, 4); assert.equal(remove.length, 4);
     assert(!remove.some(command => command.startsWith(`string ezconfig Spear ${removedCategory} `)));
     rearingRemovalBatches[removedCategory] = { before, remove };
+  }
+  const mainEntry = WEAPON_CONFIG_OPTIONS.General.find(entry => entry.configKey === 'WeaponLength')!;
+  const altEntry = WEAPON_CONFIG_OPTIONS.General.find(entry => entry.configKey === 'AltWeaponLength')!;
+  assert.deepEqual({ label: mainEntry.label, minimum: mainEntry.minimum, maximum: mainEntry.maximum },
+    { label: 'Main length (cm)', minimum: 1, maximum: undefined });
+  assert.equal(mainEntry.supportedWeapons?.length, 35);
+  assert.deepEqual({ label: altEntry.label, minimum: altEntry.minimum, maximum: altEntry.maximum },
+    { label: 'Alternate length (cm)', minimum: 1, maximum: undefined });
+  assert.equal(altEntry.supportedWeapons?.length, 17);
+  assert.equal(lookupDefault('Spear', 'General', 'WeaponLength').defaultValue, 180);
+  assert.equal(lookupDefault('Spear', 'General', 'AltWeaponLength').defaultValue, 135);
+  assert(getSchemaForCategory('Spear', 'General')?.WeaponLength);
+  assert(getSchemaForCategory('Spear', 'General')?.AltWeaponLength);
+  assert(getSchemaForCategory('ArmingSword', 'General')?.WeaponLength);
+  assert(!getSchemaForCategory('ArmingSword', 'General')?.AltWeaponLength);
+  assert.equal(WEAPON_CONFIG_OPTIONS.General.filter(entry => supportsWeapon(entry, 'Spear')).includes(mainEntry), true);
+  assert.equal(WEAPON_CONFIG_OPTIONS.General.filter(entry => supportsWeapon(entry, 'ArmingSword')).includes(mainEntry), true);
+  assert.equal(WEAPON_CONFIG_OPTIONS.General.filter(entry => supportsWeapon(entry, 'ArmingSword')).includes(altEntry), false);
+  assert.equal(validateEntries({ AltWeaponLength: 120 }, 'ArmingSword', 'General').valid, false);
+
+  const invalidLengths = [0, 0.999, -1, NaN, Infinity, -Infinity, 1e40];
+  for (const key of ['WeaponLength', 'AltWeaponLength']) {
+    store.setValue('Spear', 'General', key, key === 'WeaponLength' ? 120.5 : 90.25);
+    await flushConfigWrites();
+    const retained = store.getValue('Spear', 'General', key);
+    for (const invalid of invalidLengths) {
+      assert.equal(validateEntries({ [key]: invalid }, 'Spear', 'General').valid, false);
+      store.setValue('Spear', 'General', key, invalid);
+      assert.equal(store.getValue('Spear', 'General', key), retained);
+    }
+  }
+  const invalidApi = await save(request({ entries: { WeaponLength: 0 } }) as never, {
+    params: Promise.resolve({ path: ['Spear', 'General'] }),
+  });
+  assert.equal(invalidApi.status, 400);
+  const unsupportedApi = await save(request({ entries: { AltWeaponLength: 120 } }) as never, {
+    params: Promise.resolve({ path: ['ArmingSword', 'General'] }),
+  });
+  assert.equal(unsupportedApi.status, 400);
+
+  const lengthStages: Record<string, string[]> = {};
+  for (const [label, main, alternate] of [
+    ['shortenLengthen', 120.5, 240.25],
+    ['minimumAndDecimal', 1, 135.75],
+    ['largeFiniteIndependent', 3e38, 2.5],
+    ['nativeReplay', 240, 90],
+  ] as const) {
+    store.setValue('Spear', 'General', 'WeaponLength', main);
+    store.setValue('Spear', 'General', 'AltWeaponLength', alternate);
+    const lengthRows = (await readRows()).filter(row => row.key === 'WeaponLength' || row.key === 'AltWeaponLength');
+    assert.equal(lengthRows.length, 2);
+    const commands = selectedReviewCommands(lengthRows, new Set(lengthRows.map(row => row.id)));
+    assert.equal((await apply(request({ commands, wipeDatabase: false }))).status, 200);
+    assert.deepEqual(sent[sent.length - 1], commands);
+    lengthStages[label] = commands;
+  }
+  store.removeValue('Spear', 'General', 'WeaponLength');
+  let lengthRows = (await readRows()).filter(row => row.key === 'WeaponLength' || row.key === 'AltWeaponLength');
+  assert.deepEqual(lengthRows.map(row => row.key), ['AltWeaponLength']);
+  const partialRemove = await applyRows(lengthRows, undefined, true);
+  store.removeValue('Spear', 'General', 'AltWeaponLength');
+  lengthRows = (await readRows()).filter(row => row.key === 'WeaponLength' || row.key === 'AltWeaponLength');
+  assert.equal(lengthRows.length, 0);
+  const wipe = await applyRows(lengthRows, undefined, true);
+
+  store.setValue('Spear', 'General', 'WeaponLength', 210.5);
+  store.setValue('Spear', 'General', 'AltWeaponLength', 100.25);
+  store.setValue('Greatsword', 'General', 'WeaponLength', 150.75);
+  store.setValue('Greatsword', 'General', 'AltWeaponLength', 80.5);
+  let rosterRows = (await readRows()).filter(row =>
+    (row.database === 'Spear' || row.database === 'Greatsword') &&
+    (row.key === 'WeaponLength' || row.key === 'AltWeaponLength'));
+  assert.equal(rosterRows.length, 4);
+  const twoWeapons = await applyRows(rosterRows);
+  store.removeValue('Spear', 'General', 'WeaponLength');
+  rosterRows = (await readRows()).filter(row =>
+    (row.database === 'Spear' || row.database === 'Greatsword') &&
+    (row.key === 'WeaponLength' || row.key === 'AltWeaponLength'));
+  assert(rosterRows.some(row => row.database === 'Spear' && row.key === 'AltWeaponLength'));
+  assert(!rosterRows.some(row => row.database === 'Spear' && row.key === 'WeaponLength'));
+  const removeSpearMain = await applyRows(rosterRows, undefined, true);
+  store.removeValue('Greatsword', 'General', 'AltWeaponLength');
+  rosterRows = (await readRows()).filter(row =>
+    (row.database === 'Spear' || row.database === 'Greatsword') &&
+    (row.key === 'WeaponLength' || row.key === 'AltWeaponLength'));
+  assert(rosterRows.some(row => row.database === 'Greatsword' && row.key === 'WeaponLength'));
+  assert(!rosterRows.some(row => row.database === 'Greatsword' && row.key === 'AltWeaponLength'));
+  const removeGreatswordAlt = await applyRows(rosterRows, undefined, true);
+
+  if (process.env.EZCONFIG_CAPTURE_LENGTH_COMMANDS === '1') {
+    const directory = resolve('.scratch/weapon-scale-ui');
+    await mkdir(directory, { recursive: true });
+    await writeFile(join(directory, 'ticket02-spear-length-captured-rcon.json'), JSON.stringify({
+      source: 'Real store -> temporary persistence -> review -> selected apply -> captured RCON',
+      database: 'Spear', category: 'General', defaultsCm: { WeaponLength: 180, AltWeaponLength: 135 },
+      stages: lengthStages, partialRemove, wipe,
+    }, null, 2) + '\n');
+  }
+  if (process.env.EZCONFIG_CAPTURE_ROSTER_LENGTH_COMMANDS === '1') {
+    const directory = resolve('.scratch/weapon-scale-ui');
+    await mkdir(directory, { recursive: true });
+    await writeFile(join(directory, 'ticket04-roster-length-captured-rcon.json'), JSON.stringify({
+      source: 'Real store -> temporary persistence -> review -> selected apply -> captured RCON',
+      databases: ['Spear', 'Greatsword'], category: 'General',
+      stages: { twoWeapons, removeSpearMain, removeGreatswordAlt },
+    }, null, 2) + '\n');
   }
   if (process.env.EZCONFIG_CAPTURE_GENERAL_COMMANDS === '1') {
     const directory = resolve('.scratch/weapon-reliability-ui');

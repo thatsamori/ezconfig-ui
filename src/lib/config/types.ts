@@ -19,6 +19,8 @@ export type DefaultMetadata = {
 
 export type ConfigEntry = DefaultMetadata & {
   configKey: string;
+  /** Human-facing label; configKey remains the wire/storage contract. */
+  label?: string;
   dataType: DataType;
   isImplemented: boolean;
   documentation: string;
@@ -28,6 +30,8 @@ export type ConfigEntry = DefaultMetadata & {
   minimum?: number;
   /** Optional upper bound for a Float opted into constraints via minimum. */
   maximum?: number;
+  /** Weapon database names that may use this entry; unset means all weapons. */
+  supportedWeapons?: string[];
   /** With minimum, reject fractional values before native Float rounding. */
   integer?: boolean;
   /** Stock values differ by motion; Customize must ask for an explicit value. */
@@ -54,6 +58,11 @@ export type ConfigEntry = DefaultMetadata & {
    */
   gatedBy?: string;
 };
+
+export function supportsWeapon(entry: ConfigEntry, database: string): boolean {
+  const weapon = database.replace(/^Weapon\//, "");
+  return !entry.supportedWeapons || entry.supportedWeapons.includes(weapon);
+}
 
 export enum DataType {
   Bool = "Bool",

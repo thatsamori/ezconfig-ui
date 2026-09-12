@@ -170,7 +170,7 @@ export function ConfigRow({
                 className="font-medium"
                 title={configEntry.documentation || undefined}
               >
-                {configEntry.configKey}
+                {configEntry.label ?? configEntry.configKey}
               </Label>
               {hasNotes && !notesLoading && (
                 <Button

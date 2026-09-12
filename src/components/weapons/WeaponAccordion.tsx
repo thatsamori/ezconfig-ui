@@ -25,7 +25,7 @@ import {
   WeaponConfigGroupName,
 } from "@/lib/config/weaponConfigSchema";
 import type { GroupedDatabase } from "@/lib/database/structure";
-import type { ConfigEntry } from "@/lib/config/types";
+import { supportsWeapon, type ConfigEntry } from "@/lib/config/types";
 
 // Type for pending bulk action
 interface PendingBulkAction {
@@ -48,6 +48,16 @@ function getConfigOptions(category: string): ConfigEntry[] {
   }
   // Attack types (Strike, AltStrike, Stab, AltStab) use the Attack options
   return WEAPON_CONFIG_OPTIONS.Attack;
+}
+
+export function getSupportedConfigOptions(weaponName: string, category: string, query = ""): ConfigEntry[] {
+  const supported = getConfigOptions(category).filter((entry) => supportsWeapon(entry, weaponName));
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return supported;
+  return supported.filter((entry) =>
+    entry.configKey.toLowerCase().includes(normalizedQuery) ||
+    entry.label?.toLowerCase().includes(normalizedQuery)
+  );
 }
 
 // Lazy load weapon config from API
@@ -178,7 +188,7 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
   // Get filtered options for a category (applies both search and override
   // filters), sorted alphabetically by key.
   const getFilteredOptions = (weaponName: string, category: string) => {
-    let options = [...getConfigOptions(category)].sort((a, b) =>
+    let options = [...getSupportedConfigOptions(weaponName, category)].sort((a, b) =>
       a.configKey.localeCompare(b.configKey)
     );
 
@@ -207,7 +217,7 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
       if (overrideMap && overrideMap[weaponName]?.[category]) {
         // Category has overrides according to server, show it
         // (filtered options will be all options until loaded)
-        return filterOptionsBySearch(getConfigOptions(category)).length > 0;
+        return getSupportedConfigOptions(weaponName, category, configSearchQuery).length > 0;
       }
       // No override map or no overrides for this category
       return false;
@@ -247,7 +257,7 @@ export function WeaponAccordion({ weapons, showOverridesOnly = false, overrideMa
               onReset={() =>
                 removeValue(weaponName, category, configEntry.configKey)
               }
-              onApplyToAll={() =>
+              onApplyToAll={configEntry.supportedWeapons ? undefined : () =>
                 handleApplyToAll(
                   category,
                   configEntry.configKey,

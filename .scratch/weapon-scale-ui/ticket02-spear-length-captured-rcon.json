@@ -1,0 +1,30 @@
+{
+  "source": "Real store -> temporary persistence -> review -> selected apply -> captured RCON",
+  "database": "Spear",
+  "category": "General",
+  "defaultsCm": {
+    "WeaponLength": 180,
+    "AltWeaponLength": 135
+  },
+  "stages": {
+    "shortenLengthen": [
+      "string ezconfig Spear General {\"AltWeaponLength\":\"240.25\",\"WeaponLength\":\"120.5\"}"
+    ],
+    "minimumAndDecimal": [
+      "string ezconfig Spear General {\"AltWeaponLength\":\"135.75\",\"WeaponLength\":\"1\"}"
+    ],
+    "largeFiniteIndependent": [
+      "string ezconfig Spear General {\"AltWeaponLength\":\"2.5\",\"WeaponLength\":\"3e+38\"}"
+    ],
+    "nativeReplay": [
+      "string ezconfig Spear General {\"AltWeaponLength\":\"90\",\"WeaponLength\":\"240\"}"
+    ]
+  },
+  "partialRemove": [
+    "string ezconfig WipeDatabases",
+    "string ezconfig Spear General {\"AltWeaponLength\":\"90\"}"
+  ],
+  "wipe": [
+    "string ezconfig WipeDatabases"
+  ]
+}

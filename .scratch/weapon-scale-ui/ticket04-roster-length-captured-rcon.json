@@ -1,0 +1,24 @@
+{
+  "source": "Real store -> temporary persistence -> review -> selected apply -> captured RCON",
+  "databases": [
+    "Spear",
+    "Greatsword"
+  ],
+  "category": "General",
+  "stages": {
+    "twoWeapons": [
+      "string ezconfig Greatsword General {\"AltWeaponLength\":\"80.5\",\"WeaponLength\":\"150.75\"}",
+      "string ezconfig Spear General {\"AltWeaponLength\":\"100.25\",\"WeaponLength\":\"210.5\"}"
+    ],
+    "removeSpearMain": [
+      "string ezconfig WipeDatabases",
+      "string ezconfig Greatsword General {\"AltWeaponLength\":\"80.5\",\"WeaponLength\":\"150.75\"}",
+      "string ezconfig Spear General {\"AltWeaponLength\":\"100.25\"}"
+    ],
+    "removeGreatswordAlt": [
+      "string ezconfig WipeDatabases",
+      "string ezconfig Greatsword General {\"WeaponLength\":\"150.75\"}",
+      "string ezconfig Spear General {\"AltWeaponLength\":\"100.25\"}"
+    ]
+  }
+}
