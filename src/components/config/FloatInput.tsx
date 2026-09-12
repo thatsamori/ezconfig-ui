@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { useDebouncedCallback } from "@/lib/hooks";
 import { SaveIndicator } from "./SaveIndicator";
-import { constrainedFloatError } from '@/lib/config/numericConstraints';
+import { constrainedFloatTextError } from '@/lib/config/numericConstraints';
 
 export interface FloatInputProps {
   value: number;
@@ -12,6 +12,7 @@ export interface FloatInputProps {
   step?: number;
   min?: number;
   max?: number;
+  integer?: boolean;
 }
 
 export function FloatInput({
@@ -21,18 +22,19 @@ export function FloatInput({
   step,
   min,
   max,
+  integer,
 }: FloatInputProps) {
   const [localValue, setLocalValue, saveState] = useDebouncedCallback(
     String(value),
     (strValue) => {
       const parsed = min === undefined ? parseFloat(strValue) : Number(strValue);
-      if (!isNaN(parsed) && (min === undefined || (strValue.trim() !== '' && !constrainedFloatError(parsed, min)))) {
+      if (!isNaN(parsed) && (min === undefined || !constrainedFloatTextError(strValue, min, max, integer))) {
         onChange(parsed);
       }
     },
     1000
   );
-  const error = min === undefined ? undefined : localValue.trim() === '' ? 'Enter a value.' : constrainedFloatError(Number(localValue), min);
+  const error = min === undefined ? undefined : constrainedFloatTextError(localValue, min, max, integer);
   const invalid = error !== undefined;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,7 +48,7 @@ export function FloatInput({
         value={localValue}
         onChange={handleChange}
         disabled={disabled}
-        step={step}
+        step={integer ? 1 : step}
         min={min}
         aria-invalid={invalid || undefined}
         max={max}

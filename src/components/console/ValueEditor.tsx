@@ -10,14 +10,16 @@ import { SaveIndicator } from '@/components/config/SaveIndicator';
 import { ExplicitFloatOverride } from '@/components/config/ExplicitFloatOverride';
 import { isOverride } from './model';
 import { defaultLabel, defaultDetails, resolveDefault } from '@/lib/config/defaults';
-import { constrainedFloatError } from '@/lib/config/numericConstraints';
+import { constrainedFloatTextError } from '@/lib/config/numericConstraints';
 function NumberField({
   value,
   onChange,
   label,
   disabled,
   debounceMs,
-  minimum
+  minimum,
+  maximum,
+  integer
 }: {
   value: number;
   onChange: (value: number) => void;
@@ -25,14 +27,16 @@ function NumberField({
   disabled?: boolean;
   debounceMs: number;
   minimum?: number;
+  maximum?: number;
+  integer?: boolean;
 }) {
   const commit = (text: string) => {
-    if (text.trim() && Number.isFinite(Number(text)) && (minimum === undefined || !constrainedFloatError(Number(text), minimum))) onChange(Number(text));
+    if (text.trim() && Number.isFinite(Number(text)) && (minimum === undefined || !constrainedFloatTextError(text, minimum, maximum, integer))) onChange(Number(text));
   };
   const [local, change, state, flush] = useDebouncedCallback(String(value), commit, debounceMs);
-  const error = minimum === undefined ? undefined : local.trim() === '' ? 'Enter a value.' : constrainedFloatError(Number(local), minimum);
+  const error = minimum === undefined ? undefined : constrainedFloatTextError(local, minimum, maximum, integer);
   const invalid = error !== undefined;
-  return <div className="number-field"><input aria-label={label} aria-invalid={invalid || undefined} type="number" min={minimum} step="any" value={local} disabled={disabled} onChange={event => change(event.target.value)} onBlur={flush} onKeyDown={event => {
+  return <div className="number-field"><input aria-label={label} aria-invalid={invalid || undefined} type="number" min={minimum} max={maximum} step={integer ? 1 : 'any'} value={local} disabled={disabled} onChange={event => change(event.target.value)} onBlur={flush} onKeyDown={event => {
       if (event.key === 'Enter') {
         flush();
         event.currentTarget.blur();
@@ -66,7 +70,7 @@ export function ValueEditor({
   const baselineLabel = defaultLabel(entry, database, category);
   const baselineDetails = defaultDetails(entry, database, category);
   const commitDraft = () => {
-    if (entry.minimum !== undefined && (!draft.trim() || constrainedFloatError(Number(draft), entry.minimum))) return;
+    if (entry.minimum !== undefined && constrainedFloatTextError(draft, entry.minimum, entry.maximum, entry.integer)) return;
     if (draft.trim() && Number.isFinite(Number(draft))) onChange(Number(draft));
     setEditing(false);
     setDraft('');
@@ -78,7 +82,7 @@ export function ValueEditor({
       onConfirm={next => { onChange(next); setEditing(false); }}
       onCancel={() => setEditing(false)}
     />;
-    if (editing) return <input className="new-value" autoFocus aria-label={label} aria-invalid={entry.minimum !== undefined && (!draft.trim() || !!constrainedFloatError(Number(draft), entry.minimum)) || undefined} min={entry.minimum} type="number" step="any" placeholder="type a value" value={draft} onChange={event => setDraft(event.target.value)} onBlur={commitDraft} onKeyDown={event => {
+    if (editing) return <input className="new-value" autoFocus aria-label={label} aria-invalid={entry.minimum !== undefined && !!constrainedFloatTextError(draft, entry.minimum, entry.maximum, entry.integer) || undefined} min={entry.minimum} max={entry.maximum} type="number" step={entry.integer ? 1 : 'any'} placeholder="type a value" value={draft} onChange={event => setDraft(event.target.value)} onBlur={commitDraft} onKeyDown={event => {
       if (event.key === 'Enter') event.currentTarget.blur();
       if (event.key === 'Escape') {
         setEditing(false);
@@ -96,7 +100,7 @@ export function ValueEditor({
       else onChange(entry.dataType === DataType.Vector ? { x: 0, y: 0, z: 0 } : { x: 0, y: 0 });
     }}>{baselineLabel}</button>;
   }
-  const number = (n: number, change: (n: number) => void, name = label) => <NumberField value={n} onChange={change} label={name} disabled={disabled} debounceMs={debounceMs} minimum={entry.dataType === DataType.Float ? entry.minimum : undefined} />;
+  const number = (n: number, change: (n: number) => void, name = label) => <NumberField value={n} onChange={change} label={name} disabled={disabled} debounceMs={debounceMs} minimum={entry.dataType === DataType.Float ? entry.minimum : undefined} maximum={entry.dataType === DataType.Float ? entry.maximum : undefined} integer={entry.dataType === DataType.Float ? entry.integer : undefined} />;
   let control;
   switch (entry.dataType) {
     case DataType.Bool:

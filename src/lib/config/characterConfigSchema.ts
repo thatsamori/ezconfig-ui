@@ -6,6 +6,7 @@ import { RECOVERY_CONFIG_OPTIONS } from "./recoveryConfigSchema";
 import { MOVEMENT_CONFIG_OPTIONS } from "./movementConfigSchema";
 import { STUN_CONFIG_OPTIONS } from "./stunConfigSchema";
 import { FORWARD_GEOMETRY_CONFIG_OPTIONS, BUBBLE_GEOMETRY_CONFIG_OPTIONS } from "./geometryConfigSchema";
+import { CAMERA_CONFIG_OPTIONS } from "./cameraConfigSchema";
 
 export const CHARACTER_CATEGORY_NAME = "Character";
 
@@ -24,12 +25,14 @@ export enum CharacterConfigGroupName {
   Stun = "Stun",
   Misc = "Misc",
   DebugTools = "DebugTools",
+  Camera = "Camera",
 }
 
 export const CHARACTER_CONFIG_OPTIONS: Record<
   CharacterConfigGroupName,
   ConfigEntry[]
 > = {
+  Camera: CAMERA_CONFIG_OPTIONS,
   DebugTools: [
     {
       configKey: "AllowVisualizeBlockCollider",

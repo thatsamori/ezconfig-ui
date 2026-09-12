@@ -42,7 +42,7 @@ function convertValueToRcon(
   // A positive constrained duration must not round down to the zero-duration
   // policy. Preserve its accepted value; existing wire formats stay intact.
   if (schemaEntry.dataType === 'Float' && schemaEntry.minimum !== undefined) {
-    const error = constrainedFloatError(value, schemaEntry.minimum);
+    const error = constrainedFloatError(value, schemaEntry.minimum, schemaEntry.maximum, schemaEntry.integer);
     if (error) throw new Error(`${key}: ${error}`);
     return String(value);
   }
@@ -133,7 +133,7 @@ async function buildCommandForCategory(
     ? JSON.parse(await readFile(strictFilePath, 'utf8'))
     : await readCategory(schemaDatabase, category);
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Invalid saved configuration: expected an object');
-  if (strictFilePath) {
+  if (strictFilePath || (schemaDatabase === 'Character' && category === 'Camera')) {
     const validation = validateEntries(data, schemaDatabase, category);
     if (!validation.valid) throw new Error(`Invalid saved configuration in ${schemaDatabase}/${category}: ${validation.errors.map(({ key, reason }) => `${key}: ${reason}`).join('; ')}`);
     const finite = (value: unknown): boolean => typeof value === 'number' ? Number.isFinite(value)

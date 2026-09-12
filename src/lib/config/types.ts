@@ -26,6 +26,10 @@ export type ConfigEntry = DefaultMetadata & {
   default?: DefaultValue;
   /** Optional finite numeric minimum; unset preserves legacy numeric policy. */
   minimum?: number;
+  /** Optional upper bound for a Float opted into constraints via minimum. */
+  maximum?: number;
+  /** With minimum, reject fractional values before native Float rounding. */
+  integer?: boolean;
   /** Stock values differ by motion; Customize must ask for an explicit value. */
   defaultVariesByMotion?: boolean;
   /** Customize opens an unsaved numeric draft instead of seeding a default. */

@@ -17,6 +17,7 @@ import { buildRconCommands } from "@/lib/database/apply";
 import { executeAcknowledgedBatch } from "@/lib/rcon/service";
 import { writeApplyRecord } from '@/lib/database/applyRecord';
 import { validateToken } from '@/lib/auth/tokens';
+import { cameraCommandError } from '@/lib/config/cameraPolicyValidation';
 
 interface ApplyRequest {
   commands?: string[];
@@ -35,6 +36,8 @@ export async function POST(request: Request) {
       }
       // Selective apply: use provided commands
       categoryCommands = body.commands;
+      const error = cameraCommandError(categoryCommands);
+      if (error) return NextResponse.json({ success: false, error, failedAt: 'validation' }, { status: 400 });
     } else {
       // Full apply: build from config
       categoryCommands = await buildRconCommands();

@@ -8,6 +8,7 @@
 import { readFile, readdir, stat, writeFile, mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { env } from '@/lib/env';
+import { assertCameraPolicy } from '@/lib/config/cameraPolicyValidation';
 import type { ConfigData } from '@/lib/database/types';
 import type { PresetManifest, PresetInfo, PresetData, ConfigValue } from './types';
 
@@ -229,6 +230,7 @@ export async function loadPresetData(presetName: string): Promise<PresetData> {
     }
   }
 
+  assertCameraPolicy(data.character.Camera);
   return data;
 }
 
@@ -295,6 +297,7 @@ export async function saveUserPreset(
   data: PresetData
 ): Promise<void> {
   validateUserPresetName(name);
+  assertCameraPolicy(data.character.Camera);
 
   const presetPath = join(getUserPresetsPath(), name);
 
@@ -409,6 +412,7 @@ export async function loadUserPresetData(presetName: string): Promise<PresetData
     }
   }
 
+  assertCameraPolicy(data.character.Camera);
   return data;
 }
 

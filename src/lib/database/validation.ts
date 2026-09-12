@@ -214,7 +214,7 @@ export function validateConfigEntry(
 
   // Opt-in numeric limits preserve the policy of existing controls.
   if (schemaEntry.dataType === DataType.Float && schemaEntry.minimum !== undefined) {
-    const error = constrainedFloatError(value, schemaEntry.minimum);
+    const error = constrainedFloatError(value, schemaEntry.minimum, schemaEntry.maximum, schemaEntry.integer);
     if (error) return { valid: false, error };
   }
 

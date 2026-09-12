@@ -109,6 +109,8 @@ export function ConfigRow({
             onChange={onChange}
             disabled={disabled}
             min={configEntry.minimum}
+            max={configEntry.maximum}
+            integer={configEntry.integer}
           />
         );
       case DataType.Vector:

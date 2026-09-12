@@ -10,6 +10,7 @@ import { mkdir, writeFile, stat } from 'fs/promises';
 import { join } from 'path';
 import { getUserPresetsPath, validateUserPresetName, listUserPresets } from '@/lib/presets';
 import type { PresetManifest } from '@/lib/presets/types';
+import { assertCameraPolicy } from '@/lib/config/cameraPolicyValidation';
 
 /**
  * Convert a title to a safe preset folder name
@@ -165,6 +166,15 @@ export async function POST(request: NextRequest) {
       presetName = await generateUniqueName(baseName);
     }
 
+    // Validate the Camera payload before creating any preset files. Accept
+    // either path separator because extraction normalizes both to directories.
+    for (const [path, entry] of Object.entries(zip.files)) {
+      const normalized = path.replace(/\\/g, '/').split('/').filter(part => part && part !== '.').join('/').toLowerCase();
+      if (!entry.dir && normalized === 'character/camera.json') {
+        try { assertCameraPolicy(JSON.parse(await entry.async('string'))); }
+        catch (error) { return NextResponse.json({ success: false, error: (error as Error).message }, { status: 400 }); }
+      }
+    }
     const presetPath = join(getUserPresetsPath(), presetName);
 
     // Ensure user presets directory exists

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import type { PresetData } from '@/lib/presets/types';
+import { assertCameraPolicy } from '@/lib/config/cameraPolicyValidation';
 import { getSchemaForCategory, validateConfigEntry } from '@/lib/database/validation';
 
 // Config values can be various types from the schema
@@ -121,7 +122,7 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
 
   setValue: (database, category, key, value) => {
     const schema = getSchemaForCategory(database, category);
-    if (value !== null && schema?.[key]?.minimum !== undefined) {
+    if (schema && value !== null && (schema[key]?.minimum !== undefined || (database === 'Character' && category === 'Camera'))) {
       const validation = validateConfigEntry(key, value, schema);
       if (!validation.valid) {
         toast.error(`${key}: ${validation.error}`);
@@ -340,6 +341,7 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
     }),
 
   loadPreset: async (presetData) => {
+    assertCameraPolicy(presetData.character.Camera);
     const finish = beginConfigMutation();
     try {
       // Finish earlier edits before replacing the working set on disk.
