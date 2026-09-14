@@ -50,15 +50,18 @@ try {
     ParriedRecoveryTimeMax: .2,
     ExtraStrikeLockout: 0,
     ExtraStabLockout: -.25,
+    DynamicFeintWindow: true,
   };
-  const formatted = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value.toFixed(2)]));
+  const formatted = Object.fromEntries(Object.entries(values).map(([key, value]) => [key,
+    typeof value === 'number' ? value.toFixed(2) : value ? 'True' : 'False',
+  ]));
   await saveCategory('Damage', { TeamHitRecovery: true, TeamHitRecoveryExtraTime: 1.5 });
   assert(!(await readRows()).some(row => row.category === 'Recovery'));
   await saveCategory('Recovery', values);
   const rows = await readRows();
-  assert.equal(rows.length, 9);
+  assert.equal(rows.length, 10);
   const recovery = rows.filter(row => row.category === 'Recovery');
-  assert.equal(recovery.length, 7);
+  assert.equal(recovery.length, 8);
   assert(recovery.every(row => row.database === 'Character'));
   assert.deepEqual(Object.fromEntries(recovery.map(row => [row.key, row.value])), formatted);
   assert.deepEqual(await selectedRecovery(rows, Object.keys(values)), formatted);
@@ -71,10 +74,11 @@ try {
   }, 'unselected Recovery siblings and adjacent TeamHit feature keys must not reach transport');
 
   // Partial Reset preserves an independently saved maximum, zero and signed values.
-  await saveCategory('Recovery', { WorldRecoveryTime: .8, ParriedRecoveryTimeMax: 0, ExtraStabLockout: -.25 });
+  await saveCategory('Recovery', { WorldRecoveryTime: .8, ParriedRecoveryTimeMax: 0, ExtraStabLockout: -.25, DynamicFeintWindow: false });
   const resetRows = await readRows();
   assert.deepEqual(Object.fromEntries(resetRows.filter(row => row.category === 'Recovery').map(row => [row.key, row.value])), {
     WorldRecoveryTime: '0.80', ParriedRecoveryTimeMax: '0.00', ExtraStabLockout: '-0.25',
+    DynamicFeintWindow: 'False',
   });
   assert.equal(resetRows.filter(row => row.category === 'Damage').length, 2);
   const remaining = selectedReviewCommands(resetRows, new Set(resetRows.map(row => row.id)));
@@ -89,7 +93,7 @@ try {
   assert.equal((await apply(request({ commands: adjacent, wipeDatabase: true }))).status, 200);
   assert.deepEqual(sent[sent.length - 1], ['string ezconfig WipeDatabases', ...adjacent]);
   assert(sent[sent.length - 1].every(command => !command.startsWith(recoveryPrefix)));
-  console.log('PASS: seven combined Recovery keys, native signed/zero values, independent limits, selective transport and reset/wipe coexistence');
+  console.log('PASS: eight combined Recovery keys, including DynamicFeintWindow save/apply/reset, native signed/zero values, independent limits, selective transport and wipe coexistence');
 } finally {
   const target = resolve(root);
   assert(target.startsWith(parent + sep) && target.slice(parent.length + 1).startsWith('ezconfig-recovery-combined-'));

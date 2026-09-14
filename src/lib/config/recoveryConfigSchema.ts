@@ -48,14 +48,23 @@ export const RECOVERY_CONFIG_OPTIONS: ConfigEntry[] = [
   ),
   scalar(
     "ExtraStrikeLockout",
-    "Adds this many seconds to the wait before starting a strike after a feint. Higher positive values delay that strike; negative values shorten the wait. Your weapon's regular lockout and the game's late-feint adjustment still apply.",
+    "Adds this many seconds to the wait before starting a strike after a feint. Higher positive values delay that strike; negative values shorten the wait. When DynamicFeintWindow is off, your weapon's regular lockout and the game's native late-feint adjustment still apply.",
     "StrikeAndStabFeintLockout.X",
     true,
   ),
   scalar(
     "ExtraStabLockout",
-    "Adds this many seconds to the wait before starting a stab after a feint. Higher positive values delay that stab; negative values shorten the wait. Your weapon's regular lockout and the game's late-feint adjustment still apply.",
+    "Adds this many seconds to the wait before starting a stab after a feint. Higher positive values delay that stab; negative values shorten the wait. When DynamicFeintWindow is off, your weapon's regular lockout and the game's native late-feint adjustment still apply.",
     "StrikeAndStabFeintLockout.Y",
     true,
   ),
+  {
+    configKey: "DynamicFeintWindow",
+    dataType: DataType.Bool,
+    isImplemented: true,
+    isFeatureToggle: true,
+    default: false,
+    documentation:
+      "Feature toggle. When on, early on-foot weapon strike and stab feints recover longer and late feints recover sooner. Recovery is the remaining time until the cancelled attack's last legal feint, plus that weapon's FeintLockOut and the extra lockout for the next requested strike or stab; the total cannot be negative. At the legal feint cutoff, only those base and extra lockouts remain. It applies to main and alternate grips, combos and morphs: the cancelled attack supplies its own grip or morph values, and combos follow their effective legal feint cutoff. Parry timing is unchanged. The settings are captured when a feint is accepted, so updates, Reset and WipeDatabases preserve a recovery already underway. Fists, kicks and ranged attacks are excluded. Horseback and ladder behavior has not been verified. Off keeps the existing recovery behaviour.",
+  },
 ];

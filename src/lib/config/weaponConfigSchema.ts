@@ -189,7 +189,7 @@ export const WEAPON_CONFIG_OPTIONS: Record<'Attack' | 'General', ConfigEntry[]> 
       configKey: "FeintLockOut",
       dataType: DataType.Float,
       isImplemented: false,
-      documentation: "",
+      documentation: "Sets this attack's base feint lockout. When DynamicFeintWindow is enabled, an accepted on-foot weapon feint uses the cancelled attack's FeintLockOut as one component of its recovery. With DynamicFeintWindow off, stock recovery follows native rules; this setting's direct stock effect has not been verified.",
       default: 0.3,
     },
     {

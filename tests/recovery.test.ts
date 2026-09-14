@@ -4,9 +4,21 @@ import { CHARACTER_CONFIG_OPTIONS } from '../src/lib/config/characterConfigSchem
 import { DataType } from '../src/lib/config/types';
 import { validateEntries } from '../src/lib/database/validation';
 
-test('recovery controls use independent explicit motion defaults', () => {
+test('recovery scalar controls use independent explicit motion defaults and the DynamicFeintWindow toggle has a false default', () => {
   expect(RECOVERY_CONFIG_OPTIONS.find(entry => entry.configKey === 'WorldRecoveryTime')).toBeDefined();
-  for (const entry of RECOVERY_CONFIG_OPTIONS) {
+  const dynamicFeintWindow = RECOVERY_CONFIG_OPTIONS.find(entry => entry.configKey === 'DynamicFeintWindow');
+  if (!dynamicFeintWindow) throw new Error('DynamicFeintWindow must be present in Recovery');
+  expect(dynamicFeintWindow).toMatchObject({
+    dataType: DataType.Bool,
+    isFeatureToggle: true,
+    default: false,
+  });
+  expect(CHARACTER_CONFIG_OPTIONS.Recovery).toContain(dynamicFeintWindow);
+  expect(validateEntries({ DynamicFeintWindow: true }, 'Character', 'Recovery').valid).toBe(true);
+  expect(validateEntries({ DynamicFeintWindow: 1 }, 'Character', 'Recovery').valid).toBe(false);
+
+  const scalarEntries = RECOVERY_CONFIG_OPTIONS.filter(entry => entry.configKey !== 'DynamicFeintWindow');
+  for (const entry of scalarEntries) {
     expect(CHARACTER_CONFIG_OPTIONS.Recovery).toContain(entry);
     expect(entry.dataType).toBe(DataType.Float);
     expect(entry.gatedBy).toBeUndefined();
