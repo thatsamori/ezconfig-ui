@@ -2,8 +2,12 @@
 
 The UI uses a checked-in snapshot, so it needs no game connection to display defaults.
 `src/lib/config/gameDefaults.json` was extracted from the Mordhau SDK on 2026-09-08.
-It covers 170 character keys and 35 weapons, with separate General, Strike,
-AltStrike, Stab and AltStab values. `sources` records the weapon assets and the
+It covers 174 of the schema's 182 character keys and 35 weapons, with separate
+General, Strike, AltStrike, Stab and AltStab values. The other 8 character keys
+were added after the snapshot and declare `defaultValue` in their schema:
+CustomFOV, CustomFOVMax, DynamicFeintWindow, EllipseBubbleRadius,
+EllipseBubbleLength, EllipseBubbleMaxHeightDiff, ForwardParryLength and
+ForwardParryHalfWidth (counts as of 2026-10-31). `sources` records the weapon assets and the
 actual attack/parry motion classes referenced by stock runtime animation profiles.
 Unused SDK test motions are excluded.
 
@@ -27,7 +31,7 @@ To refresh in bulk (normally unnecessary):
 2. Follow the mod/SDK agent operating manual, then run `python uexec.py builders/session_start.py`
    and `python uexec.py builders/export_ui_defaults.py` in the mod repo.
 3. In the UI repo, run `bun scripts/import-game-defaults.ts <mod>/.scratch/ui-defaults/extracted.json`.
-4. Run `bun test ./tests`, `bunx tsc --noEmit`, and the mod's `python builders/check_contract.py`.
+4. Run `bun test ./tests`, `bun run typecheck`, and the mod's `python builders/check_contract.py`.
 
 The extractor is read-only: no Blueprint creation, graph edits, PIE or asset saves.
 It follows character movement aliases, transform components, attack structs and

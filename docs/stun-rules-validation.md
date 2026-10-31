@@ -15,6 +15,10 @@ local-controller chat delivery, and real Next/official-server automatic sync,
 reconnect, reload and interruption checks. Contracts are 173 Character keys in
 12 categories and 63 Weapon keys across 177 applicable routes.
 
+The counts above are a historical record of this validation pass. As of
+2026-10-31 the suite is 147 UI tests across 30 files, and the contract is
+182 Character keys in 14 categories and 65 Weapon keys.
+
 Automatic sync is opt-in through `RCON_AUTO_SYNC_ENABLED=true` on one authoritative
 long-lived UI instance; see [automatic sync](automatic-sync.md). Existing user
 environment files were not changed by this work.
