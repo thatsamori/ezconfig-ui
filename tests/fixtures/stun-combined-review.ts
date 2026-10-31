@@ -10,6 +10,8 @@ import { BATCH_PROTOCOL, encodeBatchFrame, type BatchFrame, type BatchProcessing
 // This standalone child fixture imports no instrumentation/bootstrap and mocks
 // the service before the API/store imports. No configured RCON connection opens.
 process.env.RCON_AUTO_SYNC_ENABLED = 'false';
+// Total derived from the published string schema, so adding a key does not require editing this fixture.
+const publishedCharacterKeyCount = (await readFile(join(import.meta.dir, '..', '..', 'string-schemas', 'characterConfigSchema.txt'), 'utf8')).trim().split(/\s+/).length;
 const parent = resolve(tmpdir());
 const root = await mkdtemp(join(parent, 'ezconfig-stun-combined-'));
 process.env.DATABASES_PATH = root;
@@ -57,7 +59,7 @@ try {
   const { CHARACTER_CONFIG_OPTIONS } = await import('../../src/lib/config/characterConfigSchema');
   const keys = Object.values(CHARACTER_CONFIG_OPTIONS).flat().map((entry) => entry.configKey);
   assert(required.every((key) => keys.includes(key)), 'Ticket03 must register all three new keys before this integration fixture runs');
-  assert.equal(keys.length, 181);
+  assert.equal(keys.length, publishedCharacterKeyCount);
   const { POST: save, GET: read } = await import('../../src/app/api/config/[...path]/route');
   const { GET: preview } = await import('../../src/app/api/apply/preview/route');
   const { POST: apply } = await import('../../src/app/api/apply/route');

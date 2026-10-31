@@ -2,10 +2,14 @@ import { successfulProcessingFixture } from './acknowledged-transport';
 // Final integrated Movement boundary: real store/handlers, temporary persistence, mocked RCON only.
 import { mock } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 
+// Totals derived from the published string schemas, so adding a key does not require editing this fixture.
+const publishedKeyCount = async (file: string) => (await readFile(join(import.meta.dir, '..', '..', 'string-schemas', file), 'utf8')).trim().split(/\s+/).length;
+const publishedCharacterKeyCount = await publishedKeyCount('characterConfigSchema.txt');
+const publishedWeaponKeyCount = await publishedKeyCount('weaponConfigSchema.txt');
 const parent = resolve(tmpdir());
 const root = await mkdtemp(join(parent, 'ezconfig-movement-combined-'));
 process.env.DATABASES_PATH = root;
@@ -28,8 +32,9 @@ try {
   assert.equal(CHARACTER_CONFIG_OPTIONS.Movement.length, 25);
   assert.equal(Object.keys(CHARACTER_CONFIG_OPTIONS).length, 14);
   const characterEntries = Object.values(CHARACTER_CONFIG_OPTIONS).flat();
-  assert.equal(characterEntries.length, 178 + STUN_CONFIG_OPTIONS.length);
-  assert.equal(Object.values(WEAPON_CONFIG_OPTIONS).flat().length, 63);
+  assert.equal(characterEntries.length, publishedCharacterKeyCount);
+  assert(STUN_CONFIG_OPTIONS.every(stun => characterEntries.some(entry => entry.configKey === stun.configKey)));
+  assert.equal(Object.values(WEAPON_CONFIG_OPTIONS).flat().length, publishedWeaponKeyCount);
   assert.equal(new Set(characterEntries.map(entry => entry.configKey)).size, characterEntries.length);
   globalThis.fetch = (async (url: string, init: RequestInit) => {
     assert(url.startsWith('/api/config/'));
