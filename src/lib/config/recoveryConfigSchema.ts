@@ -64,6 +64,7 @@ export const RECOVERY_CONFIG_OPTIONS: ConfigEntry[] = [
     isImplemented: true,
     isFeatureToggle: true,
     default: false,
+    defaultValue: false,
     documentation:
       "Feature toggle. When on, early on-foot weapon strike and stab feints recover longer and late feints recover sooner. Recovery is the remaining time until the cancelled attack's last legal feint, plus that weapon's FeintLockOut and the extra lockout for the next requested strike or stab; the total cannot be negative. At the legal feint cutoff, only those base and extra lockouts remain. It applies to main and alternate grips, combos and morphs: the cancelled attack supplies its own grip or morph values, and combos follow their effective legal feint cutoff. Parry timing is unchanged. The settings are captured when a feint is accepted, so updates, Reset and WipeDatabases preserve a recovery already underway. Fists, kicks and ranged attacks are excluded. Horseback and ladder behavior has not been verified. Off keeps the existing recovery behaviour.",
   },
