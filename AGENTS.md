@@ -13,9 +13,10 @@ are the contract between this app and the mod.
 3. The mod ticket for your feature: `<mod>/.scratch/<feature>/` (spec, tickets).
 
 ## Commands
+`bun` must be on PATH: some tests spawn `bun` as a child process.
 - `bun install` - dependencies (`bun.lock` is the only lockfile).
 - `bun test ./tests` - full suite. Run as `bun --no-env-file test ./tests` with
-  `DATABASES_PATH`/`PRESETS_PATH`/`NOTES_PATH` pointing at temp dirs and
+  `DATABASES_PATH`/`PRESETS_PATH`/`NOTES_PATH`/`USERS_PATH` pointing at temp dirs and
   `RCON_HOST=127.0.0.1`, so no real data or server is touched.
 - `bun run typecheck` - `tsc --noEmit`.
 - `bun run lint` - ESLint flat config (`eslint.config.mjs`, eslint-config-next).
@@ -40,10 +41,16 @@ are the contract between this app and the mod.
 1. Add the entry to the right schema in `src/lib/config/`.
 2. Give it a default: `defaultValue` in the schema, or a `gameDefaults.json` entry.
 3. Regenerate: `cd string-schemas && bun run generateStringSchemas.ts`.
-4. Copy `characterConfigSchema.txt` to the mod's `builders/character_config_keys.txt`
-   (and `weaponConfigSchema.txt` to `builders/weapon_config_keys.txt`).
-5. Run the mod's `python builders/check_contract.py --webapp <this repo>`.
-6. Fixtures derive totals from the string schemas; update only per-category counts.
+4. Copy `characterConfigSchema.txt` to the mod's `builders/character_config_keys.txt`;
+   for weapon keys copy `weaponConfigSchema.txt` to `builders/weapon_config_keys.txt`.
+5. Mod side: rebuild and save the key/apply graphs in the editor (character:
+   `build_character_keys.py` then `build_character_apply.py`; weapon: see the
+   mod `AGENTS.md` "Adding or changing a config key"). The contract checks read
+   the saved Blueprints, so they fail until this is done.
+6. Run the mod's `python builders/check_contract.py --webapp <this repo>` and
+   `python builders/check_weapon_contract.py` (weapon check reads this repo from
+   a fixed path, `C:\Users\chris\projects\ezconfig-ui`).
+7. Fixtures derive totals from the string schemas; update only per-category counts.
 Key names never change once published. A rename is a new key plus deprecation
 of the old one, coordinated with the mod.
 
@@ -56,6 +63,9 @@ of the old one, coordinated with the mod.
 ## Data and secrets
 `Databases/`, `Presets/User/`, `Notes/`, `users.json`, `.env*` (except
 `.env.example`) are gitignored user data. Never print, commit or overwrite them.
+Locations come from `DATABASES_PATH`, `PRESETS_PATH`, `NOTES_PATH` and
+`USERS_PATH` (defaults `./Databases`, `./Presets`, `./Notes`, `./users.json`;
+see `src/lib/env.ts`).
 
 ## Tracking
 The mod's `.scratch/<feature>/` is canonical for specs, tickets and status. This
@@ -74,7 +84,8 @@ Pending decision: removing the temporary parry-geometry startup migration hook.
 
 ## Hand-off checklist
 - `bun run typecheck` and the full test suite pass; lint count not increased.
-- New keys: string schemas regenerated, mod key lists copied, check_contract passes.
+- New keys: string schemas regenerated, mod key lists copied and graphs rebuilt,
+  check_contract and check_weapon_contract pass.
 - Mod ticket updated; evidence in `.scratch/<feature>-ui/` if RCON was captured.
 - Small commits, explicit paths; never commit user data or secrets; never push.
 
