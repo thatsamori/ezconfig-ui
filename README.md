@@ -49,9 +49,27 @@ SpawnServerActorsOnMapLoad=/EZConfig/BP_EZConfigB.BP_EZConfigB_C
 The RCON port is TCP and separate from the game port — make sure it's open in
 the server's firewall.
 
----
+## Development
 
-This project was created using `bun init` in bun v1.3.2. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+| Command | Purpose |
+| --- | --- |
+| `bun run dev` | Next dev server (connects to the RCON server in `.env`) |
+| `bun test ./tests` | Test suite (RCON and disk writes are mocked) |
+| `bun run typecheck` | TypeScript check (`tsc --noEmit`) |
+| `bun run lint` | ESLint (`eslint.config.mjs`) |
+| `bun run init-db` | Create the empty `Databases/` structure |
+
+Contributors and coding agents should read [AGENTS.md](AGENTS.md) first.
+
+### Cross-repo contract
+
+Config key names and types are the contract with the EZConfig mod
+(`C:\Program Files\Epic Games\MORDHAUEditor\Mordhau\Mods\EZConfig`). The
+generated `string-schemas/*.txt` files must match the mod's
+`builders/character_config_keys.txt` and `builders/weapon_config_keys.txt`;
+the mod's `builders/check_contract.py --webapp <this repo>` verifies the
+character keys and categories. Published key names never change; see
+AGENTS.md for the add-a-key procedure.
 
 ## Sidebar console
 
