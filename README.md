@@ -55,7 +55,7 @@ This project was created using `bun init` in bun v1.3.2. [Bun](https://bun.com) 
 
 ## Sidebar console
 
-The UI follows `design_handoff_ezconfig_redesign/README.md`: choose a weapon or character group in the sidebar, then compare attack types as columns. General has its own keys. Untouched values show verified SDK defaults or documented motion variants; they remain unset overrides until edited. Numeric overrides start with an empty input.
+The UI follows [`docs/design/redesign-handoff/README.md`](docs/design/redesign-handoff/README.md): choose a weapon or character group in the sidebar, then compare attack types as columns. General has its own keys. Untouched values show verified SDK defaults or documented motion variants; they remain unset overrides until edited. Numeric overrides start with an empty input.
 
 Edits are saved to the web app's database. **All weapons →** opens Sweep for Set, Multiply, or Add, with a per-weapon preview. Relative operations skip weapons with missing values in any selected attack type unless you provide a base. **Review & apply** lets you select individual keys and groups before sending commands over RCON. Unselected overrides remain saved in the web app. With wipe enabled, previous mod settings are cleared before the selected commands are sent.
 
