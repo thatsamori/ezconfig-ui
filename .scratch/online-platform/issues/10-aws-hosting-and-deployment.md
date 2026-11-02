@@ -8,11 +8,11 @@ Parent: [Map: EZConfig online platform](../map.md)
 
 ## Question
 
-Pick the AWS compute, database and cache services, region, backups and a
-restore check, secrets handling, domain and TLS, and how a change gets
-deployed. Compute must fit whether the platform holds long-lived connections
-to game servers. Confirm or revise the ~$25/month soft ceiling against the
-priced setups.
+Pick the AWS compute (the database is settled as one SQLite file, no
+cache), region, backups and a restore check, secrets handling, domain and
+TLS, and how a change gets deployed. Compute must fit whether the platform
+holds long-lived connections to game servers. Confirm or revise the
+~$25/month soft ceiling against the priced setups.
 
 ## Context
 
@@ -21,4 +21,13 @@ priced setups.
 - [Where does each entity get stored?](07-entity-storage.md)
 - [How do Ruleset versions stay usable as the key contract changes?](06-ruleset-versions-and-key-contract.md):
   the Supported build is a runtime setting the operator changes without a
-  deploy. Decide where it lives.
+  deploy. Settled by
+  [Where does each entity get stored?](07-entity-storage.md): a stored platform
+  setting.
+- From [Where does each entity get stored?](07-entity-storage.md): all data is
+  one SQLite file at `DATABASE_PATH`, with no Redis and no database server.
+  Decide how that file is backed up and restored (for example continuous
+  copying to S3, or nightly consistent copies), how schema changes run on
+  deploy, and whether the app runs on Node or Bun: tests run on Bun, which
+  cannot load `node:sqlite`, so the SQLite driver follows that choice.
+  Earlier Live configurations are kept, worst case about 2 GB a year.

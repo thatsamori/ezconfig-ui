@@ -112,3 +112,11 @@ while V1 is invite-only.
 - [How are owners, servers and secrets trusted?](09-trust-owners-servers-secrets.md):
   the operator role.
 - The one-time import gains the owner's existing Notes.
+
+## Comments
+
+- 2026-11-02, [Where does each entity get stored?](07-entity-storage.md)
+  revises "a newly registered game server starts ... running game defaults":
+  its Draft starts empty, but it has no Live configuration until its first
+  Apply and keeps its saved snapshot meanwhile, so its first poll wipes
+  nothing.

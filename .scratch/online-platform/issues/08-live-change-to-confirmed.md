@@ -37,3 +37,9 @@ until the game server confirms it, decide:
   restarts onto the new pak. Decide what the owner sees meanwhile, and whether
   the Live configuration is re-delivered once the server reports the
   Supported build (today every map start asks for a full re-sync).
+- From [Where does each entity get stored?](07-entity-storage.md): the Draft
+  carries a revision raised on every save, for the stale-save check. A game
+  server has no Live configuration until its first Apply and keeps its saved
+  snapshot meanwhile, so the first Apply's review cannot know what the server
+  holds. A reported id the platform does not know counts as differing. The
+  game server keeps only the last reported result.

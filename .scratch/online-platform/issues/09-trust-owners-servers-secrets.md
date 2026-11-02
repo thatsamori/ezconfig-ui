@@ -22,3 +22,12 @@ Decide:
   ([How does a server's live configuration relate to Rulesets?](04-live-configuration-and-rulesets.md)),
   and changing the Supported build
   ([How do Ruleset versions stay usable as the key contract changes?](06-ruleset-versions-and-key-contract.md)).
+
+## Context
+
+- From [Where does each entity get stored?](07-entity-storage.md): one SQLite
+  file holds users (identified by Discord user id, username and avatar copied
+  at each login), server-side sessions and each game server's key. Decide the
+  stored form of the Game server key and of session tokens, and what the
+  invite gate stores. The Supported build is a stored platform setting the
+  operator changes from the platform.

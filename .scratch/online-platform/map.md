@@ -80,6 +80,11 @@ ready to slice into implementation tickets. This map builds nothing.
   are free; values for keys that no longer exist are dropped on load; versions
   are never rewritten. The platform sends nothing to a game server unless it
   runs the one Supported build, a stamp the operator sets without a deploy.
+- [Where does each entity get stored?](issues/07-entity-storage.md):
+  one SQLite file for everything, no Redis or DynamoDB. Each configuration is
+  one JSON document of overrides. Every Live configuration is kept, with a
+  random id, and a game server has none until its first Apply. The Supported
+  build is a stored setting.
 
 ## Not yet specified
 
@@ -91,11 +96,8 @@ ready to slice into implementation tickets. This map builds nothing.
 - Making the webapp per-server: the environment-wide RCON service and the
   automatic-sync owner lock give way to per-server delivery, and background
   delivery may need to run outside the Next process.
-- The one-time import of the owner's existing `Databases/`, user Presets and
-  Notes (and whom imported notes are attributed to), once storage is decided.
-  It reads values by the load rules in
-  [How do Ruleset versions stay usable as the key contract changes?](issues/06-ruleset-versions-and-key-contract.md).
-- Change history, logs and what the owner can see about past applies.
+- Logs: what the platform records about polls, deliveries and errors, and who
+  can read them.
 
 ## Out of scope
 
