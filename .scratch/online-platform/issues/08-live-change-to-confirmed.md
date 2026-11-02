@@ -8,7 +8,7 @@ Parent: [Map: EZConfig online platform](../map.md)
 
 ## Question
 
-From the moment a change becomes live (on Apply or on edit, per
+From the moment a change becomes live (on Apply, per
 [How does a server's live configuration relate to Rulesets?](04-live-configuration-and-rulesets.md))
 until the game server confirms it, decide:
 
@@ -25,3 +25,9 @@ until the game server confirms it, decide:
   update (mod `docs/server-persistence.md`).
 - Today's rule for uncertain results: never replay automatically (`docs/server-processing-results.md`).
 - Today's stale-save check: `src/lib/database/revision.ts`.
+- From [How does a server's live configuration relate to Rulesets?](04-live-configuration-and-rulesets.md):
+  a change becomes live only on Apply, which sends the whole Draft after a
+  review that includes reset-to-default rows. The Draft auto-saves, so the
+  stale-save check runs on every auto-save, and two tabs on one Draft will
+  meet it often. A Live configuration is Pending until confirmed, then
+  Confirmed ([CONTEXT.md](../../../CONTEXT.md)).

@@ -42,10 +42,6 @@ ready to slice into implementation tickets. This map builds nothing.
   - Storage is chosen on fit; learning a technology is not a requirement.
   - A stale save is rejected; no live collaborative editing.
   - The owner's own self-hosted data gets a one-time import.
-- Standing preference: the owner is learning system design through this
-  platform. Work grilling tickets as a design review: the owner proposes, the
-  agent challenges with back-of-envelope numbers and facts from the mod and
-  webapp. Don't hand over finished designs.
 - Skills: grilling tickets call `grilling` and `domain-modeling`; research
   tickets call `research`. Research tickets never run the editor, `uexec.py`,
   the harness or builders.
@@ -73,6 +69,12 @@ ready to slice into implementation tickets. This map builds nothing.
   one Lightsail box running app, Postgres and Valkey is about $12/month and
   holds RCON; EC2 plus DynamoDB about $12; Lambda plus DynamoDB $4 to $11 but
   only if servers poll. Managed Postgres (RDS) alone pushes past $25.
+- [How does a server's live configuration relate to Rulesets?](issues/04-live-configuration-and-rulesets.md):
+  each game server has an auto-saved Draft, and an explicit Apply (after a
+  review) makes the whole Draft its Live configuration, Pending until the
+  server confirms it. Ruleset versions are copied into a Draft and saved out
+  of one, never referenced, and both configurations remember their origin
+  version. Notes are global comments per config key.
 
 ## Not yet specified
 
@@ -84,8 +86,9 @@ ready to slice into implementation tickets. This map builds nothing.
 - Making the webapp per-server: the environment-wide RCON service and the
   automatic-sync owner lock give way to per-server delivery, and background
   delivery may need to run outside the Next process.
-- The one-time import of the owner's existing `Databases/` and user Presets,
-  once storage and key-contract handling are decided.
+- The one-time import of the owner's existing `Databases/`, user Presets and
+  Notes (and whom imported notes are attributed to), once storage and
+  key-contract handling are decided.
 - Change history, logs and what the owner can see about past applies.
 
 ## Out of scope

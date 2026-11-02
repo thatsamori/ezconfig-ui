@@ -8,8 +8,8 @@ Parent: [Map: EZConfig online platform](../map.md)
 
 ## Question
 
-Choose storage for User and sessions, GameServer, Ruleset, Ruleset version and
-the live configuration, and sketch their schemas.
+Choose storage for User and sessions, GameServer, Ruleset, Ruleset version,
+Draft, Live configuration and Note, and sketch their schemas.
 
 ## Context
 
@@ -35,3 +35,10 @@ Points raised while charting, to answer or overturn:
 - Counterpoint: on AWS, DynamoDB on-demand may cost cents while managed
   Postgres is likely the biggest monthly line
   ([What does each candidate AWS setup cost per month at V1 scale?](03-aws-stack-costs.md)).
+- From [How does a server's live configuration relate to Rulesets?](04-live-configuration-and-rulesets.md):
+  each game server has a Draft and a Live configuration, each pointing at an
+  origin Ruleset version. The Draft auto-saves while the owner edits, so it
+  takes frequent small writes. Ruleset versions are numbered, immutable and
+  carry an optional description; deleting a Ruleset deletes its versions and
+  clears origins that pointed into it. Notes are global: per config key, with
+  an author, shared by every owner.

@@ -26,3 +26,9 @@ are added, deprecated and sometimes moved between categories. Decide:
   Immutable versions cannot be rewritten in place.
 - Key names never change once published; a rename is a new key plus
   deprecation (mod `AGENTS.md`, "Adding or changing a config key").
+- From [How does a server's live configuration relate to Rulesets?](04-live-configuration-and-rulesets.md):
+  a Draft and a Live configuration each show whether they are modified from
+  their origin Ruleset version, by comparing values. That comparison has to
+  hold when the origin was written for an older key contract. Loading copies
+  a version into a Draft, so the Draft can be migrated without touching the
+  version.
