@@ -10,6 +10,8 @@ are the contract between this app and the mod.
 1. This file.
 2. The mod's `AGENTS.md`, `CONTEXT.md` and `STATUS.md` at
    `C:\Program Files\Epic Games\MORDHAUEditor\Mordhau\Mods\EZConfig`.
+   For online-platform work, also this repo's `CONTEXT.md` and
+   `.scratch/online-platform/map.md`.
 3. The mod ticket for your feature: `<mod>/.scratch/<feature>/` (spec, tickets).
 
 ## Commands
@@ -68,8 +70,15 @@ Locations come from `DATABASES_PATH`, `PRESETS_PATH`, `NOTES_PATH` and
 see `src/lib/env.ts`).
 
 ## Tracking
-The mod's `.scratch/<feature>/` is canonical for specs, tickets and status. This
-repo's `.scratch/<feature>-ui/` holds UI harnesses and captured-RCON evidence only.
+- Mod features: the mod's `.scratch/<feature>/` is canonical for specs, tickets
+  and status. This repo's `.scratch/<feature>-ui/` holds UI harnesses and
+  captured-RCON evidence only.
+- Online platform: this repo's `.scratch/online-platform/` is canonical (a
+  wayfinder map with tickets and research). Platform terms are in this repo's
+  `CONTEXT.md`.
+- Both follow the mod's tracker conventions, with paths relative to the repo
+  holding the work: `docs/agents/issue-tracker.md` (including Wayfinding
+  operations) and `docs/agents/triage-labels.md` in the mod repo.
 
 ## Docs index
 - `docs/automatic-sync.md` - startup/reconnect/reload responder: ownership, deployment, failures.

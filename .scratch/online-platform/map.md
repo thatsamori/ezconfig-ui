@@ -1,0 +1,103 @@
+# Map: EZConfig online platform
+
+Status: open
+Type: wayfinder map
+Created: 2026-11-01
+
+## Destination
+
+A handoff-ready V1 spec at `.scratch/online-platform/spec.md` for a hosted,
+invite-only platform where a server owner signs in with Discord, registers their
+game servers, edits each server's live EZConfig configuration and keeps
+versioned Rulesets. Every decision the build depends on is made; the spec is
+ready to slice into implementation tickets. This map builds nothing.
+
+## Notes
+
+- Domain: this repo (`ezconfig-ui`) becomes the hosted multi-tenant platform
+  in place, plus whatever mod changes the chosen communication path needs.
+  Platform glossary: [CONTEXT.md](../../CONTEXT.md); config-contract terms are
+  in the mod's `CONTEXT.md`.
+- Where things live: this map moved here from the mod repo on 2026-11-01
+  (mod commit `cd634c6`). Paths written as "mod `...`" are in the EZConfig mod
+  repo (`C:\Program Files\Epic Games\MORDHAUEditor\Mordhau\Mods\EZConfig`);
+  other paths are in this repo. Editor work for a ticket runs in the mod repo
+  and keeps its evidence in mod `.scratch/online-platform/`.
+- Requirements fixed while charting (2026-11-01):
+  - Invite-only V1; data is still kept per account from day one.
+  - Owner-only: one Discord account owns a game server; nobody else edits it.
+  - EZConfig only. Its key set keeps growing as the mod gains features.
+  - Hosted only. The self-hosted mode (`.env` RCON target, `users.json`,
+    `Databases/` files) goes away.
+  - Game servers run on rented hosting: control panel, FTP and RCON, no helper
+    process beside the game.
+  - Discord is the only login; sessions are stored server-side.
+  - AWS (the owner's account). About $25/month is a soft ceiling, confirmed in
+    the hosting ticket.
+  - One instance plus backups, no high availability. While the platform is
+    down, servers keep their last applied values (the mod's saved snapshot
+    already survives map changes and restarts).
+  - A change reaches a connected server within about 5 s of becoming live.
+  - V1 may require a minimum EZConfig build.
+  - Storage is chosen on fit; learning a technology is not a requirement.
+  - A stale save is rejected; no live collaborative editing.
+  - The owner's own self-hosted data gets a one-time import.
+- Standing preference: the owner is learning system design through this
+  platform. Work grilling tickets as a design review: the owner proposes, the
+  agent challenges with back-of-envelope numbers and facts from the mod and
+  webapp. Don't hand over finished designs.
+- Skills: grilling tickets call `grilling` and `domain-modeling`; research
+  tickets call `research`. Research tickets never run the editor, `uexec.py`,
+  the harness or builders.
+- Research findings live in [research/](research/), linked from each ticket.
+  No research branches are pushed: both repos have unpushed history.
+- When no tickets remain, assemble `spec.md` from the resolved tickets.
+
+## Decisions so far
+
+<!-- one line per resolved ticket: [title](issues/NN-slug.md): gist -->
+
+- [Can a server mod built only from Blueprints make outbound HTTP requests?](issues/01-blueprint-outbound-http.md):
+  yes, through Mordhau's own "Mordhau Http Request" node (JSON in and out),
+  compiled into both shipping dedicated servers. It only works when the owner
+  sets `bAllowHttpRequests=True` in Game.ini. Found in the binaries, not yet
+  run; proving it is
+  [Does the Mordhau Http Request node work on a cooked dedicated server?](issues/11-prove-mordhau-http-request.md).
+
+- [Can a hosted platform use Mordhau RCON, and what do rented Mordhau hosts expose?](issues/02-rcon-and-rented-hosts.md):
+  RCON reaches rented servers across the internet, but it is plaintext, full
+  admin and cannot be limited by IP. One connection stays alive with `alive`
+  inside 120 s, and `listen` toggles. Packets are capped at 4 KB by default.
+  Owners can edit Game.ini and add mod.io mods; no host runs extra processes.
+- [What does each candidate AWS setup cost per month at V1 scale?](issues/03-aws-stack-costs.md):
+  one Lightsail box running app, Postgres and Valkey is about $12/month and
+  holds RCON; EC2 plus DynamoDB about $12; Lambda plus DynamoDB $4 to $11 but
+  only if servers poll. Managed Postgres (RDS) alone pushes past $25.
+
+## Not yet specified
+
+- Mod changes the chosen communication path needs: reporting its build and key
+  contract, authenticating to the platform, perhaps polling through the
+  Mordhau Http Request node. Graduates
+  once [How do the platform and a game server talk?](issues/05-platform-game-server-communication.md)
+  resolves.
+- Making the webapp per-server: the environment-wide RCON service and the
+  automatic-sync owner lock give way to per-server delivery, and background
+  delivery may need to run outside the Next process.
+- The one-time import of the owner's existing `Databases/` and user Presets,
+  once storage and key-contract handling are decided.
+- Change history, logs and what the owner can see about past applies.
+
+## Out of scope
+
+- Co-admins and roles: V1 is owner-only so there are no permissions to manage.
+- Sharing Rulesets (public library, share links, forking): Rulesets are private
+  in V1.
+- Live collaborative editing: stale saves are rejected instead.
+- Reading values back from a game server: the platform stays the source of
+  truth.
+- Configs for mods other than EZConfig.
+- Self-hosted single-server mode: hosted only.
+- High availability: one instance plus backups.
+- Public sign-up, billing and abuse handling: invite-only V1.
+- Importing other owners' self-hosted data.
