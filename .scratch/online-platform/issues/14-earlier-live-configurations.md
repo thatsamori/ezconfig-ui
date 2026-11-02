@@ -32,3 +32,8 @@ anything:
 - [How does a server's live configuration relate to Rulesets?](04-live-configuration-and-rulesets.md):
   loading a Ruleset version replaces the whole Draft and copying between
   servers goes only through a version.
+- From [What happens between a live change and the server confirming it?](08-live-change-to-confirmed.md):
+  Pending, Confirmed and Failed are computed from the game server's last
+  reported id and result, so only the current Live configuration has a state;
+  an outcome for earlier ones needs more storage. A no-change Apply makes a
+  Live configuration identical to the one before it (the owner's re-send).

@@ -42,6 +42,12 @@ ready to slice into implementation tickets. This map builds nothing.
   - Storage is chosen on fit; learning a technology is not a requirement.
   - A stale save is rejected; no live collaborative editing.
   - The owner's own self-hosted data gets a one-time import.
+- Open source (2026-11-02, while resolving
+  [How do the platform and a game server talk?](issues/05-platform-game-server-communication.md)):
+  the platform's core will be open source. V1 is still the one instance the
+  owner runs. Other instances are possible but unsupported: nothing is built
+  for them beyond the mod's Game.ini platform URL. The repo holds no
+  instance's secrets or settings.
 - Skills: grilling tickets call `grilling` and `domain-modeling`; research
   tickets call `research`. Research tickets never run the editor, `uexec.py`,
   the harness or builders.
@@ -80,22 +86,32 @@ ready to slice into implementation tickets. This map builds nothing.
   are free; values for keys that no longer exist are dropped on load; versions
   are never rewritten. The platform sends nothing to a game server unless it
   runs the one Supported build, a stamp the operator sets without a deploy.
+- [Does the Mordhau Http Request node work on a cooked dedicated server?](issues/11-prove-mordhau-http-request.md):
+  yes on the Windows server, but only with POST (a GET never sends the body
+  it declares). Failures end in a callback without crashing and frame time is
+  flat. A request can be held open for up to 180 s, so long polling works.
+  Only a node's newest request survives GC, so the mod keeps one in flight.
+  Linux was not run.
+- [How do the platform and a game server talk?](issues/05-platform-game-server-communication.md):
+  the mod long-polls the platform over HTTPS POST with a per-server Game
+  server key; the platform never uses RCON. Each poll reports the build stamp
+  and the last processed configuration, and gets the whole Live configuration
+  only when it differs. Processing stays today's batch; the next poll's result
+  confirms it. The URL is built in and overridable in Game.ini.
 - [Where does each entity get stored?](issues/07-entity-storage.md):
   one SQLite file for everything, no Redis or DynamoDB. Each configuration is
   one JSON document of overrides. Every Live configuration is kept, with a
   random id, and a game server has none until its first Apply. The Supported
   build is a stored setting.
+- [What happens between a live change and the server confirming it?](issues/08-live-change-to-confirmed.md):
+  a Live configuration is Pending, then Confirmed or Failed, computed from the
+  server's last report. Apply needs the server Connected on the Supported
+  build, and a no-change Apply re-sends. An interrupted delivery or a build
+  change gets the whole configuration again. Every Draft write and Apply
+  carries the revision it saw, and a stale one is rejected.
 
 ## Not yet specified
 
-- Mod changes the chosen communication path needs: reporting its build stamp,
-  authenticating to the platform, perhaps polling through the
-  Mordhau Http Request node. Graduates
-  once [How do the platform and a game server talk?](issues/05-platform-game-server-communication.md)
-  resolves.
-- Making the webapp per-server: the environment-wide RCON service and the
-  automatic-sync owner lock give way to per-server delivery, and background
-  delivery may need to run outside the Next process.
 - Logs: what the platform records about polls, deliveries and errors, and who
   can read them.
 
@@ -115,3 +131,6 @@ ready to slice into implementation tickets. This map builds nothing.
 - Key contracts (numbered contracts, migrating Ruleset versions, handling each
   game server's contract): one Supported build instead, ruled out while
   resolving [How do Ruleset versions stay usable as the key contract changes?](issues/06-ruleset-versions-and-key-contract.md).
+- Alerts outside the platform (Discord DM, email) about game server states:
+  the platform's pages and the in-game delivery message cover V1, ruled out
+  while resolving [What happens between a live change and the server confirming it?](issues/08-live-change-to-confirmed.md).

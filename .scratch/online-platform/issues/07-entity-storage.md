@@ -45,6 +45,11 @@ Points raised while charting, to answer or overturn:
   carry an optional description; deleting a Ruleset deletes its versions and
   clears origins that pointed into it. Notes are global: per config key, with
   an author, shared by every owner.
+- From [How do the platform and a game server talk?](05-platform-game-server-communication.md):
+  a GameServer holds name, owner, Game server key, last reported build stamp,
+  last poll time, and the id of the Live configuration it last reported
+  processing, with that result; no RCON fields. Each Live configuration has an
+  id that polls compare. Connection status is computed, never stored.
 
 ## Answer
 

@@ -13,10 +13,26 @@ feature, command batch) are defined in the mod's `CONTEXT.md`
 A Mordhau dedicated server that a server owner has registered on the platform.
 _Avoid_: server (alone), instance, host
 
+**Game server key**:
+The secret a game server presents to the platform to receive its Live
+configuration and report processing it. One per game server.
+_Avoid_: client key, API key, token, RCON password
+
+**Connected**:
+A game server that is waiting on the platform for its Live configuration, or
+was within the last few seconds. A change reaches only connected game servers
+within about 5 s.
+_Avoid_: online, live, up
+
 **Draft**:
 A game server's auto-saved working configuration: the Character and Weapon
 config values its owner is editing, which have not gone live.
 _Avoid_: staged config, working copy, pending changes
+
+**Unapplied changes**:
+A Draft whose values differ from its game server's Live configuration. Not the
+same as modified, which compares a configuration with its origin.
+_Avoid_: pending changes, unsaved changes
 
 **Live configuration**:
 The configuration last applied to a game server, which the platform treats as
@@ -29,11 +45,16 @@ where one EZ instance writes its config values onto itself.
 _Avoid_: push, deploy, publish, sync
 
 **Confirmed**:
-A Live configuration the game server has acknowledged processing.
+A Live configuration the game server has reported processing successfully.
 _Avoid_: delivered, synced
 
+**Failed**:
+A Live configuration whose processing on the game server stopped at a failed
+command, so the server runs only the part before it.
+_Avoid_: rejected, incomplete, error
+
 **Pending**:
-A Live configuration the game server has not yet confirmed.
+A Live configuration the game server has not yet reported processing.
 _Avoid_: queued, unsynced
 
 **Supported build**:
