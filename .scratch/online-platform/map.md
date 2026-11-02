@@ -75,11 +75,16 @@ ready to slice into implementation tickets. This map builds nothing.
   server confirms it. Ruleset versions are copied into a Draft and saved out
   of one, never referenced, and both configurations remember their origin
   version. Notes are global comments per config key.
+- [How do Ruleset versions stay usable as the key contract changes?](issues/06-ruleset-versions-and-key-contract.md):
+  without a key contract. Values are matched by key name, so category moves
+  are free; values for keys that no longer exist are dropped on load; versions
+  are never rewritten. The platform sends nothing to a game server unless it
+  runs the one Supported build, a stamp the operator sets without a deploy.
 
 ## Not yet specified
 
-- Mod changes the chosen communication path needs: reporting its build and key
-  contract, authenticating to the platform, perhaps polling through the
+- Mod changes the chosen communication path needs: reporting its build stamp,
+  authenticating to the platform, perhaps polling through the
   Mordhau Http Request node. Graduates
   once [How do the platform and a game server talk?](issues/05-platform-game-server-communication.md)
   resolves.
@@ -87,8 +92,9 @@ ready to slice into implementation tickets. This map builds nothing.
   automatic-sync owner lock give way to per-server delivery, and background
   delivery may need to run outside the Next process.
 - The one-time import of the owner's existing `Databases/`, user Presets and
-  Notes (and whom imported notes are attributed to), once storage and
-  key-contract handling are decided.
+  Notes (and whom imported notes are attributed to), once storage is decided.
+  It reads values by the load rules in
+  [How do Ruleset versions stay usable as the key contract changes?](issues/06-ruleset-versions-and-key-contract.md).
 - Change history, logs and what the owner can see about past applies.
 
 ## Out of scope
@@ -104,3 +110,6 @@ ready to slice into implementation tickets. This map builds nothing.
 - High availability: one instance plus backups.
 - Public sign-up, billing and abuse handling: invite-only V1.
 - Importing other owners' self-hosted data.
+- Key contracts (numbered contracts, migrating Ruleset versions, handling each
+  game server's contract): one Supported build instead, ruled out while
+  resolving [How do Ruleset versions stay usable as the key contract changes?](issues/06-ruleset-versions-and-key-contract.md).

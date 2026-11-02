@@ -36,6 +36,11 @@ _Avoid_: delivered, synced
 A Live configuration the game server has not yet confirmed.
 _Avoid_: queued, unsynced
 
+**Supported build**:
+The one EZConfig build, named by its build stamp, that the platform sends
+configuration to. Set by the platform operator.
+_Avoid_: expected version, compatible version, minimum build
+
 ### Rulesets
 
 **Ruleset**:
@@ -45,7 +50,7 @@ _Avoid_: mod, preset, profile
 
 **Ruleset version**:
 One immutable, numbered set of Character and Weapon config values within a
-Ruleset, recorded against the key contract it was written for.
+Ruleset.
 _Avoid_: mod version, snapshot, revision
 
 **Origin**:

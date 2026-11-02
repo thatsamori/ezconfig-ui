@@ -19,4 +19,6 @@ Decide:
 - How stored RCON passwords, if RCON stays, are protected at rest on AWS.
 - Who the platform operator is and what they may do. V1 needs at least
   deleting any Note, since Notes are shared by every owner
-  ([How does a server's live configuration relate to Rulesets?](04-live-configuration-and-rulesets.md)).
+  ([How does a server's live configuration relate to Rulesets?](04-live-configuration-and-rulesets.md)),
+  and changing the Supported build
+  ([How do Ruleset versions stay usable as the key contract changes?](06-ruleset-versions-and-key-contract.md)).

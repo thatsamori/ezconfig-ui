@@ -38,3 +38,7 @@ helper process beside the game, decide:
 - Hosted RCON means every customer server exposes its RCON port to the
   internet, the platform stores admin passwords, and the responder holds one
   long-lived connection per server, which rules out request-only hosting.
+- From [How do Ruleset versions stay usable as the key contract changes?](06-ruleset-versions-and-key-contract.md):
+  the platform sends nothing to a game server unless it runs the Supported
+  build, so the mod must report its build stamp in a form the platform can
+  read. Today the stamp reaches only the console and chat (`ezconfig version`).

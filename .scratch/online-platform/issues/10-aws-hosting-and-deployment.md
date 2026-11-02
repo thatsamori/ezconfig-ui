@@ -19,3 +19,6 @@ priced setups.
 - [What does each candidate AWS setup cost per month at V1 scale?](03-aws-stack-costs.md)
 - [How do the platform and a game server talk?](05-platform-game-server-communication.md)
 - [Where does each entity get stored?](07-entity-storage.md)
+- [How do Ruleset versions stay usable as the key contract changes?](06-ruleset-versions-and-key-contract.md):
+  the Supported build is a runtime setting the operator changes without a
+  deploy. Decide where it lives.

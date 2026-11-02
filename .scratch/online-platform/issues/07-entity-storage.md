@@ -26,7 +26,10 @@ Points raised while charting, to answer or overturn:
 - Postgres JSONB is as schemaless as DynamoDB; a growing key set is a
   versioning problem
   ([How do Ruleset versions stay usable as the key contract changes?](06-ruleset-versions-and-key-contract.md)),
-  not a document-store problem.
+  not a document-store problem. That ticket settled it without versioning:
+  values are identified by database, weapon class and key name (category is
+  looked up from the current schema), unknown keys are dropped on load, and
+  versions carry no key-set marker and are never rewritten.
 - Spreading Ruleset and Ruleset version across two stores loses the foreign key
   and the transaction (deleting a Ruleset), and adds backups and local setup.
   DynamoDB items are capped at 400 KB.

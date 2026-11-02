@@ -31,3 +31,9 @@ until the game server confirms it, decide:
   stale-save check runs on every auto-save, and two tabs on one Draft will
   meet it often. A Live configuration is Pending until confirmed, then
   Confirmed ([CONTEXT.md](../../../CONTEXT.md)).
+- From [How do Ruleset versions stay usable as the key contract changes?](06-ruleset-versions-and-key-contract.md):
+  a game server not running the Supported build gets nothing sent and keeps
+  its saved snapshot; every mod publish cuts every server off until it
+  restarts onto the new pak. Decide what the owner sees meanwhile, and whether
+  the Live configuration is re-delivered once the server reports the
+  Supported build (today every map start asks for a full re-sync).
