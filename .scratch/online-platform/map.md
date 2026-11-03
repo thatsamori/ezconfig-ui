@@ -1,6 +1,6 @@
 # Map: EZConfig online platform
 
-Status: open
+Status: resolved
 Type: wayfinder map
 Created: 2026-11-01
 
@@ -147,8 +147,8 @@ ready to slice into implementation tickets. This map builds nothing.
 
 ## Not yet specified
 
-<!-- nothing at present: no fog remains and no ticket is open, so the next
-step is assembling spec.md from the resolved tickets (Notes) -->
+Nothing. The destination is reached: [spec.md](spec.md) was assembled from
+the resolved tickets on 2026-11-02.
 
 ## Out of scope
 
