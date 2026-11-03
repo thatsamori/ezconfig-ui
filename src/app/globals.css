@@ -422,6 +422,11 @@ input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-app
 .user-row button { height: 30px; border-radius: 8px; }
 .user-row .remove-user { color: #e5484d; }
 .user-row .remove-user:disabled { opacity: .35; }
+.invite-link { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; padding: 14px 18px; background: rgba(95,207,140,.08); border: 1px solid rgba(95,207,140,.35); border-radius: 12px; font-size: 13px; color: #d4d4d8; line-height: 1.5; }
+.invite-link > div { display: flex; gap: 8px; }
+.invite-link input { flex: 1; min-width: 0; height: 34px; padding: 0 10px; background: #0f1012; border: 1px solid rgba(255,255,255,.1); border-radius: 9px; color: #f2f2f3; font-family: var(--font-mono, monospace); font-size: 12px; }
+.invites-heading { margin-bottom: 12px; }
+.invite-times { color: #9a9ba1; font-size: 12.5px; margin-right: 6px; }
 [data-slot=input], [data-slot=textarea] { background: #0f1012; border-color: rgba(255,255,255,.1); border-radius: 9px; font-size: 13px; }
 [data-slot=button] { border-radius: 9px; font-size: 13px; }
 body { -webkit-font-smoothing: antialiased; }
