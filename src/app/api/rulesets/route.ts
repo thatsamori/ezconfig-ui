@@ -4,7 +4,8 @@
  * The signed-in owner's Rulesets by name, each with its versions newest
  * first: { success, data: RulesetSummary[] }. Never their values, and never
  * another owner's. Rulesets are made by Save as Ruleset version
- * (/api/game-servers/:id/draft/save-version).
+ * (/api/game-servers/:id/draft/save-version) and by importing a Ruleset file
+ * (/api/rulesets/import).
  */
 import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/platform/auth';

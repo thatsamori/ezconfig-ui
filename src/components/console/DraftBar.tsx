@@ -12,7 +12,7 @@ import { useRefreshingJson } from '@/lib/hooks/useRefreshingJson';
 import type { GameServerView } from '@/lib/platform/game-servers';
 import type { ApplyReview } from '@/lib/platform/live-configurations';
 import type { Origin } from '@/lib/platform/origins';
-import { useConfigStore } from '@/lib/store/configStore';
+import { refusedCount, useConfigStore } from '@/lib/store/configStore';
 
 /**
  * The editor's floating bar (online-platform#47): where the open Draft stands
@@ -49,18 +49,20 @@ export const overridesText = (total: number) => total ? `${total} override${tota
 /**
  * Where the open Draft stands: Unapplied changes, a match with the Live
  * configuration or nothing applied yet, with its overrides and origin; then
- * the Live configuration's state and the connection status. Blocked and
- * Failed link to the game server's page, which explains them. Until the game
- * server's view loads, the overrides alone.
+ * the Live configuration's state and the connection status. While `refused`
+ * fields show a refused value, the bar says that first: what the fields show
+ * is not what was saved. Blocked and Failed link to the game server's page,
+ * which explains them. Until the game server's view loads, the overrides alone.
  */
-export function DraftStanding({ server, error, overrides, origin, onShowServer }: {
-  server?: GameServerView; error?: string; overrides: string; origin: Origin | null; onShowServer: () => void;
+export function DraftStanding({ server, error, overrides, origin, refused = 0, onShowServer }: {
+  server?: GameServerView; error?: string; overrides: string; origin: Origin | null; refused?: number; onShowServer: () => void;
 }) {
   const live = server?.liveConfiguration;
-  const standing = !server ? undefined : server.unappliedChanges ? 'unapplied' : live ? 'matches' : 'none';
+  const standing = !server ? undefined : refused ? 'refused' : server.unappliedChanges ? 'unapplied' : live ? 'matches' : 'none';
+  const headline = { refused: `${refused} refused value${refused === 1 ? '' : 's'}`, unapplied: 'Unapplied changes', matches: 'Matches the Live configuration', none: 'Nothing applied yet' };
   return <div className="bar-copy">
-    <p className="bar-standing"><span className={`status-dot${standing === 'unapplied' ? ' unapplied' : standing === 'matches' ? ' changed' : ''}`} />
-      {standing ? <><strong className={standing}>{standing === 'unapplied' ? 'Unapplied changes' : standing === 'matches' ? 'Matches the Live configuration' : 'Nothing applied yet'}</strong><span>{overrides}</span></> : <strong>{overrides}</strong>}
+    <p className="bar-standing"><span className={`status-dot${standing === 'refused' ? ' blocked' : standing === 'unapplied' ? ' unapplied' : standing === 'matches' ? ' changed' : ''}`} />
+      {standing ? <><strong className={standing}>{headline[standing]}</strong><span>{overrides}</span></> : <strong>{overrides}</strong>}
       {origin && <span className="bar-origin">from <OriginLabel origin={origin} /></span>}
     </p>
     <p className="bar-live">{!server ? <span role={error ? 'alert' : undefined}>{error || 'Checking the game server…'}</span> : <>
@@ -86,6 +88,7 @@ export function DraftBar({ server: { id, name }, overrides, onShowServer }: { se
   const { data: server, error, refresh } = useRefreshingJson<GameServerView>(`/api/game-servers/${id}`);
   const draft = useConfigStore(state => state.draft);
   const loading = useConfigStore(state => state.loading);
+  const refused = useConfigStore(refusedCount);
   const ready = !!draft && !loading;
   const [dialog, setDialog] = useState<Exclude<DraftMenuAction, 'load-live'> | null>(null);
   const [review, setReview] = useState<ApplyReview | 'loading' | null>(null);
@@ -120,7 +123,7 @@ export function DraftBar({ server: { id, name }, overrides, onShowServer }: { se
   };
   const closeDialog = (open: boolean) => { if (!open) setDialog(null); };
   return <footer className="floating-bar">
-    <DraftStanding server={server} error={error} overrides={overrides} origin={draft?.origin ?? null} onShowServer={onShowServer} />
+    <DraftStanding server={server} error={error} overrides={overrides} origin={draft?.origin ?? null} refused={refused} onShowServer={onShowServer} />
     <div className="bar-actions">
       <DropdownMenu>
         <DropdownMenuTrigger asChild><button type="button" className="outline-button bar-menu-button" disabled={!ready} aria-label="Save or load the Draft" title="Save or load the Draft"><Ellipsis size={16} /></button></DropdownMenuTrigger>

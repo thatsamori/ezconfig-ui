@@ -171,7 +171,7 @@ export function NotesDialog({
               </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-4">
-                No notes yet. Leave one so the next person knows why this value is set.
+                Discuss what this config value does or if you find anything interesting about it. Everyone sees your notes.
               </p>
             )}
 

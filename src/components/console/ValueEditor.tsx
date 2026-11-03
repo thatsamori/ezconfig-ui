@@ -1,20 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RotateCcw, X } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { DataType, type ConfigEntry } from '@/lib/config/types';
-import type { ConfigValue } from '@/lib/store/configStore';
+import { holdRefused, type ConfigValue, type RefusedValue } from '@/lib/store/configStore';
 import { useDebouncedCallback } from '@/lib/hooks';
 import { SaveIndicator } from '@/components/config/SaveIndicator';
-import { isOverride, newValueError, newValueOutcome } from './model';
+import { isOverride, newValueError, newValueOutcome, valueFromDefault } from './model';
 import { defaultLabel, defaultDetails, resolveDefault } from '@/lib/config/defaults';
 import { constrainedFloatTextError } from '@/lib/config/numericConstraints';
 const fieldError = (message?: string) => message && <small className="field-error" role="alert">{message}</small>;
+type DraftField = Pick<RefusedValue, 'database' | 'category' | 'key'>;
+/**
+ * While a field in the Draft holds a value it refuses, the bar and the review
+ * say so (online-platform#51). The All weapons sheet's value is not in the
+ * Draft, so it has no `field`.
+ */
+function useHoldRefused(field: DraftField | undefined, text: string, error: string | undefined, discard: () => void) {
+  useEffect(() => field && error ? holdRefused({ ...field, text, error, discard }) : undefined, [field, text, error, discard]);
+}
 function NumberField({
   value,
   onChange,
   label,
+  field,
   disabled,
   debounceMs,
   minimum,
@@ -25,6 +35,7 @@ function NumberField({
   value: number;
   onChange: (value: number) => void;
   label: string;
+  field?: DraftField;
   disabled?: boolean;
   debounceMs: number;
   minimum?: number;
@@ -35,8 +46,11 @@ function NumberField({
   const commit = (text: string) => {
     if (text.trim() && Number.isFinite(Number(text)) && (minimum === undefined || !constrainedFloatTextError(text, minimum, maximum, integer))) onChange(Number(text));
   };
-  const [local, change, state, flush] = useDebouncedCallback(String(value), commit, debounceMs);
+  const [local, change, state, flush, reset] = useDebouncedCallback(String(value), commit, debounceMs);
   const refused = minimum === undefined ? undefined : constrainedFloatTextError(local, minimum, maximum, integer);
+  const discard = useCallback(() => reset(String(value)), [reset, value]);
+  // Only what was typed: a saved value the schema refuses is in the Draft, and the platform marks it.
+  useHoldRefused(field, local, local === String(value) ? undefined : refused, discard);
   // What the field holds now comes first: the mark is on the value last saved.
   const message = refused ?? error;
   return <div className="number-field"><input aria-label={label} aria-invalid={!!message || undefined} type="number" min={minimum} max={maximum} step={integer ? 1 : 'any'} value={local} disabled={disabled} onChange={event => change(event.target.value)} onBlur={flush} onKeyDown={event => {
@@ -75,10 +89,12 @@ export function ValueEditor({
   const baseline = resolveDefault(entry, database, category).defaultValue;
   const baselineLabel = defaultLabel(entry, database, category);
   const baselineDetails = defaultDetails(entry, database, category);
-  const closeDraft = () => {
+  const closeDraft = useCallback(() => {
     setEditing(false);
     setDraft('');
-  };
+  }, []);
+  const field = useMemo(() => database && category ? { database, category, key: entry.configKey } : undefined, [database, category, entry.configKey]);
+  useHoldRefused(field, draft, editing && !isOverride(value) ? newValueError(draft, entry) : undefined, closeDraft);
   const leaveDraft = (deliberate: boolean) => {
     const outcome = newValueOutcome(draft, baseline, entry, deliberate);
     if (outcome === 'refused') return;
@@ -97,14 +113,10 @@ export function ValueEditor({
       if (entry.dataType === DataType.Float) {
         setDraft(typeof baseline === 'number' ? String(baseline) : '');
         setEditing(true);
-      } else if (baseline !== undefined) onChange(structuredClone(baseline) as ConfigValue);
-      else if (entry.dataType === DataType.Bool) onChange(true);
-      else if (entry.dataType === DataType.FloatArray) onChange([]);
-      else if (entry.dataType === DataType.String) onChange(entry.choices?.[0] ?? '');
-      else onChange(entry.dataType === DataType.Vector ? { x: 0, y: 0, z: 0 } : { x: 0, y: 0 });
+      } else onChange(valueFromDefault(baseline, entry));
     }}>{baselineLabel}</button>{fieldError(error)}</>;
   }
-  const number = (n: number, change: (n: number) => void, name = label, mark?: string) => <NumberField error={mark} value={n} onChange={change} label={name} disabled={disabled} debounceMs={debounceMs} minimum={entry.dataType === DataType.Float ? entry.minimum : undefined} maximum={entry.dataType === DataType.Float ? entry.maximum : undefined} integer={entry.dataType === DataType.Float ? entry.integer : undefined} />;
+  const number = (n: number, change: (n: number) => void, name = label, mark?: string) => <NumberField error={mark} value={n} onChange={change} label={name} field={field} disabled={disabled} debounceMs={debounceMs} minimum={entry.dataType === DataType.Float ? entry.minimum : undefined} maximum={entry.dataType === DataType.Float ? entry.maximum : undefined} integer={entry.dataType === DataType.Float ? entry.integer : undefined} />;
   let control;
   switch (entry.dataType) {
     case DataType.Bool:

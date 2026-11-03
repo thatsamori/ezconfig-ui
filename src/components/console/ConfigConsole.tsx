@@ -21,7 +21,7 @@ import { DraftBar, overridesText } from './DraftBar';
 import { SweepPanel } from './SweepPanel';
 import { GlobalSearch } from './GlobalSearch';
 import type { SearchDestination } from './search';
-import { attackGroups, weapons, countEntries, countGroups, countOverrides, isOverride, showValue, toggleAttackGroup } from './model';
+import { attackGroups, weapons, countEntries, countGroups, countOverrides, holdNumberForWheel, isOverride, showValue, toggleAttackGroup } from './model';
 import { parrySections } from './parry-sections';
 function Helm() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12a8 8 0 0 1 16 0v2l-2 6H6l-2-6Z" /><path d="M13 12h7M13 12v8M12 4V2" /></svg>;
@@ -124,7 +124,16 @@ function useDraftRefresh(showing: boolean) {
     };
   }, [showing]);
 }
+/** The wheel scrolls past every number input on the page, those in a dialog included: it never changes a value. */
+function useWheelScrollsPastNumbers() {
+  useEffect(() => {
+    const options = { capture: true, passive: true };
+    document.addEventListener('wheel', holdNumberForWheel, options);
+    return () => document.removeEventListener('wheel', holdNumberForWheel, options);
+  }, []);
+}
 function ConsoleContent() {
+  useWheelScrollsPastNumbers();
   const [tab, setTab] = useState('servers');
   // The game server whose Draft the editor has open, and the game server page to show when going back to it.
   const [editing, setEditing] = useState<{ id: number; name: string } | null>(null);

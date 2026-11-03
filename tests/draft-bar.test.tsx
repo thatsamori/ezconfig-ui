@@ -2,9 +2,10 @@ import { describe, expect, test } from 'bun:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { DraftStanding, draftMenu, overridesText } from '../src/components/console/DraftBar';
-import { blockedReason } from '../src/components/game-servers/ApplyDialog';
+import { blockedReason, RefusedValues } from '../src/components/game-servers/ApplyDialog';
 import type { GameServerView } from '../src/lib/platform/game-servers';
 import type { Origin } from '../src/lib/platform/origins';
+import { holdRefused, refusedCount, useConfigStore, type RefusedValue } from '../src/lib/store/configStore';
 
 // The editor's bar (online-platform#47): where the Draft stands, and its ⋯ menu.
 
@@ -15,8 +16,8 @@ const view = (fields: Partial<GameServerView>): GameServerView => ({
   lastReport: null, needsUpdating: null, liveConfiguration: null, unappliedChanges: false, draftOrigin: null, liveOrigin: null, applyBlocked: null,
   ...fields,
 });
-const standing = (server: GameServerView | undefined, extra: { error?: string; origin?: Origin | null } = {}) =>
-  renderToStaticMarkup(createElement(DraftStanding, { server, error: extra.error, overrides: overridesText(3), origin: extra.origin ?? null, onShowServer: () => {} }));
+const standing = (server: GameServerView | undefined, extra: { error?: string; origin?: Origin | null; refused?: number } = {}) =>
+  renderToStaticMarkup(createElement(DraftStanding, { server, error: extra.error, overrides: overridesText(3), origin: extra.origin ?? null, refused: extra.refused, onShowServer: () => {} }));
 /** The text a reader sees, tags removed. */
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -69,6 +70,42 @@ describe('where the Draft stands', () => {
     const failed = standing(view({ liveConfiguration: { id: 'a', appliedAt: now, state: 'failed', reportedAt: now, failure: { database: 'Character', category: 'Stun', error: 'x' } } }));
     const blocked = standing(view({ liveConfiguration: { id: 'a', appliedAt: now, state: 'blocked', refusedValues: [] } }));
     for (const html of [failed, blocked]) expect(html).toContain('<button type="button" class="link-button">Details</button>');
+  });
+});
+
+describe('a value a field refuses (online-platform#51)', () => {
+  const live: GameServerView['liveConfiguration'] = { id: 'a', appliedAt: now, state: 'confirmed', reportedAt: now, ignoredKeys: [] };
+  const fov: RefusedValue = { database: 'Character', category: 'Camera', key: 'CustomFOVMax', text: '500', error: 'Use a finite value from 101 to 179.', discard: () => {} };
+  test('the bar says so, and not that the Draft matches the Live configuration', () => {
+    const html = standing(view({ liveConfiguration: live }), { refused: 1 });
+    expect(html).toContain('<strong class="refused">1 refused value</strong>');
+    expect(html).toContain('status-dot blocked');
+    expect(text(html)).not.toContain('Matches the Live configuration');
+    expect(text(html)).toContain('1 refused value 3 overrides');
+  });
+  test('the bar says so before Unapplied changes or nothing applied yet, and counts', () => {
+    expect(text(standing(view({ liveConfiguration: live, unappliedChanges: true }), { refused: 2 }))).toContain('2 refused values 3 overrides');
+    expect(text(standing(view({}), { refused: 1 }))).toContain('1 refused value 3 overrides');
+  });
+  test('with none, the bar is as it was', () => {
+    expect(text(standing(view({ liveConfiguration: live }), { refused: 0 }))).toContain('Matches the Live configuration 3 overrides');
+  });
+  test('a field holds its value until it lets go, and the same field is counted once with a mark', () => {
+    const release = holdRefused(fov);
+    expect(useConfigStore.getState().refused).toEqual([fov]);
+    expect(refusedCount(useConfigStore.getState())).toBe(1);
+    expect(refusedCount({ refused: [fov], fieldErrors: { 'Character/Camera/CustomFOVMax': 'Use a whole number.' } })).toBe(1);
+    expect(refusedCount({ refused: [fov], fieldErrors: { 'Character/Stun/FreeStunDuration': 'Use a finite value of 0 or more.' } })).toBe(2);
+    release();
+    expect(useConfigStore.getState().refused).toEqual([]);
+    expect(refusedCount(useConfigStore.getState())).toBe(0);
+  });
+  test('the review names the key and where it is, with what was typed', () => {
+    const html = renderToStaticMarkup(createElement(RefusedValues, { values: [fov, { ...fov, database: 'ArmingSword', category: 'General', key: 'WeaponLength', text: '', error: 'Enter a value.' }] }));
+    expect(html).toContain('role="alert"');
+    expect(text(html)).toContain('Refused, so not in the Draft: fix or discard before you Apply');
+    expect(text(html)).toContain('Camera · CustomFOVMax 500: Use a finite value from 101 to 179.');
+    expect(text(html)).toContain('ArmingSword · General · WeaponLength Enter a value.');
   });
 });
 

@@ -12,7 +12,8 @@
  *   owner an operator action names (`serverOwnerId`, a user id beside the
  *   operator's own `userId`); plus `count`, a number (how many polls had an
  *   unknown key in an hour, how many versions a deleted Ruleset had, how many
- *   game servers went with a deleted server owner), and
+ *   values an imported Ruleset file dropped, how many game servers went with a
+ *   deleted server owner), and
  *   `buildStamp`, kept only in its
  *   `YYYYMMDD-HHMMSS` form (a poll may report any text). Any other field
  *   passed in is dropped.

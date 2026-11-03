@@ -96,7 +96,8 @@ Notes are shared by config key with every server owner, using the rich-text
 editor. Their authors edit or delete them, and the platform operator can
 delete any. Save as Ruleset version
 snapshots the open Draft as a numbered version of a Ruleset, and loading a
-version replaces the Draft.
+version replaces the Draft. A version can be exported as a Ruleset file, to send
+to someone who imports it as a new Ruleset of their own.
 
 `NEXT_BUILD_DIR` can point to a separate build directory for an isolated preview while another development server is running.
 
