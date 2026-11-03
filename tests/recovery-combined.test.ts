@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-test('all eight recovery controls survive combined save, review, selective apply and partial reset', () => {
+test('all eight recovery controls survive the editor, Apply and partial reset together', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/recovery-combined-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });

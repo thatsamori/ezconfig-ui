@@ -1,47 +1,8 @@
-import { successfulProcessingFixture } from './acknowledged-transport';
-// Final integrated contract: real handlers and temporary persistence; only transport is mocked.
-import { mock } from 'bun:test';
+// All eight Recovery keys together through the editor and Apply, on the feature review harness.
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, resolve, sep } from 'node:path';
+import { categoryCommands, categoryEntries, featureReview } from './feature-review-harness';
 
-const parent = resolve(tmpdir());
-const root = await mkdtemp(join(parent, 'ezconfig-recovery-combined-'));
-process.env.DATABASES_PATH = root;
-const sent: string[][] = [];
-mock.module('../../src/lib/rcon/service', () => ({
-  executeAcknowledgedBatch: async (commands: string[]) => { sent.push(commands); return successfulProcessingFixture(commands); },
-}));
-try {
-  const { POST: save } = await import('../../src/app/api/config/[...path]/route');
-  const { GET: preview } = await import('../../src/app/api/apply/preview/route');
-  const { POST: apply } = await import('../../src/app/api/apply/route');
-  const { reviewRows, selectedReviewCommands } = await import('../../src/components/console/model');
-  const request = (body: unknown) => new Request('http://localhost/api', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
-  const recoveryPrefix = 'string ezconfig Character Recovery ';
-  async function saveCategory(category: string, entries: Record<string, number | boolean>) {
-    const response = await save(request({ entries }) as never, {
-      params: Promise.resolve({ path: ['Character', category] }),
-    });
-    assert.equal(response.status, 200, JSON.stringify(await response.json()));
-  }
-  async function readRows() {
-    const response = await preview(); assert.equal(response.status, 200);
-    return reviewRows((await response.json()).commands);
-  }
-  async function selectedRecovery(rows: ReturnType<typeof reviewRows>, keys: string[]) {
-    const commands = selectedReviewCommands(rows, new Set(rows
-      .filter(row => row.category === 'Recovery' && keys.includes(row.key)).map(row => row.id)));
-    const response = await apply(request({ commands, wipeDatabase: false }));
-    assert.equal(response.status, 200);
-    assert.deepEqual(sent[sent.length - 1], commands);
-    assert.equal(commands.length, 1);
-    assert(commands[0].startsWith(recoveryPrefix));
-    return JSON.parse(commands[0].slice(recoveryPrefix.length));
-  }
+await featureReview('recovery-combined', async ({ set, reset, saved, apply }) => {
   const values = {
     WorldRecoveryTime: 0,
     WorldMissStaminaFactor: -1,
@@ -55,47 +16,35 @@ try {
   const formatted = Object.fromEntries(Object.entries(values).map(([key, value]) => [key,
     typeof value === 'number' ? value.toFixed(2) : value ? 'True' : 'False',
   ]));
-  await saveCategory('Damage', { TeamHitRecovery: true, TeamHitRecoveryExtraTime: 1.5 });
-  assert(!(await readRows()).some(row => row.category === 'Recovery'));
-  await saveCategory('Recovery', values);
-  const rows = await readRows();
-  assert.equal(rows.length, 10);
-  const recovery = rows.filter(row => row.category === 'Recovery');
-  assert.equal(recovery.length, 8);
-  assert(recovery.every(row => row.database === 'Character'));
-  assert.deepEqual(Object.fromEntries(recovery.map(row => [row.key, row.value])), formatted);
-  assert.deepEqual(await selectedRecovery(rows, Object.keys(values)), formatted);
+  const damage = { TeamHitRecovery: 'True', TeamHitRecoveryExtraTime: '1.50' };
+  set('Character', 'Damage', 'TeamHitRecovery', true);
+  set('Character', 'Damage', 'TeamHitRecoveryExtraTime', 1.5);
+  assert.equal(categoryEntries(await apply(), 'Character', 'Recovery'), undefined);
 
-  // A selected limit neither pulls in its sibling nor sorts the saved reversed pair.
-  assert.deepEqual(await selectedRecovery(rows, ['ParriedRecoveryTimeMin']), { ParriedRecoveryTimeMin: '0.90' });
-  assert.deepEqual(await selectedRecovery(rows, ['ParriedRecoveryTimeMax']), { ParriedRecoveryTimeMax: '0.20' });
-  assert.deepEqual(await selectedRecovery(rows, ['WorldRecoveryTime', 'WorldMissStaminaFactor', 'ExtraStabLockout']), {
-    WorldRecoveryTime: '0.00', WorldMissStaminaFactor: '-1.00', ExtraStabLockout: '-0.25',
-  }, 'unselected Recovery siblings and adjacent TeamHit feature keys must not reach transport');
+  for (const [key, value] of Object.entries(values)) set('Character', 'Recovery', key, value);
+  for (const [key, value] of Object.entries(values)) assert.equal(await saved('Character', 'Recovery', key), value);
+  const combined = await apply();
+  // The reversed parried limits are sent as saved, not sorted.
+  assert.deepEqual(categoryEntries(combined, 'Character', 'Recovery'), formatted);
+  assert.deepEqual(categoryEntries(combined, 'Character', 'Damage'), damage);
+  assert.equal(categoryCommands(combined).length, 2);
 
   // Partial Reset preserves an independently saved maximum, zero and signed values.
-  await saveCategory('Recovery', { WorldRecoveryTime: .8, ParriedRecoveryTimeMax: 0, ExtraStabLockout: -.25, DynamicFeintWindow: false });
-  const resetRows = await readRows();
-  assert.deepEqual(Object.fromEntries(resetRows.filter(row => row.category === 'Recovery').map(row => [row.key, row.value])), {
+  set('Character', 'Recovery', 'WorldRecoveryTime', .8);
+  set('Character', 'Recovery', 'ParriedRecoveryTimeMax', 0);
+  set('Character', 'Recovery', 'DynamicFeintWindow', false);
+  for (const key of ['WorldMissStaminaFactor', 'ParriedRecoveryTimeOffset', 'ParriedRecoveryTimeMin', 'ExtraStrikeLockout']) reset('Character', 'Recovery', key);
+  const partial = await apply();
+  assert.deepEqual(categoryEntries(partial, 'Character', 'Recovery'), {
     WorldRecoveryTime: '0.80', ParriedRecoveryTimeMax: '0.00', ExtraStabLockout: '-0.25',
     DynamicFeintWindow: 'False',
   });
-  assert.equal(resetRows.filter(row => row.category === 'Damage').length, 2);
-  const remaining = selectedReviewCommands(resetRows, new Set(resetRows.map(row => row.id)));
-  assert.equal((await apply(request({ commands: remaining, wipeDatabase: true }))).status, 200);
-  assert.deepEqual(sent[sent.length - 1], ['string ezconfig WipeDatabases', ...remaining]);
+  assert.deepEqual(categoryEntries(partial, 'Character', 'Damage'), damage);
 
-  await saveCategory('Recovery', {});
-  const cleared = await readRows();
-  assert.equal(cleared.length, 2);
-  assert(cleared.every(row => row.category === 'Damage'));
-  const adjacent = selectedReviewCommands(cleared, new Set(cleared.map(row => row.id)));
-  assert.equal((await apply(request({ commands: adjacent, wipeDatabase: true }))).status, 200);
-  assert.deepEqual(sent[sent.length - 1], ['string ezconfig WipeDatabases', ...adjacent]);
-  assert(sent[sent.length - 1].every(command => !command.startsWith(recoveryPrefix)));
-  console.log('PASS: eight combined Recovery keys, including DynamicFeintWindow save/apply/reset, native signed/zero values, independent limits, selective transport and wipe coexistence');
-} finally {
-  const target = resolve(root);
-  assert(target.startsWith(parent + sep) && target.slice(parent.length + 1).startsWith('ezconfig-recovery-combined-'));
-  await rm(target, { recursive: true, force: true });
-}
+  for (const key of Object.keys(values)) reset('Character', 'Recovery', key);
+  const cleared = await apply();
+  assert.equal(categoryEntries(cleared, 'Character', 'Recovery'), undefined);
+  assert.deepEqual(categoryEntries(cleared, 'Character', 'Damage'), damage);
+  assert.equal(categoryCommands(cleared).length, 1);
+});
+console.log('PASS: eight combined Recovery keys, including DynamicFeintWindow save/apply/reset, native signed/zero values, reversed limits and wipe coexistence with TeamHit');
