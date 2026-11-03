@@ -152,7 +152,7 @@ export function runRestoreCheck({ databasePath, restore, attempts = 3, retryWait
       if (!found.length) {
         const rows = [...live.values()].reduce((sum, count) => sum + count, 0);
         const tries = attempt > 1 ? ` on attempt ${attempt} of ${attempts}` : '';
-        return passed(`Restored the latest backup${tries}: integrity_check ok, and all ${live.size} tables (${rows} rows) have the live database's row counts`);
+        return passed(`Restored the latest backup${tries}: integrity_check ok, and all ${live.size} tables (${rows} ${rows === 1 ? 'row' : 'rows'}) have the live database's row counts`);
       }
     }
     return failed(`Row counts still differed from the live database after ${attempts} restores: ${listDifferences(found)}`);

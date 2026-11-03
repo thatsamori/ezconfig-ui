@@ -92,7 +92,7 @@ Still on the instance:
 
 ```bash
 sudo litestream restore -config /etc/litestream.yml /var/lib/ezconfig-platform/platform.db
-sudo chown ezconfig:ezconfig /var/lib/ezconfig-platform/platform.db*
+sudo chown ezconfig:ezconfig /var/lib/ezconfig-platform/platform.db
 sudo -u ezconfig sqlite3 -readonly /var/lib/ezconfig-platform/platform.db 'PRAGMA integrity_check; PRAGMA user_version; SELECT count(*) FROM users; SELECT count(*) FROM game_servers;'
 ```
 

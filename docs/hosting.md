@@ -187,12 +187,16 @@ file is filled. A run missed while the instance was off happens soon after it
 starts again.
 
 - Run it now: `sudo systemctl start ezconfig-restore-check` waits for the
-  result and exits non-zero when the check fails. On today's database it takes
-  a few seconds.
+  result and exits non-zero when the check fails. On the database at launch
+  it takes under a second.
 - The next run: `systemctl list-timers ezconfig-restore-check.timer`.
-- Its log: `journalctl -u ezconfig-restore-check` holds Litestream's restore
-  output, then one JSON line, `restore-check.passed` or `restore-check.failed`,
-  with the reason; `restore-check.retry` comes before each extra restore.
+- Its log: `journalctl -u ezconfig-restore-check` holds one JSON line,
+  `restore-check.passed` or `restore-check.failed`, with the reason;
+  `restore-check.retry` comes before each extra restore. Anything
+  `litestream restore` prints comes before them; it prints nothing when it
+  succeeds.
+- The row counts include Litestream's own two tables, `_litestream_lock` and
+  `_litestream_seq`.
 - The last result: the Status page, or
   `sudo cat /var/lib/ezconfig-platform/platform.db.restore-check.json`.
 
