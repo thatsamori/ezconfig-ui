@@ -41,7 +41,10 @@ are the contract between this app and the mod.
   whose `requireSession` every route handler outside `src/app/api/auth/` calls
   first (Origin check on requests that change data, then the session cookie);
   operator-only routes call `requireOperator` instead. Invites: `invites.ts`
-  (codes stored as hashes only) and `src/app/api/operator/invites/`. `retention.ts`
+  (codes stored as hashes only) and `src/app/api/operator/invites/`. Server
+  owners: `server-owners.ts` (the operator's list, Remove and Restore access,
+  Delete with the foreign keys' cascade, none against an operator) behind
+  `src/app/api/operator/server-owners/`. `retention.ts`
   is the daily sweep of expired sessions and old Invites, started by the startup hook.
   Game servers: `game-servers.ts` (registering, keys kept only as SHA-256 hashes,
   Regenerate key and Delete, connection status), `polls.ts` (the one in-process
