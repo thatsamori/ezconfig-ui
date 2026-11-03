@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-test('four logical Windup categories survive save, review, selected apply and reset', () => {
+test('four logical Windup categories survive the editor, Apply and reset', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/weapon-windup-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });
