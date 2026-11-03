@@ -495,6 +495,11 @@ body { -webkit-font-smoothing: antialiased; }
 .status-builds { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; color: #d4d4d8; font-size: 13.5px; }
 .status-builds li { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .status-builds .role-pill { margin: 0 0 0 4px; }
+.status-page dd strong { color: #fff; font-weight: 600; }
+.status-states { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.status-states li { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.status-states .status-dot { margin-right: 2px; }
+.status-activity-note { margin-top: 12px; }
 .status-log { display: flex; flex-direction: column; margin-top: 16px; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; overflow: hidden; }
 .status-log li { display: grid; grid-template-columns: max-content 64px minmax(0,1fr); align-items: baseline; gap: 4px 14px; padding: 10px 16px; background: #16171a; font-size: 12.5px; }
 .status-log li + li { border-top: 1px solid rgba(255,255,255,.05); }
@@ -505,7 +510,7 @@ body { -webkit-font-smoothing: antialiased; }
 .status-log code { justify-self: start; }
 .status-log .message { grid-column: 2 / -1; color: #d4d4d8; overflow-wrap: anywhere; }
 .status-log-empty { margin-top: 16px; }
-@media (max-width: 560px) { .ini-copy { flex-direction: column; align-items: stretch; } .server-row { flex-wrap: wrap; } .status-log li { grid-template-columns: max-content minmax(0,1fr); } .status-log code { grid-column: 1 / -1; } .status-log .message { grid-column: 1 / -1; } }
+@media (max-width: 560px) { .ini-copy { flex-direction: column; align-items: stretch; } .server-row { flex-wrap: wrap; } .status-log li { grid-template-columns: max-content minmax(0,1fr); } .status-log code { grid-column: 1 / -1; } .status-log .message { grid-column: 1 / -1; } .status-activity { grid-template-columns: minmax(0,1fr); row-gap: 2px; } .status-activity dd:not(:last-child) { margin-bottom: 10px; } }
 /* A game server's Draft in the editor */
 .crumb-link { color: #d4d4d8; text-decoration: underline; text-underline-offset: 2px; }
 .crumb-link:hover { color: #f2f2f3; }

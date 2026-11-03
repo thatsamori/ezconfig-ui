@@ -495,6 +495,13 @@ category commands.
 - **Counts,** computed when the page loads: game servers registered,
   Connected now, and Connected by reported build stamp with the Supported
   build marked. No server or owner is named.
+- **Activity,** computed when the page loads, as counts that name no server or
+  owner (`online-platform#48`):
+  - server owners, and those seen in the last 24 h and the last 7 days, by the
+    latest last seen of their sessions;
+  - Live configurations by state, and game servers with none yet;
+  - game servers Applied in the last 24 h and the last 7 days, by each one's
+    latest Apply: game servers, not Applies.
 - **Health,** held in process memory: release commit, running since, and the
   number of warnings and errors since start with the newest 20.
 - **Backup:**

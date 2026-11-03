@@ -76,6 +76,25 @@ describe('the operator status page', () => {
     expectNoSecretsLogged(result);
   });
 
+  test('counts server owners and those seen in the last 24 h and 7 days, each once, by the latest last seen of their sessions', () => {
+    const result = runScenario('activity-server-owners');
+    expect(result.problems).toEqual([]);
+    expectNoSecretsLogged(result);
+  });
+
+  test('counts Live configurations by the state each game server page shows, and game servers with none yet', () => {
+    const result = runScenario('activity-live-configurations');
+    // Each Failed report warns once, as it arrives; reading the counts logs nothing.
+    expect(result.problems.map(({ event, gameServerId }) => [event, gameServerId])).toEqual([['live-configuration.failed', 6], ['live-configuration.failed', 9]]);
+    expectNoSecretsLogged(result);
+  });
+
+  test('counts game servers Applied in the last 24 h and 7 days: game servers, not Applies', () => {
+    const result = runScenario('activity-applied');
+    expect(result.problems).toEqual([]);
+    expectNoSecretsLogged(result);
+  });
+
   test('only the platform operator can open it', () => {
     const result = runScenario('access');
     expect(result.info).toEqual([]);

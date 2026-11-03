@@ -168,6 +168,40 @@ export function liveConfigurationState(live: Pick<LiveConfiguration, 'id' | 'doc
   return result.failure === null ? { state: 'confirmed', reportedAt, ignoredKeys: result.unknownKeys } : { state: 'failed', reportedAt, failure: result.failure };
 }
 
+/** How many game servers have a Live configuration in each state, and how many have none yet. */
+export type LiveConfigurationCounts = Record<LiveConfigurationState['state'] | 'none', number>;
+
+/**
+ * Every game server's Live configuration, read through
+ * `liveConfigurationState`, so each count is what its page shows. Also when
+ * each was applied: one time per game server, its latest Apply. A Live
+ * configuration the game server has not reported is checked against the
+ * schema, as that state needs.
+ */
+export function countLiveConfigurations(): { states: LiveConfigurationCounts; appliedAt: number[] } {
+  type StateRow = {
+    id: string | null; overrides: string | null; applied_at: number | null;
+    last_poll_at: number | null; reported_live_configuration_id: string | null; reported_result: string | null; reported_processed_at: number | null;
+  };
+  const rows = platformStore().all<StateRow>(`SELECT live.id, live.overrides, live.applied_at,
+    server.last_poll_at, server.reported_live_configuration_id, server.reported_result, server.reported_processed_at
+    FROM game_servers AS server LEFT JOIN live_configurations AS live ON live.game_server_id = server.id`);
+  const states: LiveConfigurationCounts = { pending: 0, blocked: 0, confirmed: 0, failed: 0, none: 0 };
+  const appliedAt: number[] = [];
+  for (const row of rows) {
+    if (row.id === null) {
+      states.none++;
+      continue;
+    }
+    const { state } = liveConfigurationState({ id: row.id, document: JSON.parse(row.overrides!) }, {
+      lastPollAt: row.last_poll_at, reportedLiveConfigurationId: row.reported_live_configuration_id, reportedResult: row.reported_result, reportedProcessedAt: row.reported_processed_at,
+    });
+    states[state]++;
+    appliedAt.push(row.applied_at!);
+  }
+  return { states, appliedAt };
+}
+
 /**
  * What the game server's page shows: the Live configuration with its state
  * (null before the first Apply), and whether the Draft has Unapplied changes:

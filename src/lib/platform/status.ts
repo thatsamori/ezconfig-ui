@@ -9,6 +9,16 @@
  *   warnings and errors logged since start with the newest 20.
  * - Backup: Litestream's last heartbeat, and the weekly restore check's
  *   status file. Each warns when it is overdue.
+ * - Activity, counts only, naming no game server or owner:
+ *   - server owners, and those seen in the last 24 h and the last 7 days, by the
+ *     latest last seen of their sessions. It is written at most once an hour
+ *     and goes when a session ends, so these can run low: a server owner who
+ *     signed out reads as not seen. The operator is a server owner, and opening
+ *     this page sees them.
+ *   - Live configurations by state, and game servers with none yet. State is
+ *     computed for each one (live-configurations.ts), never stored.
+ *   - game servers Applied in the last 24 h and the last 7 days. A game server
+ *     keeps only its latest Apply, so this counts game servers, not Applies.
  *
  * Times are the server's, and the sentences are written here, so the page
  * shows ages by the server's clock, not the browser's.
@@ -17,8 +27,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { backupHeartbeatOverdue, readLastBackupHeartbeat } from './backup-heartbeat';
 import { countGameServers } from './game-servers';
+import { countLiveConfigurations, type LiveConfigurationCounts } from './live-configurations';
 import { readLogHealth, type LogHealthEntry } from './log';
 import { readRestoreCheck, RESTORE_CHECK_STALE_MS } from './restore-check';
+import { listServerOwners } from './server-owners';
 import { isSupportedBuild, readSupportedBuild } from './supported-build';
 
 /** When this process started; the log health and the backup heartbeat are since then. */
@@ -37,6 +49,12 @@ export interface PlatformStatus {
      * on it.
      */
     connectedByBuild: { buildStamp: string | null; count: number; supported: boolean }[];
+  };
+  /** The last 7 days include the last 24 h. */
+  activity: {
+    serverOwners: { total: number; seenLast24h: number; seenLast7Days: number };
+    liveConfigurations: LiveConfigurationCounts;
+    gameServersApplied: { last24h: number; last7Days: number };
   };
   health: {
     /** The full commit id; null when the app is not running from a release. */
@@ -96,6 +114,19 @@ function gameServers(now: number): PlatformStatus['gameServers'] {
   return { registered, connected: connectedBuildStamps.length, supportedBuild, connectedByBuild };
 }
 
+const DAY_MS = 86_400_000;
+
+function activity(now: number): PlatformStatus['activity'] {
+  const within = (times: (number | null)[], ms: number) => times.filter(time => time !== null && now - time <= ms).length;
+  const lastSeen = listServerOwners().map(owner => owner.lastSeenAt);
+  const { states, appliedAt } = countLiveConfigurations();
+  return {
+    serverOwners: { total: lastSeen.length, seenLast24h: within(lastSeen, DAY_MS), seenLast7Days: within(lastSeen, 7 * DAY_MS) },
+    liveConfigurations: states,
+    gameServersApplied: { last24h: within(appliedAt, DAY_MS), last7Days: within(appliedAt, 7 * DAY_MS) },
+  };
+}
+
 function backup(now: number, startedAt: number): PlatformStatus['backup'] {
   const last = readLastBackupHeartbeat()?.getTime() ?? null;
   return {
@@ -126,6 +157,7 @@ export function readPlatformStatus(now = Date.now(), startedAt = PROCESS_STARTED
   return {
     now,
     gameServers: gameServers(now),
+    activity: activity(now),
     health: { releaseCommit: readReleaseCommit(), startedAt, warnings, errors, recent },
     backup: backup(now, startedAt),
     restoreCheck: restoreCheck(now),
