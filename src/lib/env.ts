@@ -1,4 +1,6 @@
 // Server-side only env config
+const publicUrl = process.env.PUBLIC_URL || 'http://localhost:3000';
+
 export const env = {
   rcon: {
     host: process.env.RCON_HOST || 'localhost',
@@ -9,12 +11,15 @@ export const env = {
   presetsPath: process.env.PRESETS_PATH || './Presets',
   notesPath: process.env.NOTES_PATH || './Notes',
   ezconfigPassword: process.env.EZCONFIG_PASSWORD || '',
-  // Auth settings
-  usersPath: process.env.USERS_PATH || './users.json',
-  adminUsername: process.env.ADMIN_USERNAME || '',
-  adminPassword: process.env.ADMIN_PASSWORD || '',
-  // Online platform
+  // Online platform (instance settings; see .env.example)
+  databasePath: process.env.DATABASE_PATH || '',
+  /** The address browsers use; requests that change data must come from its origin. */
+  publicUrl,
+  discordClientId: process.env.DISCORD_CLIENT_ID || '',
   discordClientSecret: process.env.DISCORD_CLIENT_SECRET || '',
+  discordRedirectUrl: process.env.DISCORD_REDIRECT_URL || `${publicUrl.replace(/\/+$/, '')}/api/auth/discord/callback`,
+  /** Platform operators: comma-separated Discord user ids. */
+  operatorDiscordIds: (process.env.OPERATOR_DISCORD_IDS || '').split(',').map(id => id.trim()).filter(Boolean),
 } as const;
 
 // Validation - call this in server actions

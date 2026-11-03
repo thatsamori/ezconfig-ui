@@ -7,7 +7,7 @@ export interface SearchDestination {
   id: string;
   label: string;
   path: string;
-  tab: 'character' | 'weapons' | 'presets' | 'users';
+  tab: 'character' | 'weapons' | 'presets';
   weapon?: string;
   group?: string;
   configKey?: string;
@@ -18,7 +18,6 @@ const destinations: SearchDestination[] = [
   { id: 'character', label: 'Character', path: 'Page', tab: 'character' },
   { id: 'weapons', label: 'Weapons', path: 'Page', tab: 'weapons' },
   { id: 'presets', label: 'Presets', path: 'Page', tab: 'presets' },
-  { id: 'users', label: 'Users', path: 'Page · Admin', tab: 'users' },
 ];
 
 for (const group of Object.values(CharacterConfigGroupName)) {
@@ -45,12 +44,12 @@ const index = destinations.map(destination => ({
   text: normalize(`${destination.tab} ${destination.path} ${destination.label} ${destination.configKey ?? ''}`),
 }));
 
-export function searchGlobal(query: string, context: { weapon: string; isAdmin: boolean }) {
+export function searchGlobal(query: string, context: { weapon: string }) {
   const terms = query.trim().split(/\s+/).map(normalize).filter(Boolean);
   const phrase = normalize(query);
-  const matches = index.filter(item => (context.isAdmin || item.destination.tab !== 'users') && (
+  const matches = index.filter(item =>
     terms.length ? terms.every(term => item.text.includes(term)) : !item.destination.configKey
-  ));
+  );
   const score = (item: typeof index[number]) =>
     (phrase && item.label === phrase ? 100 : phrase && item.label.startsWith(phrase) ? 50 : 0) +
     (terms.includes(item.label) ? 30 : 0) +

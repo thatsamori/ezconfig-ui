@@ -1,11 +1,23 @@
-import { Database } from 'bun:sqlite';
+import type { Database } from 'bun:sqlite';
 import { mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
+import { env } from '@/lib/env';
 
 // The only module that opens the platform database (ADR 0001): a later driver
 // change is an adapter here and nowhere else.
 
 export type PlatformMigration = { version: number; name: string; sql: string };
+export type SqlValue = string | number | null;
+
+/** What the platform's modules query through, with `?` parameters; bun:sqlite stays behind it. */
+export interface PlatformStore {
+  get<Row>(sql: string, ...params: SqlValue[]): Row | undefined;
+  all<Row>(sql: string, ...params: SqlValue[]): Row[];
+  /** Resolves to the number of rows changed. */
+  run(sql: string, ...params: SqlValue[]): number;
+  /** Runs `work` in one write transaction (BEGIN IMMEDIATE); a throw rolls it back. */
+  transaction<Result>(work: () => Result): Result;
+}
 export type PlatformMigrationResult = { path: string; from: number; to: number; applied: string[]; copy: string | null };
 
 /** Relative to the working directory, which `next start` and the tests run from. */
@@ -20,8 +32,16 @@ export function readPlatformMigrations(directory = resolve(PLATFORM_MIGRATIONS_D
 }
 
 /** Every connection enforces foreign keys; WAL is what Litestream streams. */
+// Loaded when a database is first opened, not on import: Next loads every route
+// module under Node while it builds, and Node has no bun:sqlite.
+function sqlite(): typeof import('bun:sqlite') {
+  if (!process.versions.bun) throw new Error('Platform storage uses bun:sqlite; run the app on Bun (bun --bun next start)');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- a synchronous, lazy load of the driver
+  return require('bun:sqlite');
+}
+
 export function openPlatformDatabase(path: string): Database {
-  const database = new Database(path, { create: true, strict: true });
+  const database = new (sqlite().Database)(path, { create: true, strict: true });
   try {
     database.exec('PRAGMA busy_timeout = 5000');
     database.exec('PRAGMA foreign_keys = ON');
@@ -29,6 +49,34 @@ export function openPlatformDatabase(path: string): Database {
     if (mode !== 'wal') throw new Error(`Platform database ${path} cannot use WAL mode (got ${mode}); Litestream needs it`);
     return database;
   } catch (error) { database.close(); throw error; }
+}
+
+// One connection per process, shared across Next route bundles and hot reloads.
+const storeKey = Symbol.for('ezconfig-ui.platform-storage.store.v1');
+const sharedStore = globalThis as typeof globalThis & { [key: symbol]: { path: string; database: Database; store: PlatformStore } | undefined };
+
+/** The app's connection to the database at DATABASE_PATH, opened on first use; startup has already migrated it. */
+export function platformStore(): PlatformStore {
+  const path = env.databasePath;
+  if (!path) throw new Error('DATABASE_PATH is not set: sign-in and sessions need the platform database');
+  const current = sharedStore[storeKey];
+  if (current?.path === path) return current.store;
+  closePlatformStore();
+  const database = openPlatformDatabase(path);
+  const store: PlatformStore = {
+    get: <Row>(sql: string, ...params: SqlValue[]) => (database.query(sql).get(...params) ?? undefined) as Row | undefined,
+    all: <Row>(sql: string, ...params: SqlValue[]) => database.query(sql).all(...params) as Row[],
+    run: (sql, ...params) => database.query(sql).run(...params).changes,
+    transaction: work => database.transaction(work).immediate(),
+  };
+  sharedStore[storeKey] = { path, database, store };
+  return store;
+}
+
+/** Closes the app's connection, if open, so the file can be removed (Windows keeps open files). */
+export function closePlatformStore() {
+  sharedStore[storeKey]?.database.close();
+  sharedStore[storeKey] = undefined;
 }
 
 const userVersion = (database: Database) => (database.query('PRAGMA user_version').get() as { user_version: number }).user_version;

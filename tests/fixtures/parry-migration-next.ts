@@ -1,10 +1,12 @@
 // Run after NEXT_BUILD_DIR=.next-automatic-sync-test/geometry bun run build.
-// Uses the actual Next entry point, isolated storage and disabled automatic sync.
+// Uses the actual Next entry point on Bun, isolated storage, a platform session
+// and disabled automatic sync.
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { createServer } from 'node:net';
+import { signInForTest, type TestSession } from '../helpers/platform-session';
 
 const root = await mkdtemp(join(tmpdir(), 'ezconfig-parry-next-'));
 const portProbe = createServer();
@@ -14,21 +16,26 @@ await new Promise<void>(resolve => portProbe.close(() => resolve()));
 const env = {
   ...process.env, NEXT_BUILD_DIR: '.next-automatic-sync-test/geometry',
   DATABASES_PATH: join(root, 'Databases'), PRESETS_PATH: join(root, 'Presets'), NOTES_PATH: join(root, 'Notes'),
-  USERS_PATH: join(root, 'users.json'), ADMIN_USERNAME: 'geometry-fixture', ADMIN_PASSWORD: 'geometry-fixture-only',
+  DATABASE_PATH: join(root, 'platform.db'), PUBLIC_URL: `http://127.0.0.1:${port}`,
   RCON_AUTO_SYNC_ENABLED: 'false', RCON_HOST: '127.0.0.1', RCON_PORT: '17947', RCON_PASSWORD: 'isolated-unused',
 };
-const start = () => Bun.spawn(['node', 'node_modules/next/dist/bin/next', 'start', '-H', '127.0.0.1', '-p', String(port)], { cwd: process.cwd(), env, stdout: 'pipe', stderr: 'pipe' });
+// The session is made in this process, in the database the server opens.
+Object.assign(process.env, { DATABASE_PATH: env.DATABASE_PATH, PUBLIC_URL: env.PUBLIC_URL });
+const start = () => Bun.spawn([process.execPath, '--bun', 'node_modules/next/dist/bin/next', 'start', '-H', '127.0.0.1', '-p', String(port)], { cwd: process.cwd(), env, stdout: 'pipe', stderr: 'pipe' });
 let child: ReturnType<typeof start> | undefined;
+let session: TestSession | undefined;
 try {
+  session = await signInForTest('Geometry fixture');
+  const signedIn = { Cookie: session.cookie, Origin: session.origin };
   const character = join(env.DATABASES_PATH, 'Character');
   await mkdir(character, { recursive: true });
   await writeFile(join(character, 'Combat.json'), '{');
   child = start();
   const badStdout = new Response(child.stdout).text(), badStderr = new Response(child.stderr).text();
   await Bun.sleep(2000);
-  const badResponse = await fetch(`http://127.0.0.1:${port}/api/databases/overrides`, { signal: AbortSignal.timeout(3000) }).catch(() => undefined);
+  const badResponse = await fetch(`http://127.0.0.1:${port}/api/databases/overrides`, { headers: signedIn, signal: AbortSignal.timeout(3000) }).catch(() => undefined);
   assert.equal(badResponse?.status, 500, 'failed instrumentation blocks configuration reads');
-  const badWrite = await fetch(`http://127.0.0.1:${port}/api/config/Character/Combat`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"entries":{"CanJumpKick":true}}' });
+  const badWrite = await fetch(`http://127.0.0.1:${port}/api/config/Character/Combat`, { method: 'PATCH', headers: { ...signedIn, 'Content-Type': 'application/json' }, body: '{"entries":{"CanJumpKick":true}}' });
   assert.equal(badWrite.status, 500, 'failed instrumentation blocks configuration writes');
   assert.equal(await readFile(join(character, 'Combat.json'), 'utf8'), '{');
   if (child.exitCode === null) { child.kill(); await child.exited; }
@@ -43,7 +50,7 @@ try {
   const end = Date.now() + 15000;
   let response: Response | undefined;
   while (Date.now() < end) {
-    response = await fetch(`http://127.0.0.1:${port}/api/databases/overrides`).catch(() => undefined);
+    response = await fetch(`http://127.0.0.1:${port}/api/databases/overrides`, { headers: signedIn }).catch(() => undefined);
     if (response?.status === 200) break;
     if (child.exitCode !== null) throw new Error(`Next startup exited: ${await stderr}`);
     await Bun.sleep(50);
@@ -54,7 +61,7 @@ try {
   assert.deepEqual(values.character.Combat, { CanJumpKick: false });
   console.info(`PASS: first actual Next config response has canonical Parry values; isolated browser URL http://127.0.0.1:${port}`);
   if (process.argv.includes('--keep-open')) {
-    console.info('Isolated UI fixture login: geometry-fixture / geometry-fixture-only. Stop this process after browser verification.');
+    console.info(`Isolated UI fixture session (sign-in itself needs a Discord application): set the cookie ${session.cookie} for 127.0.0.1:${port}. Stop this process after browser verification.`);
     await new Promise<void>(resolve => {
       process.once('SIGINT', resolve); process.once('SIGTERM', resolve);
     });
@@ -63,6 +70,7 @@ try {
   await stdout; await stderr;
 } finally {
   if (child && child.exitCode === null) { child.kill(); await child.exited; }
+  session?.close();
   const target = resolve(root);
   assert(target.startsWith(resolve(tmpdir()) + sep) && target.split(sep).at(-1)?.startsWith('ezconfig-parry-next-'));
   await rm(target, { recursive: true, force: true });

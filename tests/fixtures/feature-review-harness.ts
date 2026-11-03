@@ -3,10 +3,12 @@
  * values through the editor, reads back what was saved, and Applies the whole
  * configuration, which delivers a wipe then one command per non-empty category
  * in today's command encoding. There is no selective apply. It runs on the
- * self-hosted routes with temp storage and the RCON service mocked; env is set
- * before the app is imported, so each review is its own child process.
+ * self-hosted routes, signed in with a platform session, with temp storage and
+ * the RCON service mocked; env is set before the app is imported, so each
+ * review is its own child process.
  */
 import { successfulProcessingFixture } from './acknowledged-transport';
+import { signInForTest } from '../helpers/platform-session';
 import { mock } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -77,7 +79,7 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
   const root = await mkdtemp(join(parent, prefix));
   const storage = {
     DATABASES_PATH: join(root, 'Databases'), PRESETS_PATH: join(root, 'Presets'),
-    NOTES_PATH: join(root, 'Notes'), USERS_PATH: join(root, 'users.json'),
+    NOTES_PATH: join(root, 'Notes'), DATABASE_PATH: join(root, 'platform.db'),
   };
   // Nothing real is reachable: storage is in the temp root, RCON is mocked, and its host is loopback.
   Object.assign(process.env, storage, { RCON_HOST: '127.0.0.1', RCON_AUTO_SYNC_ENABLED: 'false' });
@@ -97,12 +99,16 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
   }));
   const originalFetch = globalThis.fetch;
   let settle = async () => {};
+  let closeStore = () => {};
   try {
     const { env } = await import('../../src/lib/env');
-    assert.deepEqual([env.databasesPath, env.presetsPath, env.notesPath, env.usersPath, env.rcon.host],
-      [storage.DATABASES_PATH, storage.PRESETS_PATH, storage.NOTES_PATH, storage.USERS_PATH, '127.0.0.1'],
+    assert.deepEqual([env.databasesPath, env.presetsPath, env.notesPath, env.databasePath, env.rcon.host],
+      [storage.DATABASES_PATH, storage.PRESETS_PATH, storage.NOTES_PATH, storage.DATABASE_PATH, '127.0.0.1'],
       'the app was imported before the review set its env: import it only inside the review');
     await mkdir(storage.DATABASES_PATH);
+    closeStore = (await import('../../src/lib/platform/storage')).closePlatformStore;
+    // Every self-hosted route needs a session; the editor's and Apply's requests all carry this one.
+    const session = await signInForTest();
     const { POST: saveCategory, GET: readCategory } = await import('../../src/app/api/config/[...path]/route');
     const { POST: applyRoute } = await import('../../src/app/api/apply/route');
     const { useConfigStore, flushConfigWrites } = await import('../../src/lib/store/configStore');
@@ -114,7 +120,7 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
     globalThis.fetch = (async (url: string, init: RequestInit) => {
       const path = url.startsWith('/api/config/') ? url.slice('/api/config/'.length).split('/') : [];
       assert.equal(path.length, 2, `the harness does not serve ${url}`);
-      return saveCategory(new Request('http://localhost' + url, init) as never, at(path));
+      return saveCategory(session.request(url, init) as never, at(path));
     }) as unknown as typeof fetch;
     const store = useConfigStore.getState();
     await run({
@@ -122,13 +128,13 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
       reset: (database, category, key) => store.removeValue(database, category, key),
       async saved(database, category, key) {
         await flushConfigWrites();
-        const response = await readCategory(new Request('http://localhost') as never, at([database, category]));
+        const response = await readCategory(session.request(`/api/config/${database}/${category}`) as never, at([database, category]));
         assert.equal(response.status, 200);
         return (await response.json()).data[key];
       },
       editorValue: (database, category, key) => store.getValue(database, category, key),
       async saveUnchecked(database, category, entries) {
-        return (await saveCategory(new Request('http://localhost', json('PATCH', { entries })) as never, at([database, category]))).status;
+        return (await saveCategory(session.request(`/api/config/${database}/${category}`, json('PATCH', { entries })) as never, at([database, category]))).status;
       },
       storeUnvalidated: (database, category, entries) => patchCategory(database, category, entries as ConfigData),
       async apply(stage = `apply-${Object.keys(stages).length + 1}`) {
@@ -139,7 +145,7 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
         const logged: unknown[][] = [], log = console.error;
         console.error = (...args: unknown[]) => { logged.push(args); };
         // No commands in the request: the whole saved configuration, after a wipe.
-        const response = await applyRoute(new Request('http://localhost/api/apply', json('POST', {})))
+        const response = await applyRoute(session.request('/api/apply', json('POST', {})))
           .finally(() => { console.error = log; });
         if (response.status !== 200) {
           assert.equal(delivered.length, before, 'a refused Apply delivers nothing');
@@ -159,6 +165,7 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
     }
   } finally {
     await settle();
+    closeStore();
     globalThis.fetch = originalFetch;
     const target = resolve(root);
     assert(target.startsWith(parent + sep) && target.slice(parent.length + 1).startsWith(prefix));

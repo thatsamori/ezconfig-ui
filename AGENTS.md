@@ -18,9 +18,9 @@ are the contract between this app and the mod.
 `bun` must be on PATH: some tests spawn `bun` as a child process.
 - `bun install` - dependencies (`bun.lock` is the only lockfile).
 - `bun test ./tests` - full suite. Run as `bun --no-env-file test ./tests` with
-  `DATABASES_PATH`/`PRESETS_PATH`/`NOTES_PATH`/`USERS_PATH` pointing at temp dirs,
-  `DATABASE_PATH` at a file in one, and `RCON_HOST=127.0.0.1`, so no real data or
-  server is touched.
+  `DATABASES_PATH`/`PRESETS_PATH`/`NOTES_PATH` pointing at temp dirs,
+  `DATABASE_PATH` at a file in one (tests that call routes in-process sign in
+  there), and `RCON_HOST=127.0.0.1`, so no real data or server is touched.
 - `bun run typecheck` - `tsc --noEmit`.
 - `bun run lint` - ESLint flat config (`eslint.config.mjs`, eslint-config-next).
 - `bun run init-db` - create empty databases; writes to `./Databases` (ignores
@@ -36,11 +36,16 @@ are the contract between this app and the mod.
   startup hook: platform migrations, then the parry-geometry storage migration.
 - `src/lib/platform/` - platform storage: `storage.ts` is the only app module that
   opens the SQLite database; `migrations/` holds its numbered SQL migrations.
+  Logging: `log.ts`. Sign-in with Discord: `discord.ts` (the OAuth exchange, the
+  one module tests replace), `sign-in.ts`, `users.ts`, `sessions.ts` and `auth.ts`,
+  whose `requireSession` every route handler outside `src/app/api/auth/` calls
+  first (Origin check on requests that change data, then the session cookie).
 - `src/lib/database/`, `src/app/api/` - persistence and API routes.
 - `string-schemas/` - generated `characterConfigSchema.txt`/`weaponConfigSchema.txt`.
 - `tests/` (`*.test.ts`), `tests/fixtures/` (standalone child fixtures) and
-  `tests/helpers/` (`runPlatformFixture`: a child fixture with its own fresh,
-  migrated platform database).
+  `tests/helpers/`: `runPlatformFixture`/`withPlatformDatabase` (child fixtures
+  on a fresh, migrated platform database) and `signInForTest` (a session for
+  tests that call routes directly; the feature review harness uses it).
 - `scripts/` - init-db, defaults export/import, parry migration CLI.
 - `docs/` - see index below; `docs/design/`, `docs/archive/` are reference only.
 
@@ -77,13 +82,14 @@ of the old one, coordinated with the mod.
 - Sending to a live server, wipes or presets loads need the user's go-ahead.
 
 ## Data and secrets
-`Databases/`, `Presets/User/`, `Notes/`, `users.json`, `.env*` (except
-`.env.example`) are gitignored user data. So is the platform database at
+`Databases/`, `Presets/User/`, `Notes/`, `users.json` (no longer read), `.env*`
+(except `.env.example`) are gitignored user data. So is the platform database at
 `DATABASE_PATH` with its `.bak` copies (ignored only as `./platform.db*`).
 Never print, commit or overwrite them.
-Locations come from `DATABASES_PATH`, `PRESETS_PATH`, `NOTES_PATH` and
-`USERS_PATH` (defaults `./Databases`, `./Presets`, `./Notes`, `./users.json`;
-see `src/lib/env.ts`).
+Locations come from `DATABASES_PATH`, `PRESETS_PATH` and `NOTES_PATH` (defaults
+`./Databases`, `./Presets`, `./Notes`) and `DATABASE_PATH`; see `src/lib/env.ts`.
+No test or script calls Discord: tests replace `src/lib/platform/discord` (see
+`tests/fixtures/platform-sign-in.ts`), and `DISCORD_CLIENT_SECRET` lives only in `.env`.
 
 ## Tracking
 - Mod features: the mod's `.scratch/<feature>/` is canonical for specs, tickets

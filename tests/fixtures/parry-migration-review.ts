@@ -5,11 +5,13 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { createServer } from 'node:net';
 import { successfulProcessingFixture } from './acknowledged-transport';
+import { signInForTest, type TestSession } from '../helpers/platform-session';
 
 const root = await mkdtemp(join(tmpdir(), 'ezconfig-parry-review-'));
 const databaseRoot = join(root, 'Databases');
 process.env.DATABASES_PATH = databaseRoot;
 process.env.PRESETS_PATH = join(root, 'Presets');
+process.env.DATABASE_PATH = join(root, 'platform.db');
 const probe = createServer();
 await new Promise<void>(resolve => probe.listen(0, '127.0.0.1', resolve));
 const ownershipPort = (probe.address() as { port: number }).port;
@@ -33,7 +35,8 @@ const environment = {
   RCON_AUTO_SYNC_ENABLED: 'true', RCON_AUTO_SYNC_OWNER_PORT: String(ownershipPort),
   RCON_HOST: '127.0.0.1', RCON_PORT: '17947', RCON_PASSWORD: 'isolated-placeholder',
 };
-const request = (body: unknown) => new Request('http://localhost/api', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+let session: TestSession | undefined;
+const request = (body: unknown) => session!.request('/api', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const until = async (predicate: () => boolean) => {
   const end = Date.now() + 2000;
   while (!predicate()) { if (Date.now() > end) throw new Error('Startup did not produce an automatic snapshot'); await Bun.sleep(5); }
@@ -66,18 +69,19 @@ try {
     commands: automatic[0],
   }, null, 2));
 
+  session = await signInForTest();
   const { PATCH: save } = await import('../../src/app/api/config/[...path]/route');
   const { GET: preview } = await import('../../src/app/api/apply/preview/route');
   const { POST: apply } = await import('../../src/app/api/apply/route');
   const { GET: overrides } = await import('../../src/app/api/databases/overrides/route');
-  const saved = await overrides();
+  const saved = await overrides(session.request('/api/databases/overrides'));
   assert.equal(saved.status, 200);
   const values = (await saved.json()).values;
   assert.deepEqual(values.character.Parry[PARRY_TRANSFORM_KEYS[0]], { x: 0, y: 0, z: 0 });
   const updated = { x: -4, y: 0, z: 2 };
-  const response = await save(new Request('http://localhost/api', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries: { [PARRY_TRANSFORM_KEYS[0]]: updated } }) }) as never, { params: Promise.resolve({ path: ['Character', 'Parry'] }) });
+  const response = await save(session.request('/api/config/Character/Parry', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entries: { [PARRY_TRANSFORM_KEYS[0]]: updated } }) }) as never, { params: Promise.resolve({ path: ['Character', 'Parry'] }) });
   assert.equal(response.status, 200);
-  const reviewed = await preview();
+  const reviewed = await preview(session.request('/api/apply/preview'));
   assert.equal(reviewed.status, 200);
   const rows = reviewRows((await reviewed.json()).commands);
   const selected = rows.filter(row => PARRY_TRANSFORM_KEYS.includes(row.key as typeof PARRY_TRANSFORM_KEYS[number]));
@@ -102,7 +106,7 @@ try {
   assert.equal(automatic.length, 1, 'failed startup produces no extra snapshot or wipe');
   console.info('PASS: migrated storage -> real startup/runtime/snapshot -> wipe then canonical Parry; real saved read/edit/review/selected apply; malformed startup never connects');
 } finally {
-  await stop?.();
+  await stop?.(); session?.close();
   const target = resolve(root);
   assert(target.startsWith(resolve(tmpdir()) + sep) && target.split(sep).at(-1)?.startsWith('ezconfig-parry-review-'));
   await rm(target, { recursive: true, force: true });

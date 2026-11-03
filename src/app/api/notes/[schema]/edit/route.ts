@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { editNote } from '@/lib/notes/service';
+import { requireSession } from '@/lib/platform/auth';
 
 const VALID_SCHEMAS = ['weapon', 'character'];
 
@@ -16,6 +17,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ schema: string }> }
 ) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const { schema } = await params;
 

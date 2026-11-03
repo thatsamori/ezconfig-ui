@@ -6,8 +6,11 @@
 
 import { NextResponse } from 'next/server';
 import { listStaticPresets, listUserPresets } from '@/lib/presets';
+import { requireSession } from '@/lib/platform/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const [staticPresets, userPresets] = await Promise.all([
       listStaticPresets(),

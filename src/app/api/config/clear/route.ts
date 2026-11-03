@@ -6,8 +6,11 @@
 
 import { NextResponse } from 'next/server';
 import { clearAllDatabases } from '@/lib/database/service';
+import { requireSession } from '@/lib/platform/auth';
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     await clearAllDatabases();
     return NextResponse.json({ success: true });

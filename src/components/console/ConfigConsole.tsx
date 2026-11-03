@@ -1,17 +1,15 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Bookmark, Sword, Users, Search, Check, X, MessageCircle } from 'lucide-react';
+import { Bookmark, Sword, Search, Check, X, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { AuthGate } from '@/components/auth';
+import { AccountMenu, AuthGate } from '@/components/auth';
 import { Logo } from '@/components/Logo';
 import { PresetsTab } from '@/components/presets';
-import { UsersTab } from '@/components/users';
 import { SavePresetDialog } from '@/components/presets/SavePresetDialog';
 import { SelectiveApplyDialog } from '@/components/SelectiveApplyDialog';
 import { NotesDialog } from '@/components/notes';
 import { Switch } from '@/components/ui/switch';
-import { useAuthStore } from '@/lib/store';
 import { useConfigStore, flushConfigWrites, type ConfigState } from '@/lib/store/configStore';
 import { WEAPON_CONFIG_OPTIONS } from '@/lib/config/weaponConfigSchema';
 import { CHARACTER_CONFIG_OPTIONS, CharacterConfigGroupName } from '@/lib/config/characterConfigSchema';
@@ -93,8 +91,6 @@ function ConsoleContent() {
   const [sweep, setSweep] = useState<ConfigEntry | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [presetOpen, setPresetOpen] = useState(false);
-  const user = useAuthStore(state => state.user);
-  const logout = useAuthStore(state => state.logout);
   const values = useConfigStore(state => state.values);
   const [reload, setReload] = useState(0);
   const sync = useConfigPolling(reload);
@@ -145,7 +141,7 @@ function ConsoleContent() {
     target.focus({ preventScroll: true });
     target.scrollIntoView({ block: 'center', inline: 'nearest' });
   }, [searchDestination, loading, loadError]);
-  const globalSearch = <GlobalSearch weapon={weapon} isAdmin={user?.role === 'admin'} onSelect={navigateSearch} />;
+  const globalSearch = <GlobalSearch weapon={weapon} onSelect={navigateSearch} />;
   const resetScope = async () => {
     const store = useConfigStore.getState();
     const categories = isCharacter ? {
@@ -172,11 +168,7 @@ function ConsoleContent() {
         id: 'presets',
         label: 'Presets',
         icon: <Bookmark />
-      }, ...(user?.role === 'admin' ? [{
-        id: 'users',
-        label: 'Users',
-        icon: <Users />
-      }] : [])].map(item => <button key={item.id} title={item.label} aria-label={item.label} aria-current={tab === item.id ? 'page' : undefined} className={tab === item.id ? 'active' : ''} onClick={() => selectTab(item.id)}>{item.icon}</button>)}<button className="rail-avatar" title={`Sign out ${user?.username ?? ''}`} aria-label="Sign out" onClick={logout}>{user?.username.slice(0, 1).toUpperCase()}</button></nav>
+      }].map(item => <button key={item.id} title={item.label} aria-label={item.label} aria-current={tab === item.id ? 'page' : undefined} className={tab === item.id ? 'active' : ''} onClick={() => selectTab(item.id)}>{item.icon}</button>)}<AccountMenu /></nav>
     {configScreen ? <>
       <aside className="config-sidebar"><div className="sidebar-header"><div className="sidebar-title"><h2>{isCharacter ? 'Groups' : 'Weapons'}</h2><span>{isCharacter ? `${countGroups(values.character)} overrides` : `${weaponCount} with overrides`}</span></div><SearchField value={query} onChange={setQuery} placeholder="Filter" />{!isCharacter && <label className="override-filter"><Switch checked={onlyOverrides} onCheckedChange={setOnlyOverrides} /><span>Only with overrides</span></label>}</div><div className="sidebar-list">{items.map(name => <button key={name} className={name === title ? 'selected' : ''} aria-current={name === title ? 'true' : undefined} onClick={() => isCharacter ? setCharGroup(name as CharacterConfigGroupName) : setWeapon(name)}><span>{name}</span>{count(name) > 0 && <b>{count(name)}</b>}</button>)}{!items.length && <p className="empty-state">{onlyOverrides && !isCharacter ? 'No weapons with overrides match' : 'No matches'}</p>}</div></aside>
       <section className="config-content" ref={contentRef}><header className="config-header"><div className="content-heading"><div><p className="crumb">{isCharacter ? 'Character' : 'Weapons'}</p><h1>{title}</h1></div><div className="header-actions">{globalSearch}<button className="outline-button" disabled={loading || !!loadError} onClick={resetScope}>Reset {isCharacter ? 'group' : 'weapon'}</button></div></div>{isCharacter ? <p className="character-hint">Server-wide values. Rows marked feature are toggles; the parameters under them are stored and sent regardless, but the mod only reads them while the toggle is on.</p> : <div className="attack-toolbar"><div className="attack-chips">{attackGroups.map(group => {
@@ -189,7 +181,7 @@ function ConsoleContent() {
             '--columns': visibleGroups.length
           } as React.CSSProperties}><div className="config-table-inner"><div className="config-grid table-heading" role="row"><span role="columnheader">Config key</span>{visibleGroups.map(group => <span role="columnheader" key={group}>{isCharacter ? 'Value' : group}{visibleGroups.length > 1 && <button className="icon-button" aria-label={`Hide ${group}`} onClick={() => setGroups(toggleAttackGroup(groups, group))}><X size={12} /></button>}</span>)}<span role="columnheader" className="sr-only">Actions</span></div>{rowSections.map(section => <div role="rowgroup" key={section.title}>{section.title && <div role="row" className="config-section-heading"><div role="cell" aria-colspan={visibleGroups.length + 2}><h2>{section.title}</h2></div></div>}{section.entries.map(entry => <KeyRow key={`${database}/${visibleGroups.join('/')}/${entry.configKey}`} entry={entry} database={database} groups={visibleGroups} values={values} onSweep={setSweep} highlighted={searchDestination?.configKey === entry.configKey && searchDestination.tab === tab && searchDestination.group === visibleGroups[0] && (isCharacter || searchDestination.weapon === weapon)} />)}</div>)}{rows.length === 0 && <p className="empty-state">No keys in this group</p>}</div></div>}</div>
       <footer className="floating-bar"><span className={`status-dot${total ? ' changed' : ''}`} /><div className="bar-copy"><strong>{total ? `${total} unapplied changes` : 'Everything at game default'}</strong>{total > 0 && <span>across {weaponCount ? `${weaponCount} weapon${weaponCount === 1 ? '' : 's'}` : ''}{countGroups(values.character) ? `${weaponCount ? ' and ' : ''}character` : ''}</span>}</div><button className="outline-button" disabled={loading || !!loadError} onClick={() => setPresetOpen(true)}>Save as preset</button><button className="primary-button" disabled={loading || !!loadError} onClick={() => setReviewOpen(true)}>Review &amp; apply</button></footer></section>
-    </> : <section className="standalone-page" ref={contentRef}><div className="header-actions standalone-search">{globalSearch}</div>{tab === 'presets' ? <PresetsTab /> : user?.role === 'admin' ? <UsersTab /> : null}</section>}
+    </> : <section className="standalone-page" ref={contentRef}><div className="header-actions standalone-search">{globalSearch}</div>{tab === 'presets' ? <PresetsTab /> : null}</section>}
     {sweep && <SweepPanel entry={sweep} weapon={weapon} groups={groups} onClose={() => setSweep(null)} />}
     {reviewOpen && <SelectiveApplyDialog open={reviewOpen} onOpenChange={setReviewOpen} onApplyComplete={() => {}} />}
     {presetOpen && <SavePresetDialog open={presetOpen} onOpenChange={setPresetOpen} />}

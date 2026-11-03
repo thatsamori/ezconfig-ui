@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { useAuthStore } from "@/lib/store/authStore";
+import { useSessionStore } from "@/lib/store/sessionStore";
 import { useNotesContext } from "@/lib/notes/NotesContext";
 import type { Note } from "@/lib/notes/types";
 
@@ -21,7 +21,7 @@ export interface UseNotesReturn {
 export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn {
   const { getNotes, getCachedNotes, updateCache, isLoading, subscribeToLoading } = useNotesContext();
   const [, setVersion] = useState(0);
-  const user = useAuthStore((state) => state.user);
+  const user = useSessionStore((state) => state.user);
 
   // Get notes from cache (synchronous)
   const notesData = getCachedNotes(schema);
@@ -51,7 +51,6 @@ export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn
           body: JSON.stringify({
             configKey,
             note,
-            createdBy: user.username,
           }),
         });
 
@@ -146,6 +145,6 @@ export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn
     addNote,
     editNote,
     deleteNote,
-    currentUsername: user?.username || "",
+    currentUsername: user?.name || "",
   };
 }

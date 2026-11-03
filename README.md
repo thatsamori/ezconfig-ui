@@ -18,10 +18,12 @@ Create the database folder structure (idempotent):
 bun run init-db
 ```
 
-Copy `.env.example` to `.env` and fill in your server's RCON details, then run:
+Copy `.env.example` to `.env` and fill in your server's RCON details and the
+Discord sign-in settings, then run the app on Bun (platform storage uses
+`bun:sqlite`):
 
 ```bash
-bun run dev
+bun --bun run dev
 ```
 
 ## Mordhau server setup
@@ -53,7 +55,7 @@ the server's firewall.
 
 | Command | Purpose |
 | --- | --- |
-| `bun run dev` | Next dev server (connects to the RCON server in `.env`) |
+| `bun --bun run dev` | Next dev server on Bun (connects to the RCON server in `.env`) |
 | `bun test ./tests` | Test suite (RCON and disk writes are mocked) |
 | `bun run typecheck` | TypeScript check (`tsc --noEmit`) |
 | `bun run lint` | ESLint (`eslint.config.mjs`) |

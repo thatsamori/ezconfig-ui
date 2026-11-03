@@ -3,12 +3,13 @@
  *
  * Add a note to a config key (atomic operation)
  *
- * Request body: { configKey: string, note: string, createdBy: string }
+ * Request body: { configKey: string, note: string }; the author is the signed-in server owner.
  * Response: { success: true, data: NotesData } or { success: false, error: string }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { addNote } from '@/lib/notes/service';
+import { requireSession } from '@/lib/platform/auth';
 
 const VALID_SCHEMAS = ['weapon', 'character'];
 
@@ -16,6 +17,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ schema: string }> }
 ) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const { schema } = await params;
 
@@ -27,7 +30,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { configKey, note, createdBy } = body;
+    const { configKey, note } = body;
 
     if (typeof configKey !== 'string' || !configKey) {
       return NextResponse.json(
@@ -43,14 +46,7 @@ export async function POST(
       );
     }
 
-    if (typeof createdBy !== 'string' || !createdBy) {
-      return NextResponse.json(
-        { success: false, error: 'createdBy is required' },
-        { status: 400 }
-      );
-    }
-
-    const data = await addNote(schema, configKey, { createdBy, note });
+    const data = await addNote(schema, configKey, { createdBy: session.user.username, note });
 
     return NextResponse.json({ success: true, data });
   } catch (error) {

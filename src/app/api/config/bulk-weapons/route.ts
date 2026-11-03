@@ -3,9 +3,12 @@ import { patchCategory } from '@/lib/database/service';
 import { getSchemaForCategory, validateEntries } from '@/lib/database/validation';
 import { CategoryName, WeaponConfigGroupName } from '@/lib/config/weaponConfigSchema';
 import type { ConfigData } from '@/lib/database/types';
+import { requireSession } from '@/lib/platform/auth';
 
 /** Accept shared or per-weapon entries; null removes an override. */
 export async function POST(request: NextRequest) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const body = await request.json();
     if (!Object.values(WeaponConfigGroupName).includes(body.category)) return NextResponse.json({

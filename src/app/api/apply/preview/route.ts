@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { buildRconCommands } from '@/lib/database/apply';
 import { readApplyRecord } from '@/lib/database/applyRecord';
-export async function GET() {
+import { requireSession } from '@/lib/platform/auth';
+export async function GET(request: Request) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const [commands, lastApplied] = await Promise.all([buildRconCommands(), readApplyRecord()]);
     return NextResponse.json({
