@@ -135,3 +135,12 @@ live game server and the live instance are the owner's.
 - This ticket's Discord, release order and restore drill criteria are ticked from
   the records above and #39. The master copy of the settings is the owner's and
   was not checked here.
+
+2026-11-03, 23:10 UTC: `main` at `217893e` deployed in 65 s, with #50, #51, #52, #54,
+the one-step Game.ini block (`Mods=5696753`) and the import's removal. There was no
+migration. The owner asked for it to go out before the check of `9f3df3a` reported, on
+typecheck, 249 tests, lint at 5 and the build at this commit. A read-only count before
+the deploy found no stored value that #54's stricter rules refuse. The app, Litestream,
+Caddy and the timer are active, and the app logged no warnings or errors in the 5 minutes
+after it. `/` answers 200; the session, game servers and Rulesets APIs, the Ruleset
+import and a poll with no key answer 401; `/internal/backup-heartbeat` answers 403.
