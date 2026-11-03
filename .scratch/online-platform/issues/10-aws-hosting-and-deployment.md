@@ -244,3 +244,10 @@ backup status.
   bucket plan can grow.
 - The spec's first build slice proves a 2-minute held poll through Caddy and
   Next.js on Bun, and Litestream against a Lightsail bucket.
+
+## Comments
+
+- 2026-11-02, from
+  [Does the HTTP node work on Linux, and can the mod read Game.ini?](12-prove-linux-http-and-game-ini.md):
+  the local-testing override must be quoted,
+  `PlatformUrl="http://127.0.0.1:…"`. Unquoted, the read stops at `//`.

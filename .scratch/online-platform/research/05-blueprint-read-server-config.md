@@ -113,6 +113,12 @@ check, fall back to the built-in URL. The owner adds this to the same
 PlatformUrl=https://platform.example.org
 ```
 
+Correction (2026-11-02, from
+[Does the HTTP node work on Linux, and can the mod read Game.ini?](../issues/12-prove-linux-http-and-game-ini.md)):
+quote the value, `PlatformUrl="https://platform.example.org"`. Unquoted, the
+read stops at `//` and returns `https:`, and the server saves `https:` back
+to the file. Proof item 2 below came out that way on both servers.
+
 Reading it just before each poll costs one in-memory lookup. That way an RCON
 `modifyinivar` change applies without a restart (unproven). Skip CPF_Config,
 since BP_EZConfigB would read Engine.ini. Skip command-line overrides, since

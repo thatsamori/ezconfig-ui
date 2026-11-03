@@ -249,3 +249,12 @@ deletes a server owner on request. Added to the map.
 - Logs (map fog) gains operator actions.
 - No ADR: each decision reverses cheaply. The published Game.ini names are a
   contract the spec carries.
+
+## Comments
+
+- 2026-11-02, from
+  [Does the HTTP node work on Linux, and can the mod read Game.ini?](12-prove-linux-http-and-game-ini.md):
+  `modifyinivar` is proven. It changes the next read without a restart, and
+  the value survives one. A key shaped like an issued one reads back exactly
+  and needs no quotes. If the setup block also carries a `PlatformUrl` line,
+  quote the URL: unquoted, it reads and is saved as `https:`.

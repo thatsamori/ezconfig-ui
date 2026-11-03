@@ -218,3 +218,12 @@ one throwaway probe on the owner's Linux box and in the Windows kit sandbox.
   Held polls live in one in-process registry, and Apply wakes the game
   server's held poll after its transaction commits. A platform restart drops
   held polls, so a game server is Not connected for about 10 to 20 s.
+- 2026-11-02, from
+  [Does the HTTP node work on Linux, and can the mod read Game.ini?](12-prove-linux-http-and-game-ini.md):
+  the Game.ini example above must be quoted,
+  `PlatformUrl="https://platform.example.org"`. Unquoted, the read stops at
+  `//` and returns `https:`, and the server saves `https:` back to the file.
+  That fails the `https://` check, so the mod would fall back to the built-in
+  URL silently. Its log should name the likely cause. The node works the same
+  on the Linux server, and `modifyinivar` changes the value without a
+  restart.

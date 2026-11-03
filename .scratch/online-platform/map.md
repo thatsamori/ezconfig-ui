@@ -123,6 +123,12 @@ ready to slice into implementation tickets. This map builds nothing.
   the SQLite file to a Lightsail bucket, and a weekly restore checks it. The
   owner deploys a commit by script, migrations run at startup, and there is
   no staging.
+- [Does the HTTP node work on Linux, and can the mod read Game.ini?](issues/12-prove-linux-http-and-game-ini.md):
+  yes to both. On Linux the node matches Windows: HTTPS POST with verified
+  certificates, the 180 s hold limit, clean failures and flat frame time.
+  `[EZConfigPlatform]` reads back exactly on both platforms, but only if the
+  URL is quoted: unquoted, it reads and is saved as `https:`. `modifyinivar`
+  changes the value without a restart.
 
 ## Not yet specified
 
