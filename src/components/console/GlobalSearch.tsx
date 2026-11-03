@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpRight, Bookmark, CornerDownLeft, Search, Settings2, Sword, Users, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpRight, Bookmark, CornerDownLeft, Search, Settings2, Sword, X } from 'lucide-react';
 import { searchGlobal, type SearchDestination } from './search';
 
-export function GlobalSearch({ weapon, isAdmin, onSelect }: {
+export function GlobalSearch({ weapon, onSelect }: {
   weapon: string;
-  isAdmin: boolean;
   onSelect: (destination: SearchDestination) => void;
 }) {
   const [query, setQuery] = useState('');
@@ -18,7 +17,7 @@ export function GlobalSearch({ weapon, isAdmin, onSelect }: {
   const list = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const id = useId();
-  const { results, total } = useMemo(() => searchGlobal(query, { weapon, isAdmin }), [query, weapon, isAdmin]);
+  const { results, total } = useMemo(() => searchGlobal(query, { weapon }), [query, weapon]);
   const activeIndex = Math.min(active, Math.max(0, results.length - 1));
 
   useLayoutEffect(() => {
@@ -102,7 +101,7 @@ export function GlobalSearch({ weapon, isAdmin, onSelect }: {
       <div className="global-search-heading"><strong>{query.trim() ? 'Search results' : 'Go to…'}</strong><span>Entire workspace</span></div>
       <div className="global-search-results" role="listbox" aria-label="Search results" id={`${id}-results`} ref={list}>
         {results.map((result, index) => {
-          const Icon = result.tab === 'weapons' ? Sword : result.tab === 'presets' ? Bookmark : result.tab === 'users' ? Users : Settings2;
+          const Icon = result.tab === 'weapons' ? Sword : result.tab === 'presets' ? Bookmark : Settings2;
           return <div role="option" id={`${id}-${index}`} key={result.id} aria-selected={activeIndex === index}
             className="global-search-result" onPointerMove={() => setActive(index)}
             onMouseDown={event => event.preventDefault()} onClick={() => choose(result)}>

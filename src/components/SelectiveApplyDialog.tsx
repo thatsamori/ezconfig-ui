@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { flushConfigWrites } from '@/lib/store/configStore';
-import { useAuthStore } from '@/lib/store';
 import { reviewRows, selectedReviewCommands, type ReviewRow } from '@/components/console/model';
 import { applyFeedback } from '@/lib/rcon/apply-feedback';
 export function SelectiveApplyDialog({
@@ -32,7 +31,6 @@ export function SelectiveApplyDialog({
     commands: number;
     values?: number;
   } | null>(null);
-  const token = useAuthStore(state => state.token);
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -76,10 +74,7 @@ export function SelectiveApplyDialog({
       const response = await fetch('/api/apply', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          ...(token ? {
-            Authorization: `Bearer ${token}`
-          } : {})
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           commands: selectedReviewCommands(rows, selected),

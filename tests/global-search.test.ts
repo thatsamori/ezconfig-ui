@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { searchGlobal } from '../src/components/console/search';
 import { getSupportedConfigOptions } from '../src/components/weapons/WeaponAccordion';
 
-const context = { weapon: 'ArmingSword', isAdmin: false };
+const context = { weapon: 'ArmingSword' };
 
 describe('global search', () => {
   test('finds character keys outside the active group, ignoring casing and spacing', () => {
@@ -54,9 +54,8 @@ describe('global search', () => {
     expect(results.every(result => !result.configKey)).toBe(true);
   });
 
-  test('only administrators can discover Users', () => {
+  test('offers no Users page now that server owners sign in with Discord', () => {
     expect(searchGlobal('users', context).results).toEqual([]);
-    expect(searchGlobal('users', { ...context, isAdmin: true }).results[0]).toMatchObject({ tab: 'users' });
   });
 
   test('reports no matches and caps broad results with an accurate total', () => {

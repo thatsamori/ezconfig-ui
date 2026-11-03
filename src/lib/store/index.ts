@@ -1,4 +1,4 @@
 export { useConfigStore } from './configStore';
 export type { ConfigState } from './configStore';
-export { useAuthStore } from './authStore';
-export type { AuthState, AuthUser } from './authStore';
+export { useSessionStore } from './sessionStore';
+export type { SessionState, SessionUser } from './sessionStore';
