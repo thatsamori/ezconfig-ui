@@ -901,6 +901,7 @@ batches arrive.
   servers can too, the same uniqueness rule applies.
 - **Linux.** Linux rented hosts need no special handling beyond OS CA
   certificates, which standard images include (`online-platform#12`).
-- **Mod tracking.** Mod-side tickets and evidence live in the mod's
-  `.scratch/online-platform/`, and this repo's tracker holds the platform
-  work. Refer to tickets as `online-platform#NN`.
+- **Tracking.** The implementation tickets, `online-platform#16` to `#42`,
+  live in this repo's `.scratch/online-platform/issues/`, including the mod's
+  (`#29`, `#34`). The mod's `.scratch/online-platform/` holds evidence only.
+  Refer to tickets as `online-platform#NN`.
