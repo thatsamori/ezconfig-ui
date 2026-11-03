@@ -106,3 +106,6 @@ Follow-ups, not done here:
   not one server. The apply review still uses `SERVER_NAME`.
 - The sign-in page and account menu were checked by typecheck, lint and the
   route tests, not in a browser.
+
+2026-11-02: The owner signed in with a real Discord application on the
+ticket's worktree and confirmed sign-in works. Merged into `main` as `77c4e3a`.
