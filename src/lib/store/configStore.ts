@@ -72,6 +72,13 @@ export interface ConfigState {
   /** Empty the Draft, with its revision checked. */
   resetToGameDefaults: () => Promise<void>;
   /**
+   * Discard changes on a game server's page: its Draft becomes the Live
+   * configuration, if it is still at `revision`, the review's. The editor,
+   * when it has that Draft open, takes the answer, as it takes a Reset's or,
+   * when stale, a rejected save's.
+   */
+  discardChanges: (gameServerId: number, revision: number) => Promise<void>;
+  /**
    * Fetch the open Draft again and take another tab's saves. Skipped while an
    * edit is saving or being typed (`typing`); edits here that never saved are
    * named, as a rejected save names them.
@@ -154,6 +161,8 @@ function adopt(gameServerId: number, view: DraftView): ValueChange[] {
 let saving: Promise<void> | null = null;
 let pending = false;
 let opening = 0;
+/** The game server whose Draft is open or loading: the one whose edits `unsaved` names. */
+let openId: number | null = null;
 let refreshing = false;
 /** Saves rejected with edits lost, and the last one's message, for flushConfigWrites. */
 let rejected = { count: 0, message: '' };
@@ -222,10 +231,11 @@ async function settled() {
 }
 
 /**
- * One of the Draft writes beside auto-save (Reset, the Ruleset writes), with
- * the revision checked: the answer's data. On a stale rejection the tab takes
- * the current Draft, naming its lost edits, and this throws `stale`. Undefined
- * when another Draft was opened meanwhile.
+ * One of the Draft writes beside auto-save (Reset, Discard changes, the
+ * Ruleset writes), with the revision checked: the answer's data. On a stale
+ * rejection the tab takes the current Draft, naming its lost edits, and this
+ * throws `stale`. Undefined when the editor does not have this Draft open,
+ * as when another was opened meanwhile.
  */
 async function draftWrite<T>(gameServerId: number, path: string, body: Record<string, unknown>, verb: string, stale: string): Promise<T | undefined> {
   const response = await fetch(`/api/game-servers/${gameServerId}/draft/${path}`, {
@@ -236,13 +246,13 @@ async function draftWrite<T>(gameServerId: number, path: string, body: Record<st
     throw new Error(`Could not reach the platform to ${verb}`);
   });
   const answer = await response.json().catch(() => ({})) as { error?: string; data?: T | DraftView };
-  if (useConfigStore.getState().draft?.gameServerId !== gameServerId) return undefined;
+  const open = useConfigStore.getState().draft?.gameServerId === gameServerId;
   if (response.status === 409 && answer.data && typeof answer.data === 'object' && 'values' in answer.data) {
-    adopt(gameServerId, answer.data as DraftView);
+    if (open) adopt(gameServerId, answer.data as DraftView);
     throw new Error(stale);
   }
   if (!response.ok || !answer.data) throw new Error(answer.error || `Could not ${verb} (${response.status})`);
-  return answer.data as T;
+  return open ? answer.data as T : undefined;
 }
 
 export const useConfigStore = create<ConfigState>()((set, get) => ({
@@ -260,7 +270,10 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
     await settled();
     if (token !== opening) return;
     pending = false;
-    set({ values: emptyValues(), draft: null, loading: true, loadError: '', saveState: 'saved', saveError: '', fieldErrors: {}, unsaved: [] });
+    // Opening the same Draft again, as Edit Draft does, keeps its named edits until they are dismissed.
+    const unsaved = openId === gameServerId ? get().unsaved : [];
+    openId = gameServerId;
+    set({ values: emptyValues(), draft: null, loading: true, loadError: '', saveState: 'saved', saveError: '', fieldErrors: {}, unsaved });
     try {
       const response = await fetch(`/api/game-servers/${gameServerId}/draft`);
       const body = await response.json().catch(() => ({})) as { error?: string; data?: DraftView };
@@ -277,6 +290,7 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
 
   closeDraft: () => {
     opening++;
+    openId = null;
     pending = false;
     set({ values: emptyValues(), draft: null, loading: false, loadError: '', saveState: 'saved', saveError: '', fieldErrors: {}, unsaved: [] });
   },
@@ -346,6 +360,14 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
       'Not reset: the Draft changed in another tab. The editor now shows it; reset again to empty it.');
     if (!reset) return;
     set({ values: reset.values, draft: opened(draft.gameServerId, reset), saveState: 'saved', saveError: '', fieldErrors: {} });
+  },
+
+  discardChanges: async (gameServerId, revision) => {
+    await settled();
+    const discarded = await draftWrite<DraftView>(gameServerId, 'discard', { revision }, 'discard the changes',
+      'Nothing was discarded: the Draft changed in another tab. Check it, then discard again.');
+    // Values and base together, as Reset sets them: the discarded edits are not named.
+    if (discarded) set({ values: discarded.values, draft: opened(gameServerId, discarded), saveState: 'saved', saveError: '', fieldErrors: {} });
   },
 
   refreshDraft: async (typing = () => false) => {

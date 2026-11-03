@@ -36,7 +36,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { encodeValues } from '@/lib/config/encodeValues';
 import { documentErrors, documentFields, type DocumentField, type FieldError, type ValuesDocument } from '@/lib/config/valuesDocument';
 import type { ConfigValue } from '@/lib/database/types';
-import { discardDraft, readDraft, type Draft, type DraftWrite } from './drafts';
+import { discardDraft, readDraft, type CheckedWrite, type Draft } from './drafts';
 import type { GameServer, GameServerView } from './game-servers';
 import { originOf } from './origins';
 import type { ProcessingResult, UnknownKey } from './poll-exchange';
@@ -223,7 +223,10 @@ export function pendingDelivery(gameServerId: number, processedId: string | null
  * origin, if it is still at `baseRevision`. Undefined when the game server has
  * no Draft, or no Live configuration to discard to.
  */
-export function discardChanges(gameServerId: number, baseRevision: number, now = Date.now()): DraftWrite | undefined {
-  const live = readLiveConfiguration(gameServerId);
-  return live && discardDraft(gameServerId, baseRevision, live, now);
+export function discardChanges(gameServerId: number, baseRevision: number, now = Date.now()): CheckedWrite | undefined {
+  // The Live configuration is read in the Draft write's transaction, so an Apply cannot come between.
+  return platformStore().transaction((): CheckedWrite | undefined => {
+    const live = readLiveConfiguration(gameServerId);
+    return live && discardDraft(gameServerId, baseRevision, live, now);
+  });
 }

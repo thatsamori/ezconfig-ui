@@ -56,7 +56,10 @@ instance's settings or secrets.
   (`src/app/api/auth/discord/`), the poll endpoint and the heartbeat; the
   sign-in fixture's `routes` scenario checks every route file. Operator-only
   routes call `requireOperator` instead. Invites: `invites.ts`
-  (codes stored as hashes only) and `src/app/api/operator/invites/`. `retention.ts`
+  (codes stored as hashes only) and `src/app/api/operator/invites/`. Server
+  owners: `server-owners.ts` (the operator's list, Remove and Restore access,
+  Delete with the foreign keys' cascade, none against an operator) behind
+  `src/app/api/operator/server-owners/`. `retention.ts`
   is the daily sweep of expired sessions and old Invites, started by the startup hook.
   Game servers: `game-servers.ts` (registering, keys kept only as SHA-256 hashes,
   Regenerate key and Delete, connection status), `polls.ts` (the one in-process
@@ -94,8 +97,9 @@ instance's settings or secrets.
   `tests/helpers/`: `runPlatformFixture`/`withPlatformDatabase` (child fixtures
   on a fresh, migrated platform database) and `signInForTest` (a session for
   tests that call routes directly; the feature review harness uses it).
-- `scripts/` - `deploy.ts`, and the game defaults export and import
-  (`docs/game-defaults.md`).
+- `scripts/` - `deploy.ts`, the game defaults export and import
+  (`docs/game-defaults.md`), and the one-time import (`import-self-hosted.ts`,
+  online-platform#40; deleted after the owner's import, #42).
 - `docs/` - see index below; `docs/design/`, `docs/archive/` are reference only.
 - `deploy/` - the platform instance's units, Caddyfile, Litestream template and
   provisioning; `scripts/deploy.ts` (`bun run deploy <commit>`) runs

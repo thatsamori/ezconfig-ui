@@ -3,6 +3,8 @@ import { useConfigStore, flushConfigWrites, fieldName, type DraftValues } from '
 const originalFetch = globalThis.fetch;
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  // Each test opens its Draft afresh: reopening the same one keeps its named edits.
+  useConfigStore.getState().closeDraft();
 });
 type Call = { method: string; url: string; body?: { revision: number; document?: unknown } & Record<string, unknown> };
 type View = { values: DraftValues; revision: number; savedAt: number | null; dropped: number };
@@ -119,6 +121,52 @@ test('Reset to game defaults on a stale revision takes the current Draft and res
   await store.openDraft(7);
   await expect(store.resetToGameDefaults()).rejects.toThrow('Not reset: the Draft changed in another tab');
   expect(useConfigStore.getState()).toMatchObject({ values: theirs(4).values, draft: { revision: 4 }, saveState: 'saved', unsaved: [] });
+});
+test("a rejected save's named edits stay through opening the same Draft again, as Edit Draft does, and not another's", async () => {
+  serve(() => stale(theirs(4)));
+  const store = useConfigStore.getState();
+  await store.openDraft(7);
+  store.setValue('Character', 'Movement', 'CanDodge', false);
+  // As the game server page's review flushes the editor's saves first.
+  await expect(flushConfigWrites()).rejects.toThrow('an edit here was not saved: Character · Movement · CanDodge.');
+  const named = [{ database: 'Character', category: 'Movement', key: 'CanDodge', value: false }];
+  expect(useConfigStore.getState().unsaved).toEqual(named);
+  await store.openDraft(7);
+  expect(useConfigStore.getState()).toMatchObject({ draft: { gameServerId: 7, revision: 3 }, unsaved: named });
+  await store.openDraft(8);
+  expect(useConfigStore.getState()).toMatchObject({ draft: { gameServerId: 8 }, unsaved: [] });
+});
+test('a stale Discard takes the current Draft, names the edits here it did not save, and discards nothing', async () => {
+  const calls = serve(call => call.url.endsWith('/discard') ? stale(theirs(4)) : json({}, 500));
+  const store = useConfigStore.getState();
+  await store.openDraft(7);
+  // An edit whose save never arrived, as the review's flush leaves it.
+  store.setValue('Axe', 'Strike', 'Windup', 0.6);
+  await expect(flushConfigWrites()).rejects.toThrow('Could not save the Draft (500)');
+  await expect(store.discardChanges(7, 3)).rejects.toThrow('Nothing was discarded: the Draft changed in another tab. Check it, then discard again.');
+  const named = [{ database: 'Axe', category: 'Strike', key: 'Windup', value: 0.6 }];
+  expect(useConfigStore.getState()).toMatchObject({ values: theirs(4).values, draft: { gameServerId: 7, revision: 4, base: theirs(4).values }, saveState: 'saved', saveError: '', unsaved: named });
+  expect(calls.map(call => [call.url, call.body])).toEqual([
+    ['/api/game-servers/7/draft', { revision: 3, document: { Weapon: { Axe: { Strike: { Windup: 0.6 } } } } }],
+    ['/api/game-servers/7/draft/discard', { revision: 3 }],
+  ]);
+  // Edit Draft opens it again, still naming them.
+  await store.openDraft(7);
+  expect(useConfigStore.getState()).toMatchObject({ values: empty().values, unsaved: named });
+});
+test("Discard takes the Live configuration's values without naming the edits it discards, and needs no open Draft", async () => {
+  const live = { character: { Movement: { MaxWalkSpeed: 500 } }, weapons: {} };
+  const calls = serve(call => call.url.endsWith('/discard') ? json({ success: true, data: { ...empty(call.body!.revision + 1), values: live, savedAt: 6 } }) : saved(call));
+  const store = useConfigStore.getState();
+  await store.openDraft(7);
+  store.setValue('Axe', 'Strike', 'Windup', 0.6);
+  await flushConfigWrites();
+  await store.discardChanges(7, 4);
+  expect(useConfigStore.getState()).toMatchObject({ values: live, draft: { gameServerId: 7, revision: 5, savedAt: 6, base: live }, saveState: 'saved', unsaved: [] });
+  // From a game server page whose Draft the editor does not have open: the editor is left as it is.
+  await store.discardChanges(8, 2);
+  expect(useConfigStore.getState()).toMatchObject({ values: live, draft: { gameServerId: 7, revision: 5 } });
+  expect(calls.map(call => [call.url, call.body?.revision])).toEqual([['/api/game-servers/7/draft', 3], ['/api/game-servers/7/draft/discard', 4], ['/api/game-servers/8/draft/discard', 2]]);
 });
 test("a refresh picks up another tab's saves, and changes nothing while the Draft has not moved", async () => {
   let current = empty();
