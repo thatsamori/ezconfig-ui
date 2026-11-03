@@ -121,5 +121,5 @@ after it. 226 tests pass across 43 files, typecheck is clean, and lint stays at
     next refresh took it, and `StrafeModifier` showed that save's 0.5.
 - Not changed: the mod's `.scratch/movement-rules/spec.md` (about line 204)
   still states the old rule. It is in the mod repo, so this branch leaves it.
-- Found, not fixed: the Character sidebar says "1 overrides"
+- Found, and fixed on `main` after the merge: the Character sidebar said "1 overrides"
   (`ConfigConsole.tsx`, `sidebar-title`).
