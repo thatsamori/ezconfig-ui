@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readNotes, writeNotes } from '@/lib/notes/service';
 import type { NotesData, Note } from '@/lib/notes/types';
+import { requireSession } from '@/lib/platform/auth';
 
 /**
  * Valid schema names
@@ -66,6 +67,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ schema: string }> }
 ) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const { schema } = await params;
 
@@ -97,6 +100,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ schema: string }> }
 ) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const { schema } = await params;
 

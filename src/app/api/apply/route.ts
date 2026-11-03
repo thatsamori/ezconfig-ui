@@ -2,7 +2,7 @@
  * POST /api/apply
  *
  * Apply config to game via RCON.
- * No password required - app access implies authorization.
+ * Requires a platform session; the apply record names its server owner.
  *
  * Request body: { commands?: string[], wipeDatabase?: boolean }
  * - If commands provided: use those commands directly (selective apply)
@@ -16,8 +16,8 @@ import { NextResponse } from "next/server";
 import { buildRconCommands } from "@/lib/database/apply";
 import { executeAcknowledgedBatch } from "@/lib/rcon/service";
 import { writeApplyRecord } from '@/lib/database/applyRecord';
-import { validateToken } from '@/lib/auth/tokens';
 import { cameraCommandError } from '@/lib/config/cameraPolicyValidation';
+import { requireSession } from '@/lib/platform/auth';
 
 interface ApplyRequest {
   commands?: string[];
@@ -25,6 +25,8 @@ interface ApplyRequest {
 }
 
 export async function POST(request: Request) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const body = (await request.json()) as ApplyRequest;
 
@@ -58,12 +60,10 @@ export async function POST(request: Request) {
     const result = await executeAcknowledgedBatch(commands, { signal: request.signal });
     const serverConfirmedComplete = result.serverState === 'complete' && result.commandsSucceeded === commands.length;
     if (!result.success && !serverConfirmedComplete) return NextResponse.json(result, { status: result.failedAt === 'validation' ? 400 : result.status === 'rejected' ? 409 : 502 });
-    const token = request.headers.get('Authorization')?.replace(/^Bearer /, '');
-    const user = token ? validateToken(token) : null;
     // The server confirmed terminal processing; metadata failure is separate
     // and must not encourage replaying an already completed apply.
     let metadataWarning: string | undefined;
-    await writeApplyRecord({ at: new Date().toISOString(), username: user?.username ?? 'unknown user', commands: result.commandsSucceeded, values: result.acceptedValues, ignored: result.ignoredKeys }).catch((error) => {
+    await writeApplyRecord({ at: new Date().toISOString(), username: session.user.username, commands: result.commandsSucceeded, values: result.acceptedValues, ignored: result.ignoredKeys }).catch((error) => {
       console.error('Could not record last apply:', error);
       metadataWarning = 'Configuration was processed, but apply history could not be saved.';
     });

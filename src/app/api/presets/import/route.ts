@@ -11,6 +11,7 @@ import { join } from 'path';
 import { getUserPresetsPath, validateUserPresetName, listUserPresets } from '@/lib/presets';
 import type { PresetManifest } from '@/lib/presets/types';
 import { assertCameraPolicy } from '@/lib/config/cameraPolicyValidation';
+import { requireSession } from '@/lib/platform/auth';
 
 /**
  * Convert a title to a safe preset folder name
@@ -48,6 +49,8 @@ async function generateUniqueName(baseName: string): Promise<string> {
 }
 
 export async function POST(request: NextRequest) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;

@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listUserPresets, saveUserPreset } from '@/lib/presets';
 import { readAllConfigData } from '@/lib/database/structure';
+import { requireSession } from '@/lib/platform/auth';
 
 interface CreatePresetBody {
   name: string;
@@ -18,6 +19,8 @@ interface CreatePresetBody {
 }
 
 export async function POST(request: NextRequest) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const body = (await request.json()) as CreatePresetBody;
 
@@ -58,7 +61,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const presets = await listUserPresets();
 

@@ -6,12 +6,15 @@
 
 import { NextResponse } from 'next/server';
 import { loadPresetData, readPresetManifest, validatePresetName } from '@/lib/presets';
+import { requireSession } from '@/lib/platform/auth';
 
 type RouteParams = {
   params: Promise<{ name: string }>;
 };
 
 export async function GET(request: Request, { params }: RouteParams) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   const { name } = await params;
 
   // Validate preset name

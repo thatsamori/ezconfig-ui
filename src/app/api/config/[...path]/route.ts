@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readCategory, writeCategory, patchCategory } from '@/lib/database/service';
 import { getSchemaForCategory, validateEntries } from '@/lib/database/validation';
 import type { ConfigData } from '@/lib/database/types';
+import { requireSession } from '@/lib/platform/auth';
 
 /**
  * Parse path segments into database and category
@@ -42,6 +43,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const { path: pathSegments } = await params;
     const parsed = parsePath(pathSegments);
@@ -75,6 +78,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const { path: pathSegments } = await params;
     const parsed = parsePath(pathSegments);

@@ -8,10 +8,13 @@
 import { NextResponse } from 'next/server';
 import { scanOverrides, readAllConfigData } from '@/lib/database/structure';
 import { readConfigRevision, withConfigLock } from '@/lib/database/revision';
+import { requireSession } from '@/lib/platform/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const { overrides, values, metadata } = await withConfigLock(async () => {
       const [overrides, values, metadata] = await Promise.all([scanOverrides(), readAllConfigData(), readConfigRevision()]);

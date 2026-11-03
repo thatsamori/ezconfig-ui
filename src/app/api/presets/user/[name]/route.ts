@@ -7,12 +7,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteUserPreset, loadUserPresetData } from '@/lib/presets';
+import { requireSession } from '@/lib/platform/auth';
 
 interface RouteParams {
   params: Promise<{ name: string }>;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const { name } = await params;
 
@@ -43,6 +46,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const session = requireSession(request);
+  if (!session.ok) return session.response;
   try {
     const { name } = await params;
 
