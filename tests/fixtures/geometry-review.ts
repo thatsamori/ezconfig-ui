@@ -37,7 +37,7 @@ await featureReview('geometry', async ({ set, reset, saved, saveUnchecked, store
   // A manually damaged saved value must fail before admitting a full Apply
   // or sending its wipe, rather than relying on a later server rejection.
   await storeUnvalidated('Character', category, { [key]: 1e40 });
-  await assert.rejects(apply(), /Apply was refused \(500\)/);
+  await assert.rejects(apply(), /Apply was refused \(400\)/);
 
   reset('Character', category, key);
   assert.equal(await saved('Character', category, key), undefined);

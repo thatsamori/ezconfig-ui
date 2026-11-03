@@ -1,11 +1,14 @@
 /**
  * Feature review harness, shaped like the platform: a fixture sets and resets
  * values through the editor, which auto-saves a game server's Draft, reads
- * back what was saved, and Applies the whole Draft as the encoder builds it: a
- * wipe then one command per non-empty category in today's command encoding.
- * There is no selective apply. It runs on the Draft routes, signed in with a
- * platform session, with temp storage and the RCON service mocked; env is set
- * before the app is imported, so each review is its own child process.
+ * back what was saved, and Applies the whole Draft. There is no selective
+ * apply. Apply is the real one: the review's route, then Apply's, which wakes
+ * the poll the game server holds on the Supported build. The delivered Live
+ * configuration is the batch: a wipe then one command per non-empty category
+ * in today's command encoding. The game server, a simulated mod, then reports
+ * processing it and polls again. It runs on the platform's routes, signed in
+ * with a platform session, with temp storage and the RCON service mocked; env
+ * is set before the app is imported, so each review is its own child process.
  */
 import { successfulProcessingFixture } from './acknowledged-transport';
 import { signInForTest } from '../helpers/platform-session';
@@ -54,9 +57,9 @@ export interface FeatureReview {
   /** Store values without validation, as an older schema could have saved them; the editor then opens the Draft again. */
   storeUnvalidated(database: string, category: string, entries: Record<string, unknown>): Promise<void>;
   /**
-   * Apply the whole Draft. Resolves to the delivered batch, captured under
-   * `stage` (default apply-N). A refused Apply rejects, and nothing is
-   * delivered.
+   * Apply the whole Draft. Resolves to the batch the held poll delivered,
+   * captured under `stage` (default apply-N). A refused Apply rejects with
+   * `Apply was refused (status): error`, and nothing is delivered.
    */
   apply(stage?: string): Promise<string[]>;
   /** Batches the self-hosted automatic sync delivered on its own (its startup snapshot), oldest first; its RCON is mocked. */
@@ -96,6 +99,8 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
   const originalFetch = globalThis.fetch;
   let settle = async () => {};
   let closeStore = () => {};
+  /** Hangs up the game server's held poll, which would otherwise outlive the review, and waits for it to end. */
+  let hangUp = async () => {};
   try {
     const { env } = await import('../../src/lib/env');
     assert.deepEqual([env.databasesPath, env.presetsPath, env.notesPath, env.databasePath, env.rcon.host],
@@ -109,17 +114,48 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
     const { POST: register } = await import('../../src/app/api/game-servers/route');
     const { GET: readDraftRoute, PUT: saveDraftRoute } = await import('../../src/app/api/game-servers/[id]/draft/route');
     const { POST: resetDraftRoute } = await import('../../src/app/api/game-servers/[id]/draft/reset/route');
+    const applyRoute = await import('../../src/app/api/game-servers/[id]/apply/route');
+    const { POST: pollRoute } = await import('../../src/app/game-server/poll/route');
     const { readDraft } = await import('../../src/lib/platform/drafts');
-    const { commandBatch } = await import('../../src/lib/config/encodeValues');
+    const { pollActivity, setPollHoldMs } = await import('../../src/lib/platform/polls');
+    const { setSupportedBuild } = await import('../../src/lib/platform/supported-build');
+    const { WIPE_COMMAND } = await import('../../src/lib/config/encodeValues');
     const { useConfigStore, flushConfigWrites } = await import('../../src/lib/store/configStore');
     const { patchCategory } = await import('../../src/lib/database/service');
     settle = () => flushConfigWrites().catch(() => {});
     const json = (method: string, body: unknown) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const registered = await register(session.request('/api/game-servers', json('POST', { name: `Review ${name}` })));
     assert.equal(registered.status, 201, 'the review registers its game server');
-    const gameServerId: number = (await registered.json()).data.gameServer.id;
+    const { gameServer: { id: gameServerId }, key }: { gameServer: { id: number }; key: string } = (await registered.json()).data;
     const draftUrl = `/api/game-servers/${gameServerId}/draft`;
     const at = { params: Promise.resolve({ id: String(gameServerId) }) };
+
+    // The game server: a mod on the Supported build that polls with the key, and holds its poll until something is delivered.
+    const BUILD = '20261102-153000';
+    setSupportedBuild(BUILD, session.userId);
+    // Held until an Apply wakes it, however long a review takes between Applies; hung up when the review ends.
+    setPollHoldMs(3_600_000);
+    type PollAnswer = { status: number; body: { answer: string; liveConfigurationId?: string; commands?: { database: string; category: string; values: string }[] } };
+    let held: Promise<PollAnswer>;
+    const poll = async (processed: unknown) => {
+      const connection = new AbortController();
+      held = pollRoute(new Request(new URL('/game-server/poll', env.publicUrl), {
+        method: 'POST', signal: connection.signal,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ buildStamp: BUILD, instanceId: `review-${name}`, processed }),
+      })).then(async response => ({ status: response.status, body: await response.json() }));
+      const answered = held;
+      hangUp = async () => {
+        connection.abort();
+        await answered;
+      };
+      // Held once its body has arrived: from then on the game server is Connected.
+      for (let tries = 0; !pollActivity(gameServerId).held; tries++) {
+        assert(tries < 1_000, 'the game server\'s poll is held');
+        await new Promise(resolve => setTimeout(resolve, 1));
+      }
+    };
+    await poll(null);
     // The editor's Draft requests go straight into the real handlers; nothing else is served.
     globalThis.fetch = (async (url: string, init: RequestInit = {}) => {
       const method = init.method ?? 'GET';
@@ -177,14 +213,28 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
       async apply(stage = `apply-${Object.keys(stages).length + 1}`) {
         assert(!Object.hasOwn(stages, stage), `stage ${stage} is already captured`);
         await flushConfigWrites();
-        // The whole saved Draft, after a wipe. A refusal reads as the self-hosted Apply's did, which reviews match.
-        let batch: string[];
-        try {
-          batch = commandBatch(readDraft(gameServerId)!.document);
-        } catch (error) {
-          throw new Error(`Apply was refused (500): ${(error as Error).message}`, { cause: error });
+        // The owner's review, then Apply with the Draft revision and Live configuration id it was built from.
+        const reviewed = await applyRoute.GET(session.request(`/api/game-servers/${gameServerId}/apply`), at);
+        assert.equal(reviewed.status, 200, 'the review is built');
+        const { revision, liveConfigurationId } = (await reviewed.json()).data;
+        const response = await applyRoute.POST(session.request(`/api/game-servers/${gameServerId}/apply`, json('POST', { revision, liveConfigurationId })), at);
+        const body = await response.json() as { success: boolean; error?: string; details?: { database: string; category?: string; key: string; error: string }[]; data?: { liveConfigurationId: string } };
+        if (!response.ok) {
+          assert(pollActivity(gameServerId).held, 'a refused Apply delivers nothing: the poll is still held');
+          const details = body.details?.map(({ database, category, key, error }) => `${database}/${category}/${key}: ${error}`).join('; ');
+          throw new Error(`Apply was refused (${response.status}): ${body.error}${details ? `: ${details}` : ''}`);
         }
+        // The held poll is answered with the new Live configuration, grouped by category: the wipe goes first.
+        const delivered = await held;
+        assert.equal(delivered.status, 200);
+        assert.equal(delivered.body.answer, 'live-configuration', 'Apply wakes the held poll with the Live configuration');
+        assert.equal(delivered.body.liveConfigurationId, body.data!.liveConfigurationId, 'the delivery carries the new Live configuration id');
+        const batch = [WIPE_COMMAND, ...delivered.body.commands!.map(({ database, category, values }) => `string ezconfig ${database} ${category} ${values}`)];
         assertDeliveredBatch(batch);
+        // The mod processes it, and its next poll reports that, so it is held again.
+        const values = delivered.body.commands!.reduce((count, { values }) => count + Object.keys(JSON.parse(values)).length, 0);
+        await poll({ liveConfigurationId: delivered.body.liveConfigurationId, result: { success: true, acceptedValues: values, changedValues: values, unknownKeys: [], failure: null } });
+        assert.equal(readDraft(gameServerId)!.revision, revision, 'Apply leaves the Draft as it was');
         stages[stage] = batch;
         return [...batch];
       },
@@ -196,6 +246,7 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
     }
   } finally {
     await settle();
+    await hangUp();
     closeStore();
     globalThis.fetch = originalFetch;
     const target = resolve(root);

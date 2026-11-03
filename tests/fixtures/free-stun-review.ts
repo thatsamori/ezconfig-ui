@@ -38,7 +38,7 @@ await featureReview('free-stun', async ({ set, reset, saved, saveUnchecked, stor
   // A damaged saved value must stop Apply before its wipe is sent, rather
   // than relying on a later server rejection; the harness checks nothing was delivered.
   await storeUnvalidated('Character', 'Stun', { [key]: 1e40 });
-  await assert.rejects(apply(), /Apply was refused \(500\)/);
+  await assert.rejects(apply(), /Apply was refused \(400\)/);
   set('Character', 'Stun', key, 1.6);
   assert.equal(await saved('Character', 'Stun', key), 1.6);
 
