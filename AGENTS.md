@@ -48,6 +48,10 @@ are the contract between this app and the mod.
   `poll-exchange.ts` (reads a poll against `docs/poll-exchange.md`). The poll
   endpoint, `src/app/game-server/poll/`, sits outside `src/app/api/`: game
   servers send their key, not a session.
+  Drafts: `drafts.ts` (one values document per game server, revision-checked
+  whole saves) behind `src/app/api/game-servers/[id]/draft/` and its `reset/`.
+  The document's shape and placement are in `src/lib/config/valuesDocument.ts`.
+  Its encoder, `src/lib/config/encodeValues.ts`, builds the wipe-then-category batch.
 - `src/proxy.ts` - the Content-Security-Policy, with a fresh nonce per request, on
   every page. Inline script runs only with the nonce, so a new page or component
   adds no inline `<script>` or `on*` handler; the root layout renders per request
