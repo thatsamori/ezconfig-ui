@@ -7,11 +7,13 @@
  *
  * - A missing or unknown key gets 401 "key-rejected", counted per hour.
  * - A body that breaks the contract gets 400 "bad-request".
- * - Otherwise the poll's report is recorded. A poll on the Supported build
+ * - Otherwise the poll's report is recorded, and a processed id or result it
+ *   reports for the first time is logged. A poll on the Supported build
  *   whose reported processed id is not the game server's Live configuration
  *   (another id, one the platform does not know, or none) is answered at once
  *   with the whole Live configuration: "live-configuration". A game server
- *   with no Live configuration is never sent anything.
+ *   with no Live configuration is never sent anything, and one that reports
+ *   processing it, Failed included, is not sent it again.
  * - Any other poll is held (50 s) until it is answered "no-change", or
  *   "superseded" by a newer poll, or 401 "key-rejected" when Regenerate key
  *   or Delete ends its key, or "live-configuration" when an Apply wakes it.
@@ -21,12 +23,12 @@
  *
  * It sits outside `src/app/api/`, whose handlers all require a session: game
  * servers authenticate by key, and send no cookie or Origin. Routine polls are
- * never logged, and the key is never logged or stored. Each delivery is
- * logged, by id.
+ * never logged, and the key is never logged or stored. Each delivery and
+ * each new processing result is logged, by id.
  */
-import { findGameServerByKey, recordPoll } from '@/lib/platform/game-servers';
+import { findGameServerByKey, recordPoll, reportsNewResult } from '@/lib/platform/game-servers';
 import { log } from '@/lib/platform/log';
-import { readBearerKey, readPollReport } from '@/lib/platform/poll-exchange';
+import { readBearerKey, readPollReport, type PollReport } from '@/lib/platform/poll-exchange';
 import { pendingDelivery } from '@/lib/platform/live-configurations';
 import { answerAtOnce, countRejectedKey, holdPoll, type PollAnswer } from '@/lib/platform/polls';
 import { isSupportedBuild, logReportedBuild } from '@/lib/platform/supported-build';
@@ -42,6 +44,18 @@ const keyRejected = () => {
 const deliver = (gameServerId: number, delivery: Extract<PollAnswer, { answer: 'live-configuration' }>) => {
   log.info('live-configuration.delivered', { gameServerId, liveConfigurationId: delivery.liveConfigurationId });
   return answer(delivery);
+};
+
+/** The form of the ids the platform makes (a UUID); a poll may report any text as one. */
+const LIVE_CONFIGURATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** A processing result, once, when the game server first reports it: by ids, never the mod's error or a key name. */
+const logResult = (gameServerId: number, { liveConfigurationId, result }: NonNullable<PollReport['processed']>) => {
+  const ids = LIVE_CONFIGURATION_ID.test(liveConfigurationId) ? { gameServerId, liveConfigurationId } : { gameServerId };
+  const ignored = result.unknownKeys.length;
+  if (result.failure) log.warn('live-configuration.failed', 'The game server reports that processing stopped at a failed command', ids);
+  else if (ignored) log.warn('live-configuration.keys-ignored', `The game server's build ignored ${ignored} key${ignored === 1 ? '' : 's'} it does not know`, ids);
+  else log.info('live-configuration.processed', ids);
 };
 
 export async function POST(request: Request) {
@@ -63,6 +77,7 @@ export async function POST(request: Request) {
       return answer({ answer: 'bad-request', error: read.error }, 400);
     }
     logReportedBuild(server, read.report.buildStamp);
+    if (read.report.processed && reportsNewResult(server, read.report.processed)) logResult(server.id, read.report.processed);
     recordPoll(server, read.report);
     const delivery = isSupportedBuild(read.report.buildStamp) ? pendingDelivery(server.id, read.report.processed?.liveConfigurationId ?? null) : undefined;
     if (delivery) {

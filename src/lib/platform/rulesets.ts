@@ -16,7 +16,7 @@
  * - Names are unique per owner, ignoring case, as game server names are. A
  *   Ruleset can be renamed. Deleting one deletes its versions and clears every
  *   origin that pointed into them, Drafts and Live configurations alike, in
- *   one transaction (0008); the values stay. A single version is never deleted.
+ *   one transaction (0009); the values stay. A single version is never deleted.
  *
  * Nothing here logs: the routes log each change, by id only.
  */
@@ -168,7 +168,7 @@ export function renameRuleset(ownerId: number, id: number, { name, nameKey }: { 
 /**
  * Deletes one of the owner's Rulesets with all its versions. Every Draft and
  * Live configuration whose origin was one of them keeps its values and has no
- * origin from then on (0008's ON DELETE SET NULL, in the same statement).
+ * origin from then on (0009's ON DELETE SET NULL, in the same statement).
  * Undefined when it is not theirs.
  */
 export function deleteRuleset(ownerId: number, id: number): { versions: number } | undefined {

@@ -58,13 +58,12 @@ preset-import check moves to loading a Ruleset version.
 2026-11-03: Done on branch `claude/clever-curie-15caf2` (not pushed), on
 main `5b62e6a`: commits `6cf2d22`, `77d0c7c` and `cc518c2`. 228 tests pass
 across 41 files, typecheck is clean, and lint went from 13 problems to 9 (the
-four removed were in preset code). Migration `0008-rulesets.sql`.
+four removed were in preset code). Migration `0009-rulesets.sql`.
 
-- Migration numbers: #33 also took 0008 (`0008-reported-processed-at.sql` on
-  `claude/affectionate-hertz-0a222a`), and startup refuses gaps or
-  duplicates. Whichever merges second renames its file to 0009. Nothing
-  else names the number.
-- Storage, `0008-rulesets.sql`:
+- Migration numbers: #33 also took 0008 (`0008-reported-processed-at.sql`),
+  and startup refuses gaps or duplicates. #33 merged first, so this branch
+  renamed its file to 0009 when it took main at `bd5e1b9`.
+- Storage, `0009-rulesets.sql`:
   - `rulesets` (owner, name, `name_key`, created) with a unique index on
     owner and `name_key`. The name is read as a game server name is (trimmed,
     NFC, at most 64 characters); `name_key` is its lower case.

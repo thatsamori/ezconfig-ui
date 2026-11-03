@@ -7,7 +7,8 @@
 #
 # It installs Bun and Litestream at pinned versions (checked against their
 # release checksums) and Caddy from Caddy's apt repository, creates the app user
-# and folders, and installs the units and config files from this folder. It
+# and folders, and installs the units, config files and the weekly restore
+# check from this folder. It
 # never writes the instance's settings: /etc/ezconfig-platform/platform.env,
 # /etc/ezconfig-platform/caddy.env and /etc/litestream.yml. It creates them empty
 # and root-only when missing, and keeps them root-only.
@@ -19,6 +20,7 @@ readonly APP_USER=ezconfig
 readonly ROOT=/srv/ezconfig-platform
 readonly DATA=/var/lib/ezconfig-platform
 readonly SETTINGS=/etc/ezconfig-platform
+readonly CHECK=/usr/local/lib/ezconfig-platform
 
 here=$(cd "$(dirname "$0")" && pwd)
 step() { printf '\n== %s\n' "$*"; }
@@ -97,8 +99,10 @@ for file in "$SETTINGS/platform.env" "$SETTINGS/caddy.env" /etc/litestream.yml; 
   chmod 600 "$file"
 done
 
-step "Units and config files"
-install -m 644 "$here/ezconfig-platform.service" "$here/litestream.service" /etc/systemd/system/
+step "Units, config files and the restore check"
+install -m 644 "$here/ezconfig-platform.service" "$here/litestream.service" "$here/ezconfig-restore-check.service" "$here/ezconfig-restore-check.timer" /etc/systemd/system/
+install -d -m 755 "$CHECK"
+install -m 644 "$here/restore-check.ts" "$CHECK/restore-check.ts"
 install -d /etc/systemd/system/caddy.service.d /etc/systemd/journald.conf.d
 install -m 644 "$here/caddy.service.conf" /etc/systemd/system/caddy.service.d/ezconfig-platform.conf
 install -m 644 "$here/Caddyfile" /etc/caddy/Caddyfile
@@ -106,7 +110,7 @@ install -m 644 "$here/journald.conf" /etc/systemd/journald.conf.d/ezconfig-platf
 install -m 644 "$here/unattended-upgrades.conf" /etc/apt/apt.conf.d/52ezconfig-platform
 systemctl daemon-reload
 systemctl restart systemd-journald
-systemctl enable ezconfig-platform.service litestream.service caddy.service
+systemctl enable ezconfig-platform.service litestream.service caddy.service ezconfig-restore-check.timer
 
 step "Starting what is configured"
 if [[ -s $SETTINGS/caddy.env ]]; then
@@ -122,6 +126,10 @@ if [[ -s /etc/litestream.yml ]]; then
 else
   echo "Litestream: fill /etc/litestream.yml from deploy/litestream.yml.example, then run this again."
 fi
+# The timer always runs; the check skips itself until /etc/litestream.yml is
+# filled. Restarting it picks up a changed schedule.
+systemctl restart ezconfig-restore-check.timer
+systemctl list-timers ezconfig-restore-check.timer --no-pager
 if [[ -e $ROOT/current ]]; then
   systemctl restart ezconfig-platform
 else

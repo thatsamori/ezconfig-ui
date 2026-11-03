@@ -7,8 +7,8 @@ the same app: the public hostname, where people sign in (the host of
 servers poll. The decisions
 behind it are in `.scratch/online-platform/issues/10-aws-hosting-and-deployment.md`
 and `15-platform-records-and-logs.md`; the spec's "Hosting and deployment" has
-the summary. The restore check and the restore runbook are
-`online-platform#39`.
+the summary. Rebuilding the platform from its backup is
+[restore-runbook.md](restore-runbook.md).
 
 ## What runs on the instance
 
@@ -17,7 +17,8 @@ the summary. The restore check and the restore runbook are
 | The app: `next start` on Bun (`bun --bun node_modules/next/dist/bin/next start`) on 127.0.0.1:3000, one process, restarted whenever it exits | `ezconfig-platform.service`, running `/srv/ezconfig-platform/current` | `deploy/ezconfig-platform.service` |
 | Releases, the newest 3 | `/srv/ezconfig-platform/releases/<UTC time>-<commit>` | `deploy/release.sh` |
 | The database (`DATABASE_PATH`), migrated at startup | `/var/lib/ezconfig-platform/platform.db` | `src/lib/platform/migrations/` |
-| The restore check's status file, beside the database (below) | `/var/lib/ezconfig-platform/platform.db.restore-check.json` | `src/lib/platform/restore-check.ts` |
+| The restore check (below): weekly, restores the latest backup and checks it against the database | `ezconfig-restore-check.timer` and `.service`, running `/usr/local/lib/ezconfig-platform/restore-check.ts` | `deploy/ezconfig-restore-check.*`, `deploy/restore-check.ts` |
+| The restore check's status file, beside the database (below) | `/var/lib/ezconfig-platform/platform.db.restore-check.json` | written by `deploy/restore-check.ts`, read by `src/lib/platform/restore-check.ts` |
 | The app's settings | `/etc/ezconfig-platform/platform.env`, root 0600 | `.env.example` |
 | Caddy: certificate, HTTP to HTTPS, HSTS, proxy, refuses `/internal/*` | `/etc/caddy/Caddyfile`; hostnames and email in `/etc/ezconfig-platform/caddy.env`, root 0600 | `deploy/Caddyfile`, `deploy/caddy.service.conf` |
 | Litestream: streams the database to the bucket, calls the heartbeat every 75 s | `litestream.service`; config with the bucket key in `/etc/litestream.yml`, root 0600 | `deploy/litestream.service`, `deploy/litestream.yml.example` |
@@ -26,6 +27,22 @@ the summary. The restore check and the restore runbook are
 
 The three settings files are the only instance-specific files. Their master copy
 is in the owner's password manager, and the repo holds only their templates.
+
+### The settings files
+
+| File | Read by | Settings |
+|---|---|---|
+| `/etc/ezconfig-platform/platform.env` | `ezconfig-platform.service` (`EnvironmentFile=`), before it switches to the app's user | `DATABASE_PATH=/var/lib/ezconfig-platform/platform.db`; `PUBLIC_URL=https://<public hostname>`; `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET`; `OPERATOR_DISCORD_IDS`. `DISCORD_REDIRECT_URL` only to override `PUBLIC_URL` + `/api/auth/discord/callback`, which must be in the Discord application's Redirects. `.env.example` describes each. The unit sets `NODE_ENV` and `NEXT_TELEMETRY_DISABLED` itself. |
+| `/etc/ezconfig-platform/caddy.env` | `caddy.service`, through the drop-in `deploy/caddy.service.conf` | `PUBLIC_HOSTNAME` (the host of `PUBLIC_URL`), `PLATFORM_HOSTNAME` (the URL built into the mod; it must differ from `PUBLIC_HOSTNAME`), and `ACME_EMAIL` for Let's Encrypt. |
+| `/etc/litestream.yml` | `litestream.service` and `ezconfig-restore-check.service`, each through a private copy (`LoadCredential=`) | The bucket, its Region and its access key: `deploy/litestream.yml.example`, with the placeholders filled. |
+
+Each is root 0600 and stays so: `provision.sh` creates them empty when missing
+and resets their owner and mode on every run, but never writes into them.
+Caddy, Litestream and the restore check do not start while their file is
+empty. Edit one with `sudo nano <file>`,
+then restart what reads it (`sudo systemctl restart ezconfig-platform`, `caddy`
+or `litestream`), or provision again. Never print one into a terminal you share
+or a log.
 
 ## Setting up an instance
 
@@ -44,17 +61,25 @@ is in the owner's password manager, and the repo holds only their templates.
    ```
 
 3. Copy this folder over and provision from the repo root. Provisioning can be
-   run again whenever a file in `deploy/` changes:
+   run again whenever a file in `deploy/` changes. It restarts Caddy,
+   Litestream and the app, so game servers are Not connected for about 10 to
+   20 s. Remove the old copy first: `scp -r` into a folder that exists copies
+   `deploy` inside it, and the old files would run.
 
    ```bash
+   ssh ezconfig-platform rm -rf ezconfig-deploy
    scp -r deploy ezconfig-platform:ezconfig-deploy
    ssh ezconfig-platform sudo bash ezconfig-deploy/provision.sh
    ```
 
-4. On the instance, fill the three settings files from `.env.example` and
-   `deploy/litestream.yml.example` (`sudo nano <file>`), then provision again so
-   Caddy and Litestream start. `PUBLIC_URL` is `https://<public hostname>`.
+4. On the instance, fill the three settings files (above) from `.env.example`
+   and `deploy/litestream.yml.example` (`sudo nano <file>`), then provision
+   again so Caddy and Litestream start. On an instance replacing one whose
+   backup is in the bucket, restore the database before Litestream starts:
+   that order is in [restore-runbook.md](restore-runbook.md).
 5. Deploy a commit (below).
+6. Run the restore check once, so the Status page has a result before the
+   first Sunday (below): `ssh ezconfig-platform sudo systemctl start ezconfig-restore-check`.
 
 ## Deploying
 
@@ -110,7 +135,7 @@ them.
 
 ### The restore check's status file
 
-The weekly restore check (`online-platform#39`) records its result in a file
+The weekly restore check (below) records its result in a file
 beside the database, never in the database itself: `DATABASE_PATH` plus
 `.restore-check.json`, so `/var/lib/ezconfig-platform/platform.db.restore-check.json`
 on the instance. The app reads it whenever the Status page loads
@@ -138,6 +163,55 @@ read it. On the page:
 - `passed` warns once `checkedAt` is more than 8 days old;
 - a file that is not this shape reads as unreadable, with a warning, and
   never as passed.
+
+## The restore check
+
+Every Sunday at 04:00 UTC, `ezconfig-restore-check.timer` starts
+`ezconfig-restore-check.service`. It runs `deploy/restore-check.ts`, which
+`provision.sh` installs in `/usr/local/lib/ezconfig-platform`, on Bun as the
+app's user. It imports nothing from the app, so it does not change with a
+deploy; provisioning installs a new version. The check:
+
+1. restores the latest backup from the bucket (`litestream restore`) into a
+   folder in the unit's private `/tmp`;
+2. runs `PRAGMA integrity_check` on the restored copy;
+3. compares the copy's row count for each table with the live database, which
+   it opens read-only. A write that lands during the check can make a count
+   differ, so it restores again, up to 3 times and 20 s apart, before it
+   fails;
+4. writes the result to the status file (above), then removes its folder.
+
+It never writes the database. It reads the bucket key from systemd's private
+copy of `/etc/litestream.yml`, as Litestream does, and stays idle until that
+file is filled. A run missed while the instance was off happens soon after it
+starts again.
+
+- Run it now: `sudo systemctl start ezconfig-restore-check` waits for the
+  result and exits non-zero when the check fails. On the database at launch
+  it takes under a second.
+- The next run: `systemctl list-timers ezconfig-restore-check.timer`.
+- Its log: `journalctl -u ezconfig-restore-check` holds one JSON line,
+  `restore-check.passed` or `restore-check.failed`, with the reason;
+  `restore-check.retry` comes before each extra restore. Anything
+  `litestream restore` prints comes before them; it prints nothing when it
+  succeeds.
+- The row counts include Litestream's own two tables, `_litestream_lock` and
+  `_litestream_seq`.
+- The last result: the Status page, or
+  `sudo cat /var/lib/ezconfig-platform/platform.db.restore-check.json`.
+
+The reason names the step that failed:
+
+| The reason starts | What to look at |
+|---|---|
+| Litestream could not restore the latest backup | Litestream's error above it in the check's journal: the bucket, its key, the network. `journalctl -u litestream` shows whether streaming still works. |
+| The restored copy could not be read as a database, or integrity_check found problems | The backup is damaged. Run the check again. If it fails again, check the live database too: `sudo -u ezconfig sqlite3 -readonly /var/lib/ezconfig-platform/platform.db 'PRAGMA integrity_check'`. |
+| Row counts still differed from the live database | Either writes landed during all 3 restores, or the bucket is behind the database. Run it again; if it repeats, look for errors in `journalctl -u litestream`. |
+| There is no live database | `DATABASE_PATH` in the unit, and whether the database is still in `/var/lib/ezconfig-platform`. |
+
+If the status file cannot be written, the check logs
+`restore-check.unrecorded` with the result and exits 2; the Status page then
+keeps showing the previous result until it is 8 days old.
 
 ## Checks
 

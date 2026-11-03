@@ -6,7 +6,7 @@
  * Modified compares the stored overrides exactly, over the values the current
  * schema has a place for: an override equal to its game default is not the
  * same as no override, and values the schema has no place for never count.
- * A deleted Ruleset has cleared every origin that pointed into it (0008).
+ * A deleted Ruleset has cleared every origin that pointed into it (0009).
  */
 import { isDeepStrictEqual } from 'node:util';
 import { documentFields } from '@/lib/config/valuesDocument';

@@ -56,8 +56,9 @@ are the contract between this app and the mod.
   whole saves) behind `src/app/api/game-servers/[id]/draft/` and its `reset/`.
   The document's shape and placement are in `src/lib/config/valuesDocument.ts`.
   Its encoder, `src/lib/config/encodeValues.ts`, builds the wipe-then-category batch.
-  Live configurations: `live-configurations.ts` (the review, Apply, delivery
-  and Discard changes) behind `src/app/api/game-servers/[id]/apply/` and
+  Live configurations: `live-configurations.ts` (the review, Apply, delivery,
+  Discard changes, and the Pending, Confirmed or Failed state computed from
+  the last report) behind `src/app/api/game-servers/[id]/apply/` and
   `.../draft/discard/`; the poll route delivers from it.
   Rulesets: `rulesets.ts` (Save as Ruleset version, loading a version,
   rename and delete) behind `src/app/api/rulesets/` and `.../draft/save-version/`
@@ -80,7 +81,9 @@ are the contract between this app and the mod.
 - `docs/` - see index below; `docs/design/`, `docs/archive/` are reference only.
 - `deploy/` - the platform instance's units, Caddyfile, Litestream template and
   provisioning; `scripts/deploy.ts` (`bun run deploy <commit>`) runs
-  `deploy/release.sh` on it. Kept LF (`.gitattributes`).
+  `deploy/release.sh` on it. `deploy/restore-check.ts` is the weekly restore
+  check: standalone (no app imports, installed by `provision.sh`), it opens the
+  database read-only and writes only the status file. Kept LF (`.gitattributes`).
 
 ## Adding a config key
 1. Add the entry to the right schema in `src/lib/config/`.
@@ -146,7 +149,8 @@ No test or script calls Discord: tests replace `src/lib/platform/discord` (see
 - `docs/stun-rules-validation.md` - stun/acknowledgment validation record (human pass deferred).
 - `docs/weapon-reliability-validation.md` - weapon reliability validation record.
 - `docs/archive/README.md` - Jan 2026 planning archive (superseded).
-- `docs/hosting.md` - the platform instance: what runs where, provisioning, `bun run deploy`, checks.
+- `docs/hosting.md` - the platform instance: what runs where, settings files, provisioning, `bun run deploy`, the restore check, checks.
+- `docs/restore-runbook.md` - rebuilding the instance from the bucket, and the restore drill.
 
 Pending decision: removing the temporary parry-geometry startup migration hook.
 

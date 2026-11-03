@@ -17,7 +17,13 @@
  * - Delivery: a poll on the Supported build that reports processing any other
  *   id, or none, is answered at once with the whole Live configuration,
  *   grouped by category through the encoder. With no Live configuration
- *   nothing is ever sent, so a first poll never wipes a game server.
+ *   nothing is ever sent, so a first poll never wipes a game server. A poll
+ *   reporting this id gets nothing, whether processing it succeeded or failed:
+ *   a Failed configuration is sent again only by an Apply, which makes a new
+ *   id even when nothing changed, or after a build change, when the mod
+ *   reports none.
+ * - Its state (Pending, Confirmed or Failed) is computed from the game
+ *   server's last report, never stored.
  * - Discard changes resets the Draft to the Live configuration, origin
  *   included.
  * - Apply copies the Draft's origin (a Ruleset version, or none) with its
@@ -31,8 +37,9 @@ import { encodeValues } from '@/lib/config/encodeValues';
 import { documentErrors, documentFields, type DocumentField, type FieldError, type ValuesDocument } from '@/lib/config/valuesDocument';
 import type { ConfigValue } from '@/lib/database/types';
 import { discardDraft, readDraft, type Draft, type DraftWrite } from './drafts';
-import type { GameServerView } from './game-servers';
+import type { GameServer, GameServerView } from './game-servers';
 import { originOf } from './origins';
+import type { ProcessingResult, UnknownKey } from './poll-exchange';
 import { answerHeldPoll, type PollAnswer } from './polls';
 import { platformStore } from './storage';
 
@@ -126,17 +133,43 @@ export function applyReview(gameServerId: number): ApplyReview | undefined {
 }
 
 /**
- * What the game server's page shows: the Live configuration (null before the
- * first Apply), and whether the Draft has Unapplied changes: it differs from
- * the Live configuration, or, before the first Apply, sets any value. Also
- * each one's origin, and whether it is modified from it.
+ * What the game server has reported of its Live configuration, computed from
+ * its last report and never stored:
+ * - Confirmed: it reports processing this Live configuration, and every
+ *   command succeeded. Keys its build does not know were skipped: `ignoredKeys`.
+ * - Failed: it reports processing this Live configuration, and processing
+ *   stopped at a failed command (the wipe, when `database` and `category` are
+ *   ''). It runs only the categories before it, and is not sent it again
+ *   until a build change or an Apply.
+ * - Pending: anything else, including an id the platform does not know, or
+ *   none (it is sent the Live configuration at its next poll).
+ * `reportedAt` is when the report first arrived.
  */
-export function liveConfigurationView(gameServerId: number): Pick<GameServerView, 'liveConfiguration' | 'unappliedChanges' | 'draftOrigin' | 'liveOrigin'> {
-  const live = readLiveConfiguration(gameServerId);
-  const draft = readDraft(gameServerId);
+export type LiveConfigurationState =
+  | { state: 'pending' }
+  | { state: 'confirmed'; reportedAt: number; ignoredKeys: UnknownKey[] }
+  | { state: 'failed'; reportedAt: number; failure: NonNullable<ProcessingResult['failure']> };
+
+export function liveConfigurationState(liveConfigurationId: string, server: Pick<GameServer, 'lastPollAt' | 'reportedLiveConfigurationId' | 'reportedResult' | 'reportedProcessedAt'>): LiveConfigurationState {
+  if (server.reportedLiveConfigurationId !== liveConfigurationId || server.reportedResult === null) return { state: 'pending' };
+  const result = JSON.parse(server.reportedResult) as ProcessingResult;
+  const reportedAt = server.reportedProcessedAt ?? server.lastPollAt!;
+  // A result reads as succeeded with no failure, or failed with one (poll-exchange.ts).
+  return result.failure === null ? { state: 'confirmed', reportedAt, ignoredKeys: result.unknownKeys } : { state: 'failed', reportedAt, failure: result.failure };
+}
+
+/**
+ * What the game server's page shows: the Live configuration with its state
+ * (null before the first Apply), and whether the Draft has Unapplied changes:
+ * it differs from the Live configuration, or, before the first Apply, sets
+ * any value. Also each one's origin, and whether it is modified from it.
+ */
+export function liveConfigurationView(server: GameServer): Pick<GameServerView, 'liveConfiguration' | 'unappliedChanges' | 'draftOrigin' | 'liveOrigin'> {
+  const live = readLiveConfiguration(server.id);
+  const draft = readDraft(server.id);
   const { added, changed, reset } = valueChanges(draft?.document ?? {}, live?.document ?? {});
   return {
-    liveConfiguration: live ? { id: live.id, appliedAt: live.appliedAt } : null,
+    liveConfiguration: live ? { id: live.id, appliedAt: live.appliedAt, ...liveConfigurationState(live.id, server) } : null,
     unappliedChanges: added.length + changed.length + reset.length > 0,
     draftOrigin: draft ? originOf(draft.originId, draft.document) : null,
     liveOrigin: live ? originOf(live.originId, live.document) : null,

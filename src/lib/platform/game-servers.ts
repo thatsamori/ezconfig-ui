@@ -16,12 +16,13 @@
  * - Never connected: no poll yet.
  * Alongside it, the view says when EZConfig needs updating: the latest poll
  * reported a build that is not the Supported build (supported-build.ts). It
- * also shows the Live configuration, whether the Draft has Unapplied changes,
- * and why Apply is blocked, if it is (live-configurations.ts), and the origin
- * of each, modified or not (origins.ts).
+ * also shows the Live configuration with its state (Pending, Confirmed or
+ * Failed, computed from the last report), whether the Draft has Unapplied
+ * changes, and why Apply is blocked, if it is (live-configurations.ts), and
+ * the origin of each, modified or not (origins.ts).
  */
 import { createHash, randomBytes } from 'node:crypto';
-import { liveConfigurationView } from './live-configurations';
+import { liveConfigurationView, type LiveConfigurationState } from './live-configurations';
 import type { Origin } from './origins';
 import type { PollReport, ProcessingResult } from './poll-exchange';
 import { endKey, pollActivity } from './polls';
@@ -45,6 +46,8 @@ export interface GameServer {
   reportedLiveConfigurationId: string | null;
   /** The reported result as stored: ProcessingResult JSON. */
   reportedResult: string | null;
+  /** When the poll that first reported this processed id and result arrived; null with them. */
+  reportedProcessedAt: number | null;
 }
 
 export type ConnectionStatus =
@@ -70,11 +73,11 @@ export interface GameServerView {
    */
   needsUpdating: { running: string | null; supported: string | null } | null;
   /**
-   * The Live configuration, Pending since it was applied (Confirmed and Failed
-   * arrive with online-platform#33). Null until the first Apply: the game
+   * The Live configuration with its state: Pending, Confirmed or Failed,
+   * computed from the last report. Null until the first Apply: the game
    * server runs its own saved values.
    */
-  liveConfiguration: { id: string; appliedAt: number } | null;
+  liveConfiguration: ({ id: string; appliedAt: number } & LiveConfigurationState) | null;
   /** The Draft differs from the Live configuration; before the first Apply, it sets any value. */
   unappliedChanges: boolean;
   /** The Ruleset version the Draft was last loaded from or saved as, and whether it is modified from it; null for none. */
@@ -90,12 +93,13 @@ export type ApplyBlocked = 'never-connected' | 'not-connected' | 'needs-updating
 
 type Row = {
   id: number; owner_id: number; name: string; key_last4: string; registered_at: number; last_poll_at: number | null;
-  reported_build_stamp: string | null; reported_live_configuration_id: string | null; reported_result: string | null;
+  reported_build_stamp: string | null; reported_live_configuration_id: string | null; reported_result: string | null; reported_processed_at: number | null;
 };
-const COLUMNS = 'id, owner_id, name, key_last4, registered_at, last_poll_at, reported_build_stamp, reported_live_configuration_id, reported_result';
+const COLUMNS = 'id, owner_id, name, key_last4, registered_at, last_poll_at, reported_build_stamp, reported_live_configuration_id, reported_result, reported_processed_at';
 const gameServer = (row: Row): GameServer => ({
   id: row.id, ownerId: row.owner_id, name: row.name, keyLast4: row.key_last4, registeredAt: row.registered_at, lastPollAt: row.last_poll_at,
   reportedBuildStamp: row.reported_build_stamp, reportedLiveConfigurationId: row.reported_live_configuration_id, reportedResult: row.reported_result,
+  reportedProcessedAt: row.reported_processed_at,
 });
 
 const keyHash = (key: string) => createHash('sha256').update(key).digest('hex');
@@ -179,19 +183,28 @@ export function findGameServerByKey(key: string): GameServer | undefined {
   return row && gameServer(row);
 }
 
+/** Whether a poll reports another processed id or result than the game server's last report: a new one to log, and to time. */
+export function reportsNewResult(server: Pick<GameServer, 'reportedLiveConfigurationId' | 'reportedResult'>, processed: PollReport['processed']): boolean {
+  return server.reportedLiveConfigurationId !== (processed?.liveConfigurationId ?? null) || server.reportedResult !== (processed ? JSON.stringify(processed.result) : null);
+}
+
 /**
  * Records a poll: the reported build stamp, processed id and result as
- * reported, and the poll time. An unchanged report writes its time at most
- * every 5 minutes; between writes, the time the poll ended is in memory.
+ * reported, and the poll time. A new processed id or result is timed from this
+ * poll, which is when the Live configuration became Confirmed or Failed. An
+ * unchanged report writes its time at most every 5 minutes; between writes,
+ * the time the poll ended is in memory.
  */
 export function recordPoll(server: GameServer, report: PollReport, now = Date.now()): void {
   const liveConfigurationId = report.processed?.liveConfigurationId ?? null;
   const result = report.processed ? JSON.stringify(report.processed.result) : null;
-  const changed = server.reportedBuildStamp !== report.buildStamp || server.reportedLiveConfigurationId !== liveConfigurationId || server.reportedResult !== result;
+  const newResult = reportsNewResult(server, report.processed);
+  const changed = server.reportedBuildStamp !== report.buildStamp || newResult;
   if (!changed && server.lastPollAt !== null && now - server.lastPollAt < LAST_POLL_WRITE_INTERVAL_MS) return;
+  const processedAt = !report.processed ? null : newResult || server.reportedProcessedAt === null ? now : server.reportedProcessedAt;
   platformStore().run(
-    'UPDATE game_servers SET last_poll_at = ?, reported_build_stamp = ?, reported_live_configuration_id = ?, reported_result = ? WHERE id = ?',
-    now, report.buildStamp, liveConfigurationId, result, server.id,
+    'UPDATE game_servers SET last_poll_at = ?, reported_build_stamp = ?, reported_live_configuration_id = ?, reported_result = ?, reported_processed_at = ? WHERE id = ?',
+    now, report.buildStamp, liveConfigurationId, result, processedAt, server.id,
   );
 }
 
@@ -230,7 +243,7 @@ export function gameServerView(server: GameServer, now = Date.now(), supportedBu
         : { liveConfigurationId: server.reportedLiveConfigurationId, result: JSON.parse(server.reportedResult) as ProcessingResult },
     },
     needsUpdating: outdated ? { running: server.reportedBuildStamp, supported: supportedBuild } : null,
-    ...liveConfigurationView(server.id),
+    ...liveConfigurationView(server),
     applyBlocked: connection.state !== 'connected' ? connection.state : outdated ? 'needs-updating' : null,
   };
 }
