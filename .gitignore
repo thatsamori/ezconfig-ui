@@ -65,6 +65,8 @@ Databases/**
 Presets/User/**
 users.json
 Notes/**
+# Platform database (DATABASE_PATH) with its WAL files and pre-migration copies
+/platform.db*
 
 # Isolated redesign verification data
 /.qa-redesign/
