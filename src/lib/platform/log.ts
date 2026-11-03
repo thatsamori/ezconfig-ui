@@ -27,17 +27,15 @@
 import { env } from '@/lib/env';
 
 type PlatformId = string | number;
-type Level = 'info' | 'warn' | 'error';
+type ProblemLevel = 'warn' | 'error';
+type Level = 'info' | ProblemLevel;
 
-export interface LogIds {
-  userId?: PlatformId;
-  gameServerId?: PlatformId;
-  liveConfigurationId?: PlatformId;
-}
+const ID_FIELDS = ['userId', 'gameServerId', 'liveConfigurationId'] as const;
+export type LogIds = Partial<Record<(typeof ID_FIELDS)[number], PlatformId>>;
 
 export interface LogHealthEntry {
   time: string;
-  level: 'warn' | 'error';
+  level: ProblemLevel;
   event: string;
   message: string;
 }
@@ -50,7 +48,6 @@ export interface LogHealth {
 }
 
 const RECENT_LIMIT = 20;
-const ID_FIELDS = ['userId', 'gameServerId', 'liveConfigurationId'] as const satisfies readonly (keyof LogIds)[];
 const GAME_SERVER_KEY = /ezc_gsk_[A-Za-z0-9_-]*/g;
 const REDACTED = '[redacted]';
 
@@ -70,7 +67,7 @@ function pickIds(ids: LogIds): LogIds {
 }
 
 // Only the message and stack ever leave an error; its other fields may hold a request, headers or values.
-function describeProblem(problem: unknown): { message: string; stack?: string } {
+function messageAndStack(problem: unknown): { message: string; stack?: string } {
   if (typeof problem === 'string') return { message: problem };
   if (typeof problem === 'object' && problem !== null && typeof (problem as Error).message === 'string') {
     const { message, stack } = problem as Error;
@@ -92,8 +89,8 @@ function write<Fields extends { level: Level; event: string }>(fields: Fields): 
   return scrubbed;
 }
 
-function writeProblem(level: 'warn' | 'error', event: string, problem: unknown, ids: LogIds = {}): void {
-  const line = write({ level, event, ...pickIds(ids), ...describeProblem(problem) });
+function writeProblem(level: ProblemLevel, event: string, problem: unknown, ids: LogIds = {}): void {
+  const line = write({ level, event, ...pickIds(ids), ...messageAndStack(problem) });
   health[level === 'warn' ? 'warnings' : 'errors'] += 1;
   health.recent.unshift({ time: line.time, level, event: line.event, message: line.message });
   health.recent.splice(RECENT_LIMIT);
