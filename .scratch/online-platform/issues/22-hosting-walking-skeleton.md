@@ -1,6 +1,6 @@
 # 22: Hosting walking skeleton on Lightsail
 
-Status: in progress; everything is proven except the spend limit, which waits on the owner's confirmation in AWS Settings
+Status: completed
 Type: task
 Created: 2026-11-02
 Blocked by: 16
@@ -22,7 +22,7 @@ drive the box over SSH once the owner grants access.
 
 ## Acceptance criteria
 
-- [ ] AWS project setup (done by the owner):
+- [x] AWS project setup (done by the owner):
       - The selected Region is confirmed as us-east-2 in AWS Settings > View
         all projects > Overview > Additional Info > Region.
       - The project is on the Paid plan.
@@ -177,5 +177,5 @@ drive the box over SSH once the owner grants access.
 - After the deploys, both hostnames answer 200 from outside and 403 on
   `/internal/backup-heartbeat`; Caddy, Litestream and the app are active.
 - The alarm's email contact is verified, and the alarm is OK.
-- Still open: the spend limit (about $40) is set in AWS Settings, which no API
-  shows. The owner confirms it, and this ticket is then completed.
+- The spend limit: the owner confirmed it is set to about $40 in
+  AWS Settings > Billing, which no API shows. With that, every criterion is met.
