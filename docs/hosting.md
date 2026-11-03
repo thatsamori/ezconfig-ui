@@ -122,6 +122,18 @@ The Status tab, for the platform operator only, is computed when it loads
 - game servers registered, Connected now, and Connected by the build stamp
   they reported, with the Supported build marked. It names no game server or
   owner;
+- activity, as counts that name no game server or owner:
+  - server owners, and those seen in the last 24 h and the last 7 days, by the
+    latest last seen of their sessions. The operator counts, and is seen by
+    opening the page. Last seen is written at most once an hour and goes when a
+    session ends, so these can run low: a server owner who signed out reads as
+    not seen. Each one's last seen is on the Server owners tab, from the same
+    place;
+  - Live configurations by state (Pending, Blocked, Confirmed, Failed), and game
+    servers with none yet. State is computed for each one when the page loads,
+    never stored;
+  - game servers Applied in the last 24 h and the last 7 days. A game server
+    keeps only its latest Apply, so this counts game servers, not Applies;
 - the release commit, running since, and the warnings and errors logged since
   start with the newest 20;
 - "Backup: last confirmed 40 s ago", from Litestream's heartbeat. It warns

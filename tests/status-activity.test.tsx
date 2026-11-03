@@ -18,7 +18,7 @@ const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '
 describe('the Activity section', () => {
   test('shows each count under its label', () => {
     const shown = text(section());
-    expect(shown).toContain('Server owners 5 · 2 seen in the last 24 h · 4 in the last 7 days');
+    expect(shown).toContain('Server owners 5 in all · 2 seen in the last 24 h · 4 in the last 7 days');
     expect(shown).toContain('Live configurations 1 Pending 6 Blocked 7 Confirmed 8 Failed');
     expect(shown).toContain('No Live configuration yet 9 game servers');
     expect(shown).toContain('Game servers Applied 3 in the last 24 h · 10 in the last 7 days');

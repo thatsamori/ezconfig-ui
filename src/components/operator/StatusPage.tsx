@@ -21,8 +21,8 @@ const LIVE_STATES = ['pending', 'blocked', 'confirmed', 'failed'] as const;
 export function ActivitySection({ activity: { serverOwners, liveConfigurations, gameServersApplied } }: { activity: PlatformStatus['activity'] }) {
   return <section className="status-section" aria-labelledby="status-activity">
     <h2 id="status-activity" className="preset-section-title">Activity</h2>
-    <dl className="server-facts">
-      <dt>Server owners</dt><dd><strong>{serverOwners.total}</strong> · <strong>{serverOwners.seenLast24h}</strong> seen in the last 24 h · <strong>{serverOwners.seenLast7Days}</strong> in the last 7 days</dd>
+    <dl className="server-facts status-activity">
+      <dt>Server owners</dt><dd><strong>{serverOwners.total}</strong> in all · <strong>{serverOwners.seenLast24h}</strong> seen in the last 24 h · <strong>{serverOwners.seenLast7Days}</strong> in the last 7 days</dd>
       <dt>Live configurations</dt><dd><ul className="status-states">{LIVE_STATES.map(state => <li key={state}><span className={`status-dot ${state}`} /><strong>{liveConfigurations[state]}</strong> {LIVE_STATE[state]}</li>)}</ul></dd>
       <dt>No Live configuration yet</dt><dd><strong>{liveConfigurations.none}</strong> {liveConfigurations.none === 1 ? 'game server' : 'game servers'}</dd>
       <dt>Game servers Applied</dt><dd><strong>{gameServersApplied.last24h}</strong> in the last 24 h · <strong>{gameServersApplied.last7Days}</strong> in the last 7 days</dd>
