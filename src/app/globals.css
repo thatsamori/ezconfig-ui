@@ -329,7 +329,7 @@ input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-app
 [data-slot=dialog-description] { font-size: 13px; line-height: 1.55; }
 [data-slot=dialog-title] { font-size: 18px; font-weight: 600; }
 [data-slot=dialog-content].console-sheet { position: fixed; top: 0; right: 0; left: auto; transform: none; width: min(760px,100%); max-width: none; height: 100dvh; max-height: 100dvh; border-radius: 0; border: 0; border-left: 1px solid rgba(255,255,255,.1); box-shadow: -30px 0 80px rgba(0,0,0,.6); display: flex; flex-direction: column; gap: 0; padding: 0; animation: none; }
-.sheet-header { padding: 22px 28px 16px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.sheet-header { padding: 22px 40px 16px 28px; border-bottom: 1px solid rgba(255,255,255,.06); }
 .sweep-sheet [data-slot=dialog-title] { font-size: 22px; }
 .sweep-controls { padding: 16px 28px; border-bottom: 1px solid rgba(255,255,255,.06); }
 .sweep-control-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
