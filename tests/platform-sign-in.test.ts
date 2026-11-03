@@ -123,7 +123,7 @@ describe('requests', () => {
     expectNoSecretsLogged(result);
   });
 
-  test('no self-hosted route answers without a session', () => {
+  test('no route answers without a session except sign-in, the poll endpoint and the localhost-only heartbeat', () => {
     expectNoSecretsLogged(runScenario('routes'));
   });
 });
