@@ -112,3 +112,17 @@ drive the box over SSH once the owner grants access.
   - With both hostnames set, `caddy adapt` shows one server on `:443` for
     both hosts, the timeouts (10 s header, 30 s body, 180 s write, 5 min
     idle) and no access log. `caddy validate` passes.
+- Caddy, started 2026-11-03 05:30 UTC with the settings filled (before the
+  first deploy, so the app answers 502):
+  - `certificate obtained successfully` for `modhau.com` and
+    `platform.modhau.com`, from Let's Encrypt (YE2), valid to 2027-02-01.
+  - From outside, on both hostnames: `http://` answers 308 to `https://`;
+    `https://` carries `Strict-Transport-Security: max-age=31536000`;
+    `/internal/backup-heartbeat` answers 403.
+  - Within a minute, scanners requested both hostnames. Caddy's error line
+    for each failed proxy carried the client's IP, headers and URI, which the
+    spec's logs must not hold. The Caddyfile's default logger now deletes
+    those fields: after a reload, a request to
+    `/proof/held-post?code=SHOULD-NOT-BE-LOGGED` left a line with only the
+    method, host, TLS details and status. The 43 earlier lines age out with
+    the 30-day journal.
