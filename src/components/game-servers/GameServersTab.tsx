@@ -57,7 +57,7 @@ function ConnectionBadge({ connection }: { connection: ConnectionStatus }) {
 }
 
 type LiveConfigurationView = NonNullable<GameServerView['liveConfiguration']>;
-const LIVE_STATE: Record<LiveConfigurationView['state'], string> = { pending: 'Pending', confirmed: 'Confirmed', failed: 'Failed' };
+const LIVE_STATE: Record<LiveConfigurationView['state'], string> = { pending: 'Pending', blocked: 'Blocked', confirmed: 'Confirmed', failed: 'Failed' };
 
 /** The Live configuration's state, its own indicator beside the connection status: Failed stays shown when the game server is Not connected. */
 function LiveConfigurationBadge({ live }: { live: LiveConfigurationView }) {
@@ -227,13 +227,25 @@ function DraftSection({ server, onEditDraft, onChanged }: { server: GameServerVi
 
 /**
  * What the game server reported of the Live configuration: Pending for as
- * long as it has been applied; Confirmed, with when, and a warning naming any
- * keys its build ignored; or Failed, with where processing stopped, the mod's
- * error, and what the server runs now.
+ * long as it has been applied; Blocked, naming the values the current schema
+ * refuses; Confirmed, with when, and a warning naming any keys its build
+ * ignored; or Failed, with where processing stopped, the mod's error, and
+ * what the server runs now.
  */
 function LiveConfigurationState({ live }: { live: LiveConfigurationView }) {
   const applied = <>applied <Ago time={live.appliedAt} /></>;
   if (live.state === 'pending') return <p className="live-state">Live configuration: <strong>Pending</strong> · {applied}. The game server has not reported processing it yet.</p>;
+  if (live.state === 'blocked') {
+    const count = live.refusedValues.length;
+    return <>
+      <p className="live-state">Live configuration: <strong className="blocked">Blocked</strong> · {applied}. The platform cannot send it.</p>
+      <div className="live-failed" role="alert"><CircleX size={16} /><div>
+        <strong>The current schema refuses {count === 1 ? '1 value' : `${count} values`} in this Live configuration</strong>
+        <ul>{live.refusedValues.map(refused => <li key={`${refused.database}/${refused.category}/${refused.key}`}>{place(refused)} · <code>{refused.key}</code>: {refused.error}</li>)}</ul>
+        <p>The schema changed since it was applied, so none of it is sent, and the game server keeps the values it has. Fix {count === 1 ? 'the value' : 'these values'} in the Draft, then Apply: that sends it at once.</p>
+      </div></div>
+    </>;
+  }
   if (live.state === 'confirmed') return <>
     <p className="live-state">Live configuration: <strong className="confirmed">Confirmed</strong> <Ago time={live.reportedAt} /> · {applied}. The game server reported processing it.</p>
     {live.ignoredKeys.length > 0 && <div className="live-ignored" role="status"><TriangleAlert size={16} /><div>

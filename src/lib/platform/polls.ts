@@ -21,7 +21,8 @@
  *   never trips it, however often.
  *
  * Polls with a missing or unknown key are counted here too, and logged as one
- * count per clock hour.
+ * count per clock hour. So is each Blocked Live configuration a poll finds,
+ * logged once per start.
  */
 import type { CategoryCommand } from '@/lib/config/encodeValues';
 import { log } from './log';
@@ -62,6 +63,8 @@ interface Registry {
   entries: Map<number, Entry>;
   holdMs: number;
   rejected: { hour: number; count: number; flush?: ReturnType<typeof setTimeout> };
+  /** The Blocked Live configurations logged since the platform started, by id. */
+  blocked?: Set<string>;
 }
 
 // Shared across Next route bundles and hot reloads, as one process holds them all.
@@ -208,4 +211,19 @@ function flushRejectedKeys(): void {
   clearTimeout(rejected.flush);
   if (rejected.count) log.info('poll.key-rejected', { count: rejected.count });
   rejected.count = 0;
+}
+
+/**
+ * A poll found its game server's Live configuration Blocked: the current
+ * schema refuses values in it (live-configurations.ts). Logged the first time
+ * for each one since the platform started, by id only. A restart logs it once
+ * more, since a deploy may change what the schema refuses. Apply refuses what
+ * the schema refuses, so only a Live configuration stored before this start
+ * can be Blocked, and the ids kept stay few.
+ */
+export function logBlocked(gameServerId: number, liveConfigurationId: string): void {
+  const logged = registry.blocked ??= new Set();
+  if (logged.has(liveConfigurationId)) return;
+  logged.add(liveConfigurationId);
+  log.warn('live-configuration.blocked', 'The current schema refuses values in the Live configuration, so it cannot be sent', { gameServerId, liveConfigurationId });
 }

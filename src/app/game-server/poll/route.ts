@@ -13,7 +13,10 @@
  *   (another id, one the platform does not know, or none) is answered at once
  *   with the whole Live configuration: "live-configuration". A game server
  *   with no Live configuration is never sent anything, and one that reports
- *   processing it, Failed included, is not sent it again.
+ *   processing it, Failed included, is not sent it again. A Blocked Live
+ *   configuration, one the current schema refuses values in, is never sent:
+ *   the poll is held, and the first such poll since the platform started
+ *   logs it.
  * - Any other poll is held (50 s) until it is answered "no-change", or
  *   "superseded" by a newer poll, or 401 "key-rejected" when Regenerate key
  *   or Delete ends its key, or "live-configuration" when an Apply wakes it.
@@ -30,7 +33,7 @@ import { findGameServerByKey, recordPoll, reportsNewResult } from '@/lib/platfor
 import { log } from '@/lib/platform/log';
 import { readBearerKey, readPollReport, type PollReport } from '@/lib/platform/poll-exchange';
 import { pendingDelivery } from '@/lib/platform/live-configurations';
-import { answerAtOnce, countRejectedKey, holdPoll, type PollAnswer } from '@/lib/platform/polls';
+import { answerAtOnce, countRejectedKey, holdPoll, logBlocked, type PollAnswer } from '@/lib/platform/polls';
 import { isSupportedBuild, logReportedBuild } from '@/lib/platform/supported-build';
 
 const answer = (body: PollAnswer | { answer: 'bad-request'; error: string } | { answer: 'error' }, status = 200) =>
@@ -80,7 +83,9 @@ export async function POST(request: Request) {
     if (read.report.processed && reportsNewResult(server, read.report.processed)) logResult(server.id, read.report.processed);
     recordPoll(server, read.report);
     const delivery = isSupportedBuild(read.report.buildStamp) ? pendingDelivery(server.id, read.report.processed?.liveConfigurationId ?? null) : undefined;
-    if (delivery) {
+    // Blocked: held as if there were nothing to send, until an Apply of the fixed Draft wakes it.
+    if (delivery && 'blocked' in delivery) logBlocked(server.id, delivery.blocked);
+    else if (delivery) {
       answerAtOnce(server.id, read.report.instanceId);
       return deliver(server.id, delivery);
     }
