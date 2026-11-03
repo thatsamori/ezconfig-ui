@@ -1,0 +1,16 @@
+# /etc/systemd/system/ezconfig-restore-check.timer, installed and started by
+# provision.sh. Starts ezconfig-restore-check.service once a week. The
+# operator's Status page warns once the last check is more than 8 days old.
+# When it runs next: systemctl list-timers ezconfig-restore-check.timer.
+[Unit]
+Description=Weekly EZConfig platform restore check
+
+[Timer]
+# Sundays at 04:00 UTC (provision.sh sets the clock to UTC), clear of the 10:00
+# upgrade reboots and the 11:00 snapshots.
+OnCalendar=Sun *-*-* 04:00:00 UTC
+# A run missed while the instance was off happens soon after it starts again.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

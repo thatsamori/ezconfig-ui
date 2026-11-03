@@ -1,0 +1,38 @@
+# /etc/systemd/system/ezconfig-restore-check.service, installed by provision.sh
+# and started weekly by ezconfig-restore-check.timer. It runs the restore check,
+# restore-check.ts, which provision.sh installs in /usr/local/lib/ezconfig-platform.
+# The check restores the latest backup from the bucket into this unit's private
+# /tmp and checks it against the live database, which it opens read-only. It
+# writes the result to the status file beside the database, which the
+# operator's Status page reads. To run it now, and wait for the result:
+#   sudo systemctl start ezconfig-restore-check
+# Its output: journalctl -u ezconfig-restore-check.
+[Unit]
+Description=EZConfig platform: check that the latest backup restores
+After=network-online.target litestream.service
+Wants=network-online.target
+# Like litestream.service: there is no backup to check until its config is filled.
+ConditionFileNotEmpty=/etc/litestream.yml
+
+[Service]
+Type=oneshot
+# The app's user, which can read the live database and write beside it.
+User=ezconfig
+Group=ezconfig
+# The bucket key stays in root-only /etc/litestream.yml; the check passes
+# systemd's private copy to `litestream restore`, as litestream.service does.
+LoadCredential=litestream.yml:/etc/litestream.yml
+Environment=LITESTREAM_CONFIG=%d/litestream.yml DATABASE_PATH=/var/lib/ezconfig-platform/platform.db
+# One file with no packages: no env file, no auto-install, no transpiler cache.
+Environment=BUN_RUNTIME_TRANSPILER_CACHE_PATH=0
+ExecStart=/usr/local/bin/bun --no-env-file --no-install /usr/local/lib/ezconfig-platform/restore-check.ts
+# The check removes its restore folder itself; this /tmp goes when it stops anyway.
+PrivateTmp=true
+TimeoutStartSec=30min
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+# For the status file. The check only ever opens the database read-only.
+ReadWritePaths=/var/lib/ezconfig-platform
