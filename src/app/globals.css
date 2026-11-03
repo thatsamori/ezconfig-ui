@@ -365,6 +365,7 @@ input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-app
 .notes-list { max-height: calc(100dvh - 360px); min-height: 100px; }
 .note-item { display: flex; flex-direction: column; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
 .note-item > div:first-child { order: 2; margin-left: 36px; color: #d4d4d8; font-size: 13.5px; line-height: 1.55; }
+.note-item > div:first-child a { color: #5fcf8c; text-decoration: underline; }
 .note-author { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; }
 .note-avatar { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #26272b; }
 [data-slot=dialog-content].review-dialog { width: min(760px,calc(100% - 32px)); max-width: 760px; max-height: 85dvh; display: flex; flex-direction: column; overflow: hidden; gap: 18px; }

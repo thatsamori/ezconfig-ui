@@ -23,12 +23,14 @@ export function RichTextEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        // Disable features we don't need
+        // Disable features we don't need. What remains is what the Note
+        // sanitizer keeps (src/lib/platform/notes.ts); strike it would strip.
         heading: false,
         orderedList: false,
         blockquote: false,
         codeBlock: false,
         horizontalRule: false,
+        strike: false,
         underline: false,
       }),
       Underline,
