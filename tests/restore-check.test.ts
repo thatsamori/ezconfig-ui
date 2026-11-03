@@ -40,6 +40,9 @@ function withLiveDatabase<T>(work: (live: Live) => T): T {
   });
 }
 
+/** How many tables the migrated database has, as the check counts them, so a new migration's tables need no edit here. */
+const tableCount = (live: Live) => (live.app.query("SELECT count(*) AS count FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\'").get() as { count: number }).count;
+
 /** The live database's file and WAL, byte for byte (the shared-memory index is SQLite's scratch space). */
 const fingerprint = (path: string) => [path, `${path}-wal`].map(file => (existsSync(file) ? createHash('sha256').update(readFileSync(file)).digest('hex') : 'absent'));
 
@@ -58,7 +61,7 @@ describe('the restore check', () => {
       const outcome = live.check(output => { outputs.push(output); live.snapshot(output); });
 
       expect(outcome.result).toBe('passed');
-      expect(outcome.reason).toBe('Restored the latest backup: integrity_check ok, and all 6 tables (3 rows) have the live database\'s row counts');
+      expect(outcome.reason).toBe(`Restored the latest backup: integrity_check ok, and all ${tableCount(live)} tables (3 rows) have the live database's row counts`);
       expect(outputs).toHaveLength(1);
       expect(outputs[0].startsWith(live.tempRoot)).toBe(true);
       expect(existsSync(outputs[0])).toBe(false);
@@ -76,7 +79,7 @@ describe('the restore check', () => {
       let restores = 0;
       const outcome = live.check(output => (++restores === 1 ? stale(output) : live.snapshot(output)), { onRetry: (attempt, found) => retries.push([attempt, found]) });
 
-      expect(outcome).toEqual({ result: 'passed', reason: 'Restored the latest backup on attempt 2 of 3: integrity_check ok, and all 6 tables (4 rows) have the live database\'s row counts' });
+      expect(outcome).toEqual({ result: 'passed', reason: `Restored the latest backup on attempt 2 of 3: integrity_check ok, and all ${tableCount(live)} tables (4 rows) have the live database's row counts` });
       expect(retries).toEqual([[2, ['sessions: 1 restored, 2 live']]]);
       expect(readdirSync(live.tempRoot)).toEqual([]);
     });
