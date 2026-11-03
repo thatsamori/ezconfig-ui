@@ -53,7 +53,7 @@ await featureReview('weapon-roster', async ({ set, reset, apply }) => {
     const directory = resolve('.scratch/weapon-reliability-ui');
     await mkdir(directory, { recursive: true });
     await writeFile(join(directory, 'ticket04-captured-rcon.json'), JSON.stringify({
-      source: 'Real store -> temporary persistence -> Apply (whole configuration after a wipe) -> captured RCON',
+      source: "Feature review harness: editor -> Draft -> Apply (whole configuration after a wipe) -> the batch delivered to the game server's held poll",
       initialCommands, updateCommands, values,
     }, null, 2) + '\n');
   }

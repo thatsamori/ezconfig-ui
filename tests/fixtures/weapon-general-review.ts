@@ -36,7 +36,7 @@ async function writeCapture(variable: string, directory: string, file: string, d
   if (process.env[variable] !== '1') return;
   await mkdir(resolve(directory), { recursive: true });
   await writeFile(join(resolve(directory), file), JSON.stringify({
-    source: 'Real store -> temporary persistence -> Apply (whole configuration after a wipe) -> captured RCON', ...data,
+    source: "Feature review harness: editor -> Draft -> Apply (whole configuration after a wipe) -> the batch delivered to the game server's held poll", ...data,
   }, null, 2) + '\n');
 }
 
