@@ -246,8 +246,8 @@ function LiveConfigurationState({ live }: { live: LiveConfigurationView }) {
     <div className="live-failed" role="alert"><CircleX size={16} /><div>
       <strong>Processing stopped at {wipe ? 'the wipe, before any category' : place({ database, category })}</strong>
       {error && <p className="live-error">{error}</p>}
-      <p>{wipe ? 'The game server runs none of this Live configuration: it still has the values it had before.'
-        : 'The game server runs only the categories before it; the rest of this Live configuration did not reach it.'} It is not sent again on its own: fix the Draft and Apply. Apply with no changes sends it again.</p>
+      <p>{wipe ? 'The game server runs none of this Live configuration: it still has the values it had before. It is not sent again on its own: Apply sends it again, with or without changes.'
+        : 'The game server runs only the categories before it; the rest of this Live configuration did not reach it. It is not sent again on its own: fix the value in the Draft and Apply, or Apply with no changes to send it again.'}</p>
     </div></div>
   </>;
 }
