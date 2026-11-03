@@ -10,7 +10,7 @@
  */
 import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/platform/auth';
-import { draftView, findOwnedDraft, readRevision } from '@/lib/platform/drafts';
+import { draftView, findOwnedDraft, readRevision, staleDraft } from '@/lib/platform/drafts';
 import { discardChanges } from '@/lib/platform/live-configurations';
 import { log } from '@/lib/platform/log';
 
@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (revision === undefined) return failure(400, 'Send the revision the discard is based on');
     const discarded = discardChanges(id, revision);
     if (!discarded) return failure(409, 'There is no Live configuration yet: nothing has been applied');
-    if (!discarded.ok) return NextResponse.json({ success: false, error: 'The Draft changed since this page loaded it', data: discarded.reason === 'stale' ? draftView(discarded.draft) : undefined }, { status: 409, headers: NO_STORE });
+    if (!discarded.ok) return NextResponse.json(staleDraft(discarded.draft), { status: 409, headers: NO_STORE });
     return NextResponse.json({ success: true, data: draftView(discarded.draft) }, { headers: NO_STORE });
   } catch (error) {
     log.error('draft.discard-failed', error, { userId });

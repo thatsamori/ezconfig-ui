@@ -50,7 +50,7 @@ export type DraftWrite =
   | { ok: false; reason: 'invalid'; errors: FieldError[] }
   | { ok: false; reason: 'stale'; draft: Draft };
 /** A write with no values to check: written, or refused as stale. */
-type CheckedWrite = Exclude<DraftWrite, { reason: 'invalid' }>;
+export type CheckedWrite = Exclude<DraftWrite, { reason: 'invalid' }>;
 
 type Row = { game_server_id: number; overrides: string; revision: number; saved_at: number | null; origin_id: number | null };
 const COLUMNS = 'game_server_id, overrides, revision, saved_at, origin_id';
@@ -116,7 +116,7 @@ export function resetDraft(gameServerId: number, baseRevision: number, now = Dat
 }
 
 /** Discard changes: the document and origin become `live`'s, the Live configuration's. */
-export function discardDraft(gameServerId: number, baseRevision: number, live: Written, now = Date.now()): DraftWrite | undefined {
+export function discardDraft(gameServerId: number, baseRevision: number, live: Written, now = Date.now()): CheckedWrite | undefined {
   return write(gameServerId, baseRevision, () => ({ document: live.document, originId: live.originId }), now);
 }
 
