@@ -41,7 +41,7 @@ test('feature review harness isolates storage and never opens an RCON connection
     await writeFile(join(realData, 'Databases', 'Character', 'Movement.json'), saved);
     const env = {
       DATABASES_PATH: join(realData, 'Databases'), PRESETS_PATH: join(realData, 'Presets'),
-      NOTES_PATH: join(realData, 'Notes'), DATABASE_PATH: join(realData, 'platform.db'),
+      DATABASE_PATH: join(realData, 'platform.db'),
     };
     const child = Bun.spawn([process.execPath, 'run', 'tests/fixtures/feature-review-harness-check.ts'], {
       cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
@@ -59,7 +59,7 @@ test('feature review harness isolates storage and never opens an RCON connection
     expect(storage.rcon).toBe('127.0.0.1');
     const temp = dirname(storage.databases);
     expect(dirname(temp)).toBe(resolve(tmpdir()));
-    expect([storage.databases, storage.presets, storage.notes, storage.platform].map(path => dirname(path))).toEqual([temp, temp, temp, temp]);
+    expect([storage.databases, storage.presets, storage.platform].map(path => dirname(path))).toEqual([temp, temp, temp]);
     expect(existsSync(temp)).toBe(false);
   } finally {
     server.stop(true);

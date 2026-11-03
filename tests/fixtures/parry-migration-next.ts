@@ -15,7 +15,7 @@ const port = (portProbe.address() as { port: number }).port;
 await new Promise<void>(resolve => portProbe.close(() => resolve()));
 const env = {
   ...process.env, NEXT_BUILD_DIR: '.next-automatic-sync-test/geometry',
-  DATABASES_PATH: join(root, 'Databases'), PRESETS_PATH: join(root, 'Presets'), NOTES_PATH: join(root, 'Notes'),
+  DATABASES_PATH: join(root, 'Databases'), PRESETS_PATH: join(root, 'Presets'),
   DATABASE_PATH: join(root, 'platform.db'), PUBLIC_URL: `http://127.0.0.1:${port}`,
   RCON_AUTO_SYNC_ENABLED: 'false', RCON_HOST: '127.0.0.1', RCON_PORT: '17947', RCON_PASSWORD: 'isolated-unused',
 };
