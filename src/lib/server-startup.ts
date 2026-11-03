@@ -30,6 +30,8 @@ export async function registerServerStartup(environment: Environment = process.e
         const { migratePlatformDatabase } = await import('./platform/storage');
         const result = migratePlatformDatabase(environment.DATABASE_PATH);
         if (result.applied.length) console.info(`[EZConfig platform storage] ${result.path}: version ${result.from} to ${result.to} (${result.applied.join(', ')})${result.copy ? `; copy before migrating: ${result.copy}` : ''}`);
+        // Expired sessions and old Invites: a minute after start, then daily.
+        (await import('./platform/retention')).startDailySweep();
       } catch (error) {
         console.error('[EZConfig platform storage] startup blocked:', error instanceof Error ? error.message : 'Unknown error');
         throw error;

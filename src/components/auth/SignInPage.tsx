@@ -4,7 +4,7 @@ import { Logo } from '@/components/Logo';
 
 // What the Discord callback reports back in `?sign-in=`.
 const outcomes: Record<string, string> = {
-  'invite-only': 'EZConfig is invite-only. Ask the platform operator for an invite link, then sign in from it.',
+  'invite-only': 'EZConfig is invite-only. Ask the platform operator for an invite link, then sign in from it. A link works once and expires 7 days after it was made.',
   'access-removed': 'Your access to EZConfig has been removed. Ask the platform operator if you think this is a mistake.',
   cancelled: 'Sign-in was cancelled on Discord.',
   failed: 'Could not sign in with Discord. Try again.',

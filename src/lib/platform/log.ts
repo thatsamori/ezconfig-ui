@@ -6,9 +6,9 @@
  *
  * Rules (what is logged at all is in the spec's Logging section; never routine polls):
  * - Name the event with a fixed string, never one built from input.
- * - A line names platform ids only: game server, user, Live configuration.
- *   Any other field passed in is dropped. A new field is added here, after
- *   checking it against the list below.
+ * - A line names platform ids only: game server, user, Live configuration,
+ *   Invite (its id, never its code). Any other field passed in is dropped.
+ *   A new field is added here, after checking it against the list below.
  * - Never logged, in an event name, a message or an error: any part of a Game
  *   server key; session tokens; `Cookie` or `Authorization` headers; Invite
  *   codes or links; Discord OAuth codes, tokens or the client secret; Note
@@ -30,7 +30,7 @@ type PlatformId = string | number;
 type ProblemLevel = 'warn' | 'error';
 type Level = 'info' | ProblemLevel;
 
-const ID_FIELDS = ['userId', 'gameServerId', 'liveConfigurationId'] as const;
+const ID_FIELDS = ['userId', 'gameServerId', 'liveConfigurationId', 'inviteId'] as const;
 export type LogIds = Partial<Record<(typeof ID_FIELDS)[number], PlatformId>>;
 
 export interface LogHealthEntry {

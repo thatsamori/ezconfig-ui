@@ -39,7 +39,10 @@ are the contract between this app and the mod.
   Logging: `log.ts`. Sign-in with Discord: `discord.ts` (the OAuth exchange, the
   one module tests replace), `sign-in.ts`, `users.ts`, `sessions.ts` and `auth.ts`,
   whose `requireSession` every route handler outside `src/app/api/auth/` calls
-  first (Origin check on requests that change data, then the session cookie).
+  first (Origin check on requests that change data, then the session cookie);
+  operator-only routes call `requireOperator` instead. Invites: `invites.ts`
+  (codes stored as hashes only) and `src/app/api/operator/invites/`. `retention.ts`
+  is the daily sweep of expired sessions and old Invites, started by the startup hook.
 - `src/proxy.ts` - the Content-Security-Policy, with a fresh nonce per request, on
   every page. Inline script runs only with the nonce, so a new page or component
   adds no inline `<script>` or `on*` handler; the root layout renders per request
