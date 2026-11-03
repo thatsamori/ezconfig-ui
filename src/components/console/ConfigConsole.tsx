@@ -98,7 +98,8 @@ function UnsavedEdits() {
   const unsaved = useConfigStore(state => state.unsaved);
   const dismiss = useConfigStore(state => state.dismissUnsaved);
   if (!unsaved.length) return null;
-  return <div className="unsaved-edits" role="alert"><p>The Draft changed in another tab, so {unsaved.length === 1 ? 'this edit was' : `these ${unsaved.length} edits were`} not saved. The editor shows the saved Draft; make them again to keep them.</p><ul>{unsaved.map(edit => <li key={fieldName(edit.database, edit.category, edit.key)}>{editName(edit)} <span className="mono">→ {showValue(edit.value)}</span></li>)}</ul><button className="text-button" onClick={dismiss}>Dismiss</button></div>;
+  const one = unsaved.length === 1;
+  return <div className="unsaved-edits" role="alert"><p>The Draft changed in another tab, so {one ? 'this edit was' : `these ${unsaved.length} edits were`} not saved. The editor shows the saved Draft; make {one ? 'it' : 'them'} again to keep {one ? 'it' : 'them'}.</p><ul>{unsaved.map(edit => <li key={fieldName(edit.database, edit.category, edit.key)}>{editName(edit)} <span className="mono">→ {showValue(edit.value)}</span></li>)}</ul><button className="text-button" onClick={dismiss}>Dismiss</button></div>;
 }
 /** How often the open editor fetches its Draft again, to pick up another tab's saves. */
 const DRAFT_REFRESH_MS = 3_000;
