@@ -114,6 +114,17 @@ export function addField(document: ValuesDocument, path: readonly string[], valu
   if (!Object.hasOwn(target, key)) target[key] = value;
 }
 
+/** The values the schema has a place for, as a document of their own, as loading a Ruleset version takes them; `dropped` counts the rest. */
+export function knownValues(document: unknown): { document: ValuesDocument; dropped: number } {
+  const known: ValuesDocument = {};
+  let dropped = 0;
+  for (const field of documentFields(document)) {
+    if (field.category) addField(known, field.path, field.value);
+    else dropped++;
+  }
+  return { document: known, dropped };
+}
+
 /** Places each value under its key's current category, for the editor; `dropped` counts the values the schema has no place for. */
 export function placeValues(document: unknown): { values: EditorValues; dropped: number } {
   const values: EditorValues = { character: {}, weapons: {} };

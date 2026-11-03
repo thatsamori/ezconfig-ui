@@ -17,10 +17,12 @@
  * Alongside it, the view says when EZConfig needs updating: the latest poll
  * reported a build that is not the Supported build (supported-build.ts). It
  * also shows the Live configuration, whether the Draft has Unapplied changes,
- * and why Apply is blocked, if it is (live-configurations.ts).
+ * and why Apply is blocked, if it is (live-configurations.ts), and the origin
+ * of each, modified or not (origins.ts).
  */
 import { createHash, randomBytes } from 'node:crypto';
 import { liveConfigurationView } from './live-configurations';
+import type { Origin } from './origins';
 import type { PollReport, ProcessingResult } from './poll-exchange';
 import { endKey, pollActivity } from './polls';
 import { platformStore } from './storage';
@@ -75,6 +77,10 @@ export interface GameServerView {
   liveConfiguration: { id: string; appliedAt: number } | null;
   /** The Draft differs from the Live configuration; before the first Apply, it sets any value. */
   unappliedChanges: boolean;
+  /** The Ruleset version the Draft was last loaded from or saved as, and whether it is modified from it; null for none. */
+  draftOrigin: Origin | null;
+  /** The Live configuration's origin, as the Draft had it when applied; null for none, or before the first Apply. */
+  liveOrigin: Origin | null;
   /** Why Apply is disabled; null while the game server is Connected and on the Supported build. */
   applyBlocked: ApplyBlocked | null;
 }

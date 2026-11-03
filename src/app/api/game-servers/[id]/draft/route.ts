@@ -6,7 +6,9 @@
  *
  * PUT /api/game-servers/:id/draft  { revision, document }
  *   Auto-save: the whole values document, with the revision it was based on.
- *   - 200 { success, data: { revision, savedAt } }: saved, with the raised revision.
+ *   - 200 { success, data: { revision, savedAt, origin } }: saved, with the
+ *     raised revision, and the origin (a Ruleset version, or null), which a
+ *     save keeps but may now be modified from.
  *   - 400 { success, error, details: FieldError[] } when the schema refuses a
  *     value, or the body is not a document: nothing is saved.
  *   - 409 { success, error, data: DraftView } when the Draft has moved on from
@@ -18,6 +20,7 @@ import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/platform/auth';
 import { draftView, findOwnedDraft, readRevision, saveDraft, staleDraft } from '@/lib/platform/drafts';
 import { log } from '@/lib/platform/log';
+import { originOf } from '@/lib/platform/origins';
 import { isValuesDocument } from '@/lib/config/valuesDocument';
 
 const NO_STORE = { 'Cache-Control': 'no-store' };
@@ -53,7 +56,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (revision === undefined || !isValuesDocument(body?.document)) return failure(400, 'Send the whole Draft document with the revision it was based on');
     const saved = saveDraft(id, revision, body.document);
     if (!saved) return failure(404, 'No such game server');
-    if (saved.ok) return NextResponse.json({ success: true, data: { revision: saved.draft.revision, savedAt: saved.draft.savedAt } }, { headers: NO_STORE });
+    if (saved.ok) {
+      const { revision: raised, savedAt, originId, document } = saved.draft;
+      return NextResponse.json({ success: true, data: { revision: raised, savedAt, origin: originOf(originId, document) } }, { headers: NO_STORE });
+    }
     if (saved.reason === 'invalid') return NextResponse.json({ success: false, error: 'Validation failed', details: saved.errors }, { status: 400, headers: NO_STORE });
     return NextResponse.json(staleDraft(saved.draft), { status: 409, headers: NO_STORE });
   } catch (error) {
