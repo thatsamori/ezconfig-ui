@@ -40,7 +40,14 @@ test('raw decimal input cannot round a fractional maximum into a valid integer',
   }
 });
 
-test('Camera crosses real save/preset/review/apply/startup and TCP RCON boundaries', () => {
+test('Camera policy survives the editor, Apply, reset and damaged storage', () => {
+  const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/camera-policy-review.ts'], {
+    cwd: join(import.meta.dir, '..'), stdout: 'pipe', stderr: 'pipe',
+  });
+  expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
+});
+
+test('Camera crosses real preset/apply/startup and TCP RCON boundaries', () => {
   const result = Bun.spawnSync(['bun', join(import.meta.dir, 'fixtures', 'camera-policy-flow.ts')], {
     cwd: join(import.meta.dir, '..'), env: process.env, stdout: 'pipe', stderr: 'pipe',
   });
