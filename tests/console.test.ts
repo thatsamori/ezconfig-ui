@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { countOverrides, reviewRows, selectedReviewCommands, sweepValue, toggleAttackGroup } from '../src/components/console/model';
+import { countOverrides, sweepValue, toggleAttackGroup } from '../src/components/console/model';
 describe('attack columns', () => {
   test('General is exclusive and attacks keep schema order', () => {
     expect(toggleAttackGroup(['Strike', 'Stab'], 'General')).toEqual(['General']);
@@ -26,15 +26,7 @@ describe('Sweep calculations', () => {
     expect(sweepValue(1e308, 'multiply', 1e308)).toBeUndefined();
   });
 });
-describe('selective apply', () => {
-  const commands = ['string ezconfig ArmingSword Strike {"Windup":"0.675","CanCombo":"True"}', 'string ezconfig Character Movement {"CanDodge":"False"}'];
-  test('a held-back key is removed from its category command', () => {
-    const rows = reviewRows(commands);
-    const selected = new Set(rows.filter(row => row.key !== 'CanCombo').map(row => row.id));
-    expect(selectedReviewCommands(rows, selected)).toEqual(['string ezconfig ArmingSword Strike {"Windup":"0.675"}', 'string ezconfig Character Movement {"CanDodge":"False"}']);
-  });
-  test('None produces an explicit empty command array', () => expect(selectedReviewCommands(reviewRows(commands), new Set())).toEqual([]));
-  test('invalid preview commands fail closed', () => expect(() => reviewRows(['string ezconfig WipeDatabases'])).toThrow());
+describe('override counts', () => {
   test('counts overrides including false and zero, excluding tombstones', () => expect(countOverrides({
     character: {
       Movement: {

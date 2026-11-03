@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DataType, type ConfigEntry } from '@/lib/config/types';
-import { useConfigStore, flushConfigWrites, beginConfigMutation, type ConfigValue } from '@/lib/store/configStore';
+import { useConfigStore, flushConfigWrites, type ConfigValue } from '@/lib/store/configStore';
 import { ValueEditor } from './ValueEditor';
 import { weapons, isOverride, sameValue, showValue, sweepValue, type SweepMode } from './model';
 export function SweepPanel({
@@ -58,66 +58,18 @@ export function SweepPanel({
   const stage = async () => {
     if (!total || staging) return;
     setStaging(true);
-    const finish = beginConfigMutation();
     try {
+      // One save for the whole sweep: only changed cells, a null being Reset.
+      useConfigStore.getState().setValues(rows.flatMap(row => groups.flatMap((category, index) => {
+        const next = row.after[index];
+        return row.changed[index] && next !== undefined ? [{ database: row.name, category, key: entry.configKey, value: next }] : [];
+      })));
       await flushConfigWrites();
-      // Persist one batch per attack type. Only changed cells are included.
-      for (const [index, category] of groups.entries()) {
-        const weaponValues: Record<string, Record<string, ConfigValue>> = {};
-        for (const row of rows) {
-          const next = row.after[index];
-          if (row.changed[index] && next !== undefined) weaponValues[row.name] = {
-            [entry.configKey]: next
-          };
-        }
-        if (!Object.keys(weaponValues).length) continue;
-        const response = await fetch('/api/config/bulk-weapons', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            category,
-            weaponValues
-          })
-        });
-        const result = await response.json();
-        // A partial disk failure reports the exact weapons that succeeded.
-        const updated: string[] = result.data?.updatedWeapons ?? [];
-        useConfigStore.setState(state => {
-          const weapons = {
-            ...state.values.weapons
-          };
-          for (const name of updated) {
-            const categories = { ...weapons[name] };
-            const entries = { ...categories[category] };
-            for (const [key, next] of Object.entries(weaponValues[name])) {
-              if (next === null) delete entries[key];
-              else entries[key] = next;
-            }
-            if (Object.keys(entries).length) categories[category] = entries;
-            else delete categories[category];
-            if (Object.keys(categories).length) weapons[name] = categories;
-            else delete weapons[name];
-          }
-          const values = {
-            ...state.values,
-            weapons
-          };
-          return {
-            values,
-            workingValues: values,
-            savedValues: values
-          };
-        });
-        if (!response.ok || !result.success) throw new Error(result.error || 'Some changes could not be saved. Successfully saved changes remain staged.');
-      }
-      toast.success(`Staged ${total} changes to ${entry.configKey}`);
+      toast.success(`Saved ${total} changes to ${entry.configKey}`);
       onClose();
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
-      finish();
       setStaging(false);
     }
   };
@@ -134,6 +86,6 @@ export function SweepPanel({
             if (checked) next.add(row.name);else next.delete(row.name);
             return next;
           })} /><span className="sweep-weapon">{row.name}</span><span className={row.before.some(isOverride) ? 'mono' : 'faint'} title={summary(row.before, row.name)}>{summary(row.before, row.name)}</span><span className="faint">→</span><span className={`mono${row.changes ? ' green' : ''}`} title={summary(row.after, mode === 'reset' ? row.name : undefined)}>{row.enabled && (mode === 'reset' || isOverride(value)) ? mode === 'reset' ? 'Game default' : summary(row.after) : '—'}</span><span className={row.noBase ? 'amber' : row.changes ? 'green' : 'faint'}>{row.noBase ? 'no base value' : !row.enabled ? 'skipped' : row.changes ? 'will change' : 'no change'}</span></div>)}</div>
-    <footer className="sheet-footer"><p>Stages changes locally. Nothing reaches the server until Review &amp; apply.</p><div><button className="outline-button" disabled={staging} onClick={onClose}>Cancel</button><button className="primary-button" disabled={!total || staging} onClick={stage}>{staging ? 'Staging…' : `Stage ${total} changes`}</button></div></footer>
+    <footer className="sheet-footer"><p>Saves to the Draft. Nothing reaches the game server until you Apply.</p><div><button className="outline-button" disabled={staging} onClick={onClose}>Cancel</button><button className="primary-button" disabled={!total || staging} onClick={stage}>{staging ? 'Saving…' : `Save ${total} changes`}</button></div></footer>
   </DialogContent></Dialog>;
 }

@@ -1,21 +1,22 @@
 /**
  * User Presets API
  *
- * POST /api/presets/user - Create a new user preset
+ * POST /api/presets/user - Create a new user preset from one of the owner's Drafts
  * GET /api/presets/user - List all user presets
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { listUserPresets, saveUserPreset } from '@/lib/presets';
-import { readAllConfigData } from '@/lib/database/structure';
+import { placeValues } from '@/lib/config/valuesDocument';
+import { findOwnedDraft } from '@/lib/platform/drafts';
 import { requireSession } from '@/lib/platform/auth';
 
 interface CreatePresetBody {
   name: string;
   title: string;
   description: string;
-  // data field is now ignored - we read from disk instead
-  data?: unknown;
+  /** The game server whose saved Draft the preset snapshots. */
+  gameServerId: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -39,16 +40,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Read current config data directly from disk
-    // This ensures we capture ALL saved configs, not just what's loaded in memory
-    const diskData = await readAllConfigData();
+    // The Draft as saved, placed under current categories, not what a tab holds in memory
+    const draft = findOwnedDraft(session.user.id, String(body.gameServerId));
+    if (!draft) {
+      return NextResponse.json(
+        { success: false, error: 'No such game server' },
+        { status: 404 }
+      );
+    }
 
     const manifest = {
       title: body.title,
       description: body.description || '',
     };
 
-    await saveUserPreset(body.name, manifest, diskData);
+    await saveUserPreset(body.name, manifest, placeValues(draft.document).values);
 
     return NextResponse.json({ success: true });
   } catch (error) {

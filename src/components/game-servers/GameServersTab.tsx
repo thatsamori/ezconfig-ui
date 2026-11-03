@@ -20,16 +20,17 @@ GameServerKey=${gameServerKey}`;
  * with its connection status, EZConfig needs updating when it runs another
  * build than the Supported build, and, until it first connects, the setup
  * checklist. The Game server key is shown on the page that registering opens,
- * and gone once the owner leaves it.
+ * and gone once the owner leaves it. Edit Draft opens the game server's Draft
+ * in the editor; `initialOpenId` opens on a game server's page.
  */
-export function GameServersTab() {
-  const [openId, setOpenId] = useState<number | null>(null);
+export function GameServersTab({ initialOpenId, onEditDraft }: { initialOpenId?: number; onEditDraft?: (server: { id: number; name: string }) => void } = {}) {
+  const [openId, setOpenId] = useState<number | null>(initialOpenId ?? null);
   const [shown, setShown] = useState<{ id: number; gameServerKey: string } | null>(null);
   if (openId === null) return <ServerList onOpen={setOpenId} onRegistered={(id, gameServerKey) => {
     setShown({ id, gameServerKey });
     setOpenId(id);
   }} />;
-  return <ServerPage id={openId} gameServerKey={shown?.id === openId ? shown.gameServerKey : undefined} onBack={() => {
+  return <ServerPage id={openId} gameServerKey={shown?.id === openId ? shown.gameServerKey : undefined} onEditDraft={onEditDraft} onBack={() => {
     setShown(null);
     setOpenId(null);
   }} />;
@@ -81,13 +82,14 @@ function ServerList({ onOpen, onRegistered }: { onOpen: (id: number) => void; on
   </div>;
 }
 
-function ServerPage({ id, gameServerKey, onBack }: { id: number; gameServerKey?: string; onBack: () => void }) {
+function ServerPage({ id, gameServerKey, onBack, onEditDraft }: { id: number; gameServerKey?: string; onBack: () => void; onEditDraft?: (server: { id: number; name: string }) => void }) {
   const { data: server, error } = useRefreshingJson<GameServerView>(`/api/game-servers/${id}`);
   return <div className="game-servers-page">
     <button className="outline-button back-button" onClick={onBack}><ArrowLeft size={14} />All game servers</button>
     {!server ? <p className="empty-state" role={error ? 'alert' : undefined}>{error || 'Loading the game server…'}</p> : <>
       <div className="standalone-heading"><div><p className="crumb">Game server</p><h1>{server.name}</h1></div><ConnectionBadge connection={server.connection} /></div>
       {server.needsUpdating && <NeedsUpdating build={server.needsUpdating} />}
+      {onEditDraft && <section className="draft-entry"><div><h3>Draft</h3><p>Edit Character and Weapon config here. The Draft saves as you edit; nothing reaches the game server until you Apply.</p></div><button className="primary-button" onClick={() => onEditDraft({ id: server.id, name: server.name })}>Edit Draft</button></section>}
       {server.connection.state === 'never-connected' || gameServerKey ? <SetupChecklist server={server} gameServerKey={gameServerKey} /> : <dl className="server-facts">
         <dt>Reported build</dt><dd>{server.lastReport?.buildStamp ? <code>{server.lastReport.buildStamp}</code> : 'None reported'}</dd>
         <dt>Game server key</dt><dd>Ending in <code>{server.keyLast4}</code></dd>

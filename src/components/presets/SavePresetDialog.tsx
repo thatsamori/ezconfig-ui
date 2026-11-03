@@ -22,6 +22,7 @@ export function SavePresetDialog({
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const count = useConfigStore(state => countOverrides(state.values));
+  const gameServerId = useConfigStore(state => state.draft?.gameServerId);
   const name = title.trim().replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
   const valid = title.trim().length > 0 && /^[a-zA-Z0-9_-]+$/.test(name);
   const close = () => {
@@ -34,6 +35,7 @@ export function SavePresetDialog({
     if (!valid) return;
     setSaving(true);
     try {
+      if (gameServerId === undefined) throw new Error("Open a game server's Draft to save it as a preset");
       await flushConfigWrites();
       const response = await fetch('/api/presets/user', {
         method: 'POST',
@@ -43,7 +45,8 @@ export function SavePresetDialog({
         body: JSON.stringify({
           name,
           title: title.trim(),
-          description: description.trim()
+          description: description.trim(),
+          gameServerId
         })
       });
       const data = await response.json();
@@ -61,5 +64,5 @@ export function SavePresetDialog({
   };
   return <Dialog open={open} onOpenChange={next => {
     if (!next) close();
-  }}><DialogContent className="save-preset-dialog sm:max-w-[440px]"><DialogHeader><DialogTitle>Save as preset</DialogTitle><DialogDescription>Snapshots the {count} current overrides.</DialogDescription></DialogHeader><div className="grid gap-4 py-2"><div className="grid gap-2"><Label htmlFor="preset-title">Title</Label><Input id="preset-title" placeholder="My preset" value={title} disabled={saving} onChange={event => setTitle(event.target.value)} />{title && !valid && <p className="text-xs text-destructive">Include a letter or number in the title.</p>}</div><div className="grid gap-2"><Label htmlFor="preset-description">Description</Label><Textarea id="preset-description" value={description} disabled={saving} onChange={event => setDescription(event.target.value)} placeholder="What does this preset change?" rows={3} /></div></div><DialogFooter><Button variant="outline" disabled={saving} onClick={close}>Cancel</Button><Button disabled={!valid || saving} onClick={save}>{saving ? 'Saving…' : 'Save preset'}</Button></DialogFooter></DialogContent></Dialog>;
+  }}><DialogContent className="save-preset-dialog sm:max-w-[440px]"><DialogHeader><DialogTitle>Save as preset</DialogTitle><DialogDescription>Snapshots the {count} overrides in the open Draft.</DialogDescription></DialogHeader><div className="grid gap-4 py-2"><div className="grid gap-2"><Label htmlFor="preset-title">Title</Label><Input id="preset-title" placeholder="My preset" value={title} disabled={saving} onChange={event => setTitle(event.target.value)} />{title && !valid && <p className="text-xs text-destructive">Include a letter or number in the title.</p>}</div><div className="grid gap-2"><Label htmlFor="preset-description">Description</Label><Textarea id="preset-description" value={description} disabled={saving} onChange={event => setDescription(event.target.value)} placeholder="What does this preset change?" rows={3} /></div></div><DialogFooter><Button variant="outline" disabled={saving} onClick={close}>Cancel</Button><Button disabled={!valid || saving} onClick={save}>{saving ? 'Saving…' : 'Save preset'}</Button></DialogFooter></DialogContent></Dialog>;
 }

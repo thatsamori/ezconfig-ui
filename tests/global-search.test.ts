@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { searchGlobal } from '../src/components/console/search';
-import { getSupportedConfigOptions } from '../src/components/weapons/WeaponAccordion';
+import { WEAPON_CONFIG_OPTIONS } from '../src/lib/config/weaponConfigSchema';
+import { supportsWeapon } from '../src/lib/config/types';
 
 const context = { weapon: 'ArmingSword' };
 
@@ -42,10 +43,11 @@ describe('global search', () => {
     expect(alternate.some(result => result.weapon === 'ArmingSword' && result.configKey === 'AltWeaponLength')).toBe(false);
   });
 
-  test('unloaded override filtering exposes main length roster-wide but alternate only where native', () => {
-    expect(getSupportedConfigOptions('ArmingSword', 'General', 'WeaponLength').map(entry => entry.configKey)).toEqual(['WeaponLength']);
-    expect(getSupportedConfigOptions('ArmingSword', 'General', 'AltWeaponLength')).toEqual([]);
-    expect(getSupportedConfigOptions('Spear', 'General', 'WeaponLength').map(entry => entry.configKey)).toEqual(['WeaponLength', 'AltWeaponLength']);
+  test("a weapon's General screen shows main length roster-wide but alternate only where native", () => {
+    // The rows the editor shows for a weapon: its group's keys that the weapon supports.
+    const lengths = (weapon: string) => WEAPON_CONFIG_OPTIONS.General.filter(entry => supportsWeapon(entry, weapon) && entry.configKey.includes('WeaponLength')).map(entry => entry.configKey);
+    expect(lengths('ArmingSword')).toEqual(['WeaponLength']);
+    expect(lengths('Spear')).toEqual(['WeaponLength', 'AltWeaponLength']);
   });
 
   test('empty search offers navigation and never lists thousands of config keys', () => {

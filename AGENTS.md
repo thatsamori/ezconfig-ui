@@ -51,6 +51,10 @@ are the contract between this app and the mod.
   build stamp anything is sent to, set at `src/app/api/operator/supported-build/`.
   The operator's Status page: `status.ts`, with `backup-heartbeat.ts` and
   `restore-check.ts` (the weekly check's status file beside the database).
+  Drafts: `drafts.ts` (one values document per game server, revision-checked
+  whole saves) behind `src/app/api/game-servers/[id]/draft/` and its `reset/`.
+  The document's shape and placement are in `src/lib/config/valuesDocument.ts`.
+  Its encoder, `src/lib/config/encodeValues.ts`, builds the wipe-then-category batch.
 - `src/proxy.ts` - the Content-Security-Policy, with a fresh nonce per request, on
   every page. Inline script runs only with the nonce, so a new page or component
   adds no inline `<script>` or `on*` handler; the root layout renders per request

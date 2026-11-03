@@ -22,39 +22,6 @@ export function toggleAttackGroup(current: string[], group: string): string[] {
   const selected = current.includes(group) ? current.filter(item => item !== group) : [...current.filter(item => item !== 'General'), group];
   return attackGroups.filter(item => selected.includes(item));
 }
-export interface ReviewRow {
-  id: string;
-  database: string;
-  category: string;
-  key: string;
-  value: string;
-}
-export function reviewRows(commands: string[]): ReviewRow[] {
-  return commands.flatMap(command => {
-    const match = /^string ezconfig (\S+) (\S+) (\{.*\})$/.exec(command);
-    if (!match) throw new Error('The apply preview contains an unsupported command.');
-    const [, database, category, json] = match;
-    return Object.entries(JSON.parse(json) as Record<string, string>).map(([key, value]) => ({
-      id: JSON.stringify([database, category, key]),
-      database,
-      category,
-      key,
-      value
-    }));
-  }).sort((a, b) => a.database.localeCompare(b.database) || a.category.localeCompare(b.category) || a.key.localeCompare(b.key));
-}
-export function selectedReviewCommands(rows: ReviewRow[], selected: Set<string>): string[] {
-  const groups = new Map<string, Record<string, string>>();
-  for (const row of rows) {
-    if (!selected.has(row.id)) continue;
-    const prefix = `string ezconfig ${row.database} ${row.category}`;
-    groups.set(prefix, {
-      ...groups.get(prefix),
-      [row.key]: row.value
-    });
-  }
-  return [...groups].map(([prefix, entries]) => `${prefix} ${JSON.stringify(entries)}`);
-}
 export function relativeTime(value: string | number): string {
   const elapsed = Math.max(0, Date.now() - new Date(value).getTime());
   if (elapsed < 60000) return 'just now';

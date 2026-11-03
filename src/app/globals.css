@@ -493,3 +493,13 @@ body { -webkit-font-smoothing: antialiased; }
 .status-log .message { grid-column: 2 / -1; color: #d4d4d8; overflow-wrap: anywhere; }
 .status-log-empty { margin-top: 16px; }
 @media (max-width: 560px) { .ini-copy { flex-direction: column; align-items: stretch; } .server-row { flex-wrap: wrap; } .status-log li { grid-template-columns: max-content minmax(0,1fr); } .status-log code { grid-column: 1 / -1; } .status-log .message { grid-column: 1 / -1; } }
+/* A game server's Draft in the editor */
+.crumb-link { color: #d4d4d8; text-decoration: underline; text-underline-offset: 2px; }
+.crumb-link:hover { color: #f2f2f3; }
+.field-error { display: block; color: #e5484d; font-size: 11px; line-height: 1.4; margin-top: 3px; overflow-wrap: anywhere; }
+.save-problem { color: #e0a83c; }
+.text-button { margin-left: 8px; color: #d4d4d8; text-decoration: underline; text-underline-offset: 2px; }
+.draft-entry { display: flex; align-items: center; gap: 16px; justify-content: space-between; background: #16171a; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; max-width: 720px; }
+.draft-entry h3 { font-size: 14px; font-weight: 600; }
+.draft-entry p { color: #9a9ba1; font-size: 13px; line-height: 1.55; margin-top: 2px; }
+@media (max-width: 560px) { .draft-entry { flex-direction: column; align-items: stretch; } }

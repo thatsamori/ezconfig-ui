@@ -47,7 +47,7 @@ arriving, the server's batch timeout remains responsible for its incomplete
 summary. Startup with no players does not queue retrospective chat messages.
 
 Automatic outcomes appear in server chat and `[EZConfig sync]` application logs.
-The existing manual apply-history record remains owned by manual submissions.
+There is no manual apply record: the self-hosted Apply routes were removed in online-platform#30.
 Logs do not include credentials or configuration payloads. The responder does
 not need a separate daemon or an external callback service.
 
