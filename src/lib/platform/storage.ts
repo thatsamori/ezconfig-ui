@@ -1,4 +1,4 @@
-import type { Database } from 'bun:sqlite';
+import type { Database, Statement } from 'bun:sqlite';
 import { mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { env } from '@/lib/env';
@@ -53,7 +53,7 @@ export function openPlatformDatabase(path: string): Database {
 
 // One connection per process, shared across Next route bundles and hot reloads.
 const storeKey = Symbol.for('ezconfig-ui.platform-storage.store.v1');
-const sharedStore = globalThis as typeof globalThis & { [key: symbol]: { path: string; database: Database; store: PlatformStore } | undefined };
+const sharedStore = globalThis as typeof globalThis & { [key: symbol]: { path: string; database: Database; statements: Map<string, Statement>; store: PlatformStore } | undefined };
 
 /** The app's connection to the database at DATABASE_PATH, opened on first use; startup has already migrated it. */
 export function platformStore(): PlatformStore {
@@ -63,19 +63,26 @@ export function platformStore(): PlatformStore {
   if (current?.path === path) return current.store;
   closePlatformStore();
   const database = openPlatformDatabase(path);
+  // Each statement is prepared once and finalized on close. bun:sqlite's own query() cache keeps
+  // only 20: past that its statements stay open until garbage collection, and so does the file of
+  // a connection closed meanwhile.
+  const statements = new Map<string, Statement>();
+  const statement = (sql: string) => statements.get(sql) ?? statements.set(sql, database.prepare(sql)).get(sql)!;
   const store: PlatformStore = {
-    get: <Row>(sql: string, ...params: SqlValue[]) => (database.query(sql).get(...params) ?? undefined) as Row | undefined,
-    all: <Row>(sql: string, ...params: SqlValue[]) => database.query(sql).all(...params) as Row[],
-    run: (sql, ...params) => database.query(sql).run(...params).changes,
+    get: <Row>(sql: string, ...params: SqlValue[]) => (statement(sql).get(...params) ?? undefined) as Row | undefined,
+    all: <Row>(sql: string, ...params: SqlValue[]) => statement(sql).all(...params) as Row[],
+    run: (sql, ...params) => statement(sql).run(...params).changes,
     transaction: work => database.transaction(work).immediate(),
   };
-  sharedStore[storeKey] = { path, database, store };
+  sharedStore[storeKey] = { path, database, statements, store };
   return store;
 }
 
 /** Closes the app's connection, if open, so the file can be removed (Windows keeps open files). */
 export function closePlatformStore() {
-  sharedStore[storeKey]?.database.close();
+  const current = sharedStore[storeKey];
+  for (const prepared of current?.statements.values() ?? []) prepared.finalize();
+  current?.database.close();
   sharedStore[storeKey] = undefined;
 }
 
