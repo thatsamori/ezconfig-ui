@@ -8,9 +8,11 @@
  * - Name the event with a fixed string, never one built from input.
  * - A line names platform ids only: game server, user, Live configuration,
  *   Invite (its id, never its code), Note (its id, never its body), Ruleset
- *   and Ruleset version (their ids, never names or values); plus `count`, a
- *   number (how many polls had an unknown key in an hour, how many versions
- *   a deleted Ruleset had), and
+ *   and Ruleset version (their ids, never names or values), and the server
+ *   owner an operator action names (`serverOwnerId`, a user id beside the
+ *   operator's own `userId`); plus `count`, a number (how many polls had an
+ *   unknown key in an hour, how many versions a deleted Ruleset had, how many
+ *   game servers went with a deleted server owner), and
  *   `buildStamp`, kept only in its
  *   `YYYYMMDD-HHMMSS` form (a poll may report any text). Any other field
  *   passed in is dropped.
@@ -36,7 +38,7 @@ type PlatformId = string | number;
 type ProblemLevel = 'warn' | 'error';
 type Level = 'info' | ProblemLevel;
 
-const ID_FIELDS = ['userId', 'gameServerId', 'liveConfigurationId', 'inviteId', 'noteId', 'rulesetId', 'rulesetVersionId'] as const;
+const ID_FIELDS = ['userId', 'serverOwnerId', 'gameServerId', 'liveConfigurationId', 'inviteId', 'noteId', 'rulesetId', 'rulesetVersionId'] as const;
 const COUNT_FIELDS = ['count'] as const;
 const BUILD_STAMP = /^\d{8}-\d{6}$/;
 export type LogIds = Partial<Record<(typeof ID_FIELDS)[number], PlatformId> & Record<(typeof COUNT_FIELDS)[number], number> & { buildStamp: string | null }>;
