@@ -4,7 +4,7 @@ import { categoryCommands, categoryEntries, featureReview, WIPE } from './featur
 
 await featureReview('harness-check', async ({ set, reset, saved, editorValue, saveUnchecked, storeUnvalidated, apply }) => {
   const { env } = await import('../../src/lib/env');
-  console.log('STORAGE ' + JSON.stringify({ databases: env.databasesPath, presets: process.env.PRESETS_PATH, platform: env.databasePath, rcon: env.rcon.host }));
+  console.log('STORAGE ' + JSON.stringify({ platform: env.databasePath }));
   assert.deepEqual(await apply('empty'), [WIPE], 'an empty configuration still wipes');
 
   set('Character', 'Movement', 'MaxWalkSpeed', 450);

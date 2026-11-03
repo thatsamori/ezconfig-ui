@@ -6,18 +6,17 @@
  * the poll the game server holds on the Supported build. The delivered Live
  * configuration is the batch: a wipe then one command per non-empty category
  * in today's command encoding. The game server, a simulated mod, then reports
- * processing it and polls again, which makes the Live configuration Confirmed. It runs on the platform's routes, signed in
- * with a platform session, with temp storage and the RCON service mocked; env
- * is set before the app is imported, so each review is its own child process.
+ * processing it and polls again, which makes the Live configuration
+ * Confirmed. It runs on the platform's routes, signed in with a platform
+ * session, on a temp platform database; env is set before the app is
+ * imported, so each review is its own child process.
  */
-import { successfulProcessingFixture } from './acknowledged-transport';
 import { signInForTest } from '../helpers/platform-session';
-import { mock } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
-import type { ConfigData, ConfigValue } from '../../src/lib/database/types';
+import type { ConfigValue } from '../../src/lib/database/types';
 
 export const WIPE = 'string ezconfig WipeDatabases';
 
@@ -62,8 +61,6 @@ export interface FeatureReview {
    * `Apply was refused (status): error`, and nothing is delivered.
    */
   apply(stage?: string): Promise<string[]>;
-  /** Batches the self-hosted automatic sync delivered on its own (its startup snapshot), oldest first; its RCON is mocked. */
-  synced(): string[][];
 }
 
 export interface FeatureReviewOptions {
@@ -80,22 +77,10 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
   const parent = resolve(tmpdir());
   const prefix = `ezconfig-review-${name}-`;
   const root = await mkdtemp(join(parent, prefix));
-  const storage = {
-    DATABASES_PATH: join(root, 'Databases'), PRESETS_PATH: join(root, 'Presets'),
-    DATABASE_PATH: join(root, 'platform.db'),
-  };
-  // Nothing real is reachable: storage is in the temp root, RCON is mocked, and its host is loopback.
-  Object.assign(process.env, storage, { RCON_HOST: '127.0.0.1', RCON_AUTO_SYNC_ENABLED: 'false' });
+  const storage = { DATABASE_PATH: join(root, 'platform.db') };
+  // Nothing real is reachable: the platform database is in the temp root, and the game server is simulated in-process.
+  Object.assign(process.env, storage);
   const stages: Record<string, string[]> = {};
-  const synced: string[][] = [];
-  mock.module('../../src/lib/rcon/service', () => ({
-    executeAcknowledgedBatch: async () => assert.fail('Apply builds its batch with the encoder: nothing is sent over the self-hosted RCON path'),
-    // The automatic sync's own target: until online-platform#41 it delivers the self-hosted files.
-    executeAcknowledgedBatchAt: async (_target: unknown, commands: readonly string[]) => {
-      synced.push([...commands]);
-      return successfulProcessingFixture(commands);
-    },
-  }));
   const originalFetch = globalThis.fetch;
   let settle = async () => {};
   let closeStore = () => {};
@@ -103,10 +88,7 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
   let hangUp = async () => {};
   try {
     const { env } = await import('../../src/lib/env');
-    assert.deepEqual([env.databasesPath, env.databasePath, env.rcon.host],
-      [storage.DATABASES_PATH, storage.DATABASE_PATH, '127.0.0.1'],
-      'the app was imported before the review set its env: import it only inside the review');
-    await mkdir(storage.DATABASES_PATH);
+    assert.equal(env.databasePath, storage.DATABASE_PATH, 'the app was imported before the review set its env: import it only inside the review');
     const { closePlatformStore, platformStore } = await import('../../src/lib/platform/storage');
     closeStore = closePlatformStore;
     // Every route needs a session; the editor's requests and the review's all carry this one.
@@ -122,7 +104,6 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
     const { setSupportedBuild } = await import('../../src/lib/platform/supported-build');
     const { WIPE_COMMAND } = await import('../../src/lib/config/encodeValues');
     const { useConfigStore, flushConfigWrites } = await import('../../src/lib/store/configStore');
-    const { patchCategory } = await import('../../src/lib/database/service');
     settle = () => flushConfigWrites().catch(() => {});
     const json = (method: string, body: unknown) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const registered = await register(session.request('/api/game-servers', json('POST', { name: `Review ${name}` })));
@@ -207,8 +188,6 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
         await flushConfigWrites();
         const { document } = withEntries(database, category, entries);
         platformStore().run('UPDATE drafts SET overrides = ?, revision = revision + 1 WHERE game_server_id = ?', JSON.stringify(document), gameServerId);
-        // Until online-platform#41 the self-hosted startup migration and automatic sync read the files.
-        await patchCategory(database, category, entries as ConfigData);
         await open();
       },
       async apply(stage = `apply-${Object.keys(stages).length + 1}`) {
@@ -241,7 +220,6 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
         stages[stage] = batch;
         return [...batch];
       },
-      synced: () => synced.map(batch => [...batch]),
     });
     if (options.capture) {
       await mkdir(dirname(options.capture), { recursive: true });
