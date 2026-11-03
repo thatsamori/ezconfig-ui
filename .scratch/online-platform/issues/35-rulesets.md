@@ -168,7 +168,7 @@ four removed were in preset code). Migration `0008-rulesets.sql`.
     values-document shape.
   - #41: `jszip` is no longer imported anywhere and can leave
     `package.json`, along with `PRESETS_PATH`.
-  - In `bun --bun next dev` on Windows, `/api/notes` answered 500: Bun could
-    not resolve the hashed `postcss` external Turbopack linked for
-    `sanitize-html`. That is #36's code and may be this dev setup only; it is
-    not checked on main or in a production build.
+- In the hand check, `/api/notes` answered 500 with "Failed to load external
+  module postcss-…". That is the dev-server quirk #36 recorded (a fresh
+  `NEXT_BUILD_DIR`; a restart fixes it, and `next build` is fine), not a
+  Rulesets problem.
