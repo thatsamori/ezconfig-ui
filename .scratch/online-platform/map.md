@@ -129,6 +129,14 @@ ready to slice into implementation tickets. This map builds nothing.
   `[EZConfigPlatform]` reads back exactly on both platforms, but only if the
   URL is quoted: unquoted, it reads and is saved as `https:`. `modifyinivar`
   changes the value without a restart.
+- [How does the owner's self-hosted data get onto the platform?](issues/13-one-time-import.md):
+  a one-off Bun script, a dry run until `--commit`, all or nothing and
+  refusing to run twice. `Databases/` becomes the Draft of a game server
+  registered first, with a "Self-hosted" Ruleset version 1 as its origin.
+  Each preset becomes a one-version Ruleset. The owner's Notes are theirs,
+  others have no author. Values the schema won't take are dropped and
+  reported. The self-hosted app stops for good first, and the script is
+  deleted after use.
 
 ## Not yet specified
 
