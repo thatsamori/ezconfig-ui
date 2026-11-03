@@ -31,28 +31,28 @@ test('recovery scalar controls use independent explicit motion defaults and the 
   expect(validateEntries({ WorldRecoveryTime: false }, 'Character', 'Recovery').valid).toBe(false);
 });
 
-test('world recovery survives real save/review/selected apply and reset with zero and negative values', () => {
+test('world recovery survives the editor, Apply and reset with zero and negative values', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/recovery-world-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
 });
 
-test('parried recovery preserves independent offsets, partial and reversed limits through real review/apply', () => {
+test('parried recovery preserves independent offsets, partial and reversed limits through the editor and Apply', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/recovery-parried-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
 });
 
-test('world stamina factor remains independent through saved review, selected apply and reset', () => {
+test('world stamina factor remains independent through the editor, Apply and reset', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/recovery-stamina-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
 });
 
-test('strike and stab feint extras preserve independent signed values through real review/apply', () => {
+test('strike and stab feint extras preserve independent signed values through the editor and Apply', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/recovery-feint-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });
