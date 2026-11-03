@@ -57,11 +57,14 @@ describe('the poll exchange', () => {
 
   test('a poll is held, then answered "no-change"; its report is recorded as reported; a body that breaks the contract gets 400', () => {
     const result = runScenario('hold');
-    const [first, noStamp, ...refused] = result.log;
+    const [first, noStamp, ignored, failed, ...refused] = result.log;
     expect(first).toEqual(registered(1, 1));
     // The one poll reporting no build stamp: not the Supported build.
     expect(noStamp).toEqual({ level: 'info', event: 'poll.not-supported-build', gameServerId: 1 });
-    // Routine polls are never logged: only the 16 bad bodies, each with its reason.
+    // Each new processing result, once, by ids: a reported id only in the form the platform makes, known or not.
+    expect(ignored).toEqual({ level: 'warn', event: 'live-configuration.keys-ignored', gameServerId: 1, liveConfigurationId: '0b5e8f8e-4a4c-4c39-9a51-5c3f2b0e7d11', message: "The game server's build ignored 1 key it does not know" });
+    expect(failed).toEqual({ level: 'warn', event: 'live-configuration.failed', gameServerId: 1, message: 'The game server reports that processing stopped at a failed command' });
+    // Routine polls are never logged: only those results and the 16 bad bodies, each with its reason.
     expect(refused).toHaveLength(16);
     for (const line of refused) expect(Object.keys(line).sort()).toEqual(['event', 'gameServerId', 'level', 'message']);
     expect(refused[0]).toEqual({ level: 'warn', event: 'poll.bad-request', gameServerId: 1, message: 'The body must be JSON' });

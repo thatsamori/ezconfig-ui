@@ -6,7 +6,7 @@
  * the poll the game server holds on the Supported build. The delivered Live
  * configuration is the batch: a wipe then one command per non-empty category
  * in today's command encoding. The game server, a simulated mod, then reports
- * processing it and polls again. It runs on the platform's routes, signed in
+ * processing it and polls again, which makes the Live configuration Confirmed. It runs on the platform's routes, signed in
  * with a platform session, with temp storage and the RCON service mocked; env
  * is set before the app is imported, so each review is its own child process.
  */
@@ -112,6 +112,7 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
     // Every route needs a session; the editor's requests and the review's all carry this one.
     const session = await signInForTest();
     const { POST: register } = await import('../../src/app/api/game-servers/route');
+    const { GET: readGameServerRoute } = await import('../../src/app/api/game-servers/[id]/route');
     const { GET: readDraftRoute, PUT: saveDraftRoute } = await import('../../src/app/api/game-servers/[id]/draft/route');
     const { POST: resetDraftRoute } = await import('../../src/app/api/game-servers/[id]/draft/reset/route');
     const applyRoute = await import('../../src/app/api/game-servers/[id]/apply/route');
@@ -231,9 +232,11 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
         assert.equal(delivered.body.liveConfigurationId, body.data!.liveConfigurationId, 'the delivery carries the new Live configuration id');
         const batch = [WIPE_COMMAND, ...delivered.body.commands!.map(({ database, category, values }) => `string ezconfig ${database} ${category} ${values}`)];
         assertDeliveredBatch(batch);
-        // The mod processes it, and its next poll reports that, so it is held again.
+        // The mod processes it, and its next poll reports that, so it is held again and the Live configuration is Confirmed.
         const values = delivered.body.commands!.reduce((count, { values }) => count + Object.keys(JSON.parse(values)).length, 0);
         await poll({ liveConfigurationId: delivered.body.liveConfigurationId, result: { success: true, acceptedValues: values, changedValues: values, unknownKeys: [], failure: null } });
+        const { liveConfiguration } = (await (await readGameServerRoute(session.request(`/api/game-servers/${gameServerId}`), at)).json()).data;
+        assert.deepEqual([liveConfiguration?.id, liveConfiguration?.state], [delivered.body.liveConfigurationId, 'confirmed'], 'the success report makes the Live configuration Confirmed');
         assert.equal(readDraft(gameServerId)!.revision, revision, 'Apply leaves the Draft as it was');
         stages[stage] = batch;
         return [...batch];

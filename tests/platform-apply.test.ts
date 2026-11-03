@@ -26,6 +26,8 @@ const notSupported = (buildStamp: string) => ({ level: 'info', event: 'poll.not-
 /** Apply and each delivery are logged by id, with no values. */
 const applied = (liveConfigurationId: string) => ({ level: 'info', event: 'live-configuration.applied', userId: 1, gameServerId: 1, liveConfigurationId });
 const delivered = (liveConfigurationId: string) => ({ level: 'info', event: 'live-configuration.delivered', gameServerId: 1, liveConfigurationId });
+/** Each new reported result, once; a reported id only in the form the platform makes. */
+const reported = (liveConfigurationId?: string) => ({ level: 'info', event: 'live-configuration.processed', gameServerId: 1, ...liveConfigurationId && { liveConfigurationId } });
 
 describe('Apply through its route handlers', () => {
   test('the review lists the keys added, changed and reset to game default against the Live configuration; before the first Apply, every value the Draft sets', () => {
@@ -44,7 +46,7 @@ describe('Apply through its route handlers', () => {
 
   test('is refused, with the review as it is now, when the Draft revision or the Live configuration id it was built from has moved on', () => {
     const result = scenario('stale');
-    expect(result.log).toEqual([REGISTERED, applied(result.applied[0]), delivered(result.applied[0])]);
+    expect(result.log).toEqual([REGISTERED, applied(result.applied[0]), delivered(result.applied[0]), reported(result.applied[0])]);
   });
 
   test('validates the whole Draft against the current schema and blocks with the values to fix', () => {
@@ -60,17 +62,17 @@ describe('delivery in the poll exchange', () => {
     expect(result.applied).toHaveLength(2);
     expect(result.log).toEqual([
       REGISTERED,
-      applied(first), delivered(first),
+      applied(first), delivered(first), reported(first),
       applied(second), delivered(second),
-      delivered(second), delivered(second), delivered(second),
-      { level: 'info', event: 'poll.superseded', gameServerId: 1 }, delivered(second),
-      notSupported('20261101-090000'),
+      delivered(second), reported(), delivered(second), delivered(second),
+      reported(second), { level: 'info', event: 'poll.superseded', gameServerId: 1 }, delivered(second),
+      notSupported('20261101-090000'), reported(second),
       { level: 'info', event: 'game-server.deleted', userId: 1, gameServerId: 1 },
     ]);
   });
 
   test('a game server with no Live configuration keeps getting "no change", so its first poll never wipes it', () => {
-    expect(scenario('no-wipe').log).toEqual([REGISTERED]);
+    expect(scenario('no-wipe').log).toEqual([REGISTERED, reported('0b5e8f8e-4a4c-4c39-9a51-5c3f2b0e7d11'), reported()]);
   });
 });
 
