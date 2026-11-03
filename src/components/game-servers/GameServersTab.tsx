@@ -14,10 +14,13 @@ import { Ago, ConnectionBadge, LiveConfigurationBadge, type LiveConfigurationVie
 /** EZConfig's mod.io id, which installs it on the game server. It never changes. */
 const EZCONFIG_MOD_ID = 5696753;
 
-/** What the setup checklist pastes into Game.ini: the HTTP switch, the mod and the key, not the optional PlatformUrl. */
+/** What the setup checklist pastes into Game.ini: the HTTP switch, the mod, the line that starts it on each map and the key, not the optional PlatformUrl. */
 const gameIni = (gameServerKey: string) => `[/Script/Mordhau.MordhauGameSession]
 bAllowHttpRequests=True
 Mods=${EZCONFIG_MOD_ID}
+
+[/Script/Mordhau.MordhauGameMode]
+SpawnServerActorsOnMapLoad=/EZConfig/BP_EZConfigB.BP_EZConfigB_C
 
 [EZConfigPlatform]
 GameServerKey=${gameServerKey}`;
@@ -235,7 +238,7 @@ function SetupChecklist({ server, gameServerKey, onRegenerateKey }: { server: Ga
         <div className="ini-copy"><pre className="ini-block" ref={block}>{gameIni(gameServerKey)}</pre><CopyButton text={gameIni(gameServerKey)} block={block} /></div>
         <p className="key-warning">You won&apos;t see this key again. Copy it now: afterwards this page shows only its last 4 characters.</p>
       </> : <p>Key ending in <code>{server.keyLast4}</code>. Lost it? <RegenerateKeyButton onClick={onRegenerateKey} />.</p>}
-      <p><code>Mods={EZCONFIG_MOD_ID}</code> installs EZConfig, and <code>bAllowHttpRequests=True</code> lets the game server reach the platform. If Game.ini already has a <code>[/Script/Mordhau.MordhauGameSession]</code> section, add these two lines to it instead of pasting a second one, and keep any other <code>Mods=</code> lines. If <code>bAllowHttpRequests</code> is already there, set it to <code>True</code>. If Game.ini already has a <code>GameServerKey</code> line, replace it: an old key no longer works.</p>
+      <p><code>Mods={EZCONFIG_MOD_ID}</code> installs EZConfig, <code>SpawnServerActorsOnMapLoad</code> starts it on each map, and <code>bAllowHttpRequests=True</code> lets the game server reach the platform. If Game.ini already has a <code>[/Script/Mordhau.MordhauGameSession]</code> or <code>[/Script/Mordhau.MordhauGameMode]</code> section, add that section&apos;s lines to it instead of pasting a second one, and keep any other <code>Mods=</code> or <code>SpawnServerActorsOnMapLoad=</code> lines. If <code>bAllowHttpRequests</code> is already there, set it to <code>True</code>. If Game.ini already has a <code>GameServerKey</code> line, replace it: an old key no longer works.</p>
     </li>
     <li><h3>Restart the server</h3><p>EZConfig starts polling the platform with the key once the game server is back up.</p></li>
     <li><h3>Wait for Connected</h3><p>This page checks every 2 seconds. <ConnectionBadge connection={server.connection} /></p></li>

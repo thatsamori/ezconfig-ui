@@ -93,7 +93,7 @@ self-hosted mode is removed.
 12. As a server owner, I want each of my game servers to have a unique name, ignoring case, so that I can tell them apart.
 13. As a server owner, I want to see the Game server key once after registering, with a copy button and the warning "You won't see this key again", so that I can put it in Game.ini.
 14. As a server owner, I want a setup checklist for a Never connected game server: add EZConfig on the host's control panel, paste the Game.ini block, restart the server, then wait for Connected. That way I can connect it without reading separate docs.
-15. As a server owner, I want the Game.ini block to carry `bAllowHttpRequests=True`, the `Mods=` line that installs EZConfig and the `[EZConfigPlatform]` key line, so that one paste covers everything the game server needs.
+15. As a server owner, I want the Game.ini block to carry `bAllowHttpRequests=True`, the `Mods=` line that installs EZConfig, the `SpawnServerActorsOnMapLoad=` line that starts it on each map and the `[EZConfigPlatform]` key line, so that one paste covers everything the game server needs.
 16. As a server owner, I want the checklist to read "Key ending in `ab12`. Lost it? Regenerate key." once I have left the page, so that I can recognise or replace my key.
 17. As a server owner, I want Regenerate key to end the old key at once, after a confirm that says the server stops receiving configuration until its Game.ini has the new key, so that a leaked key stops working immediately.
 18. As a server owner, I want registering a server to prove nothing until a game server polls with its key, so that nobody can register my server and send it configuration.
@@ -379,16 +379,21 @@ category commands.
   bAllowHttpRequests=True
   Mods=5696753
 
+  [/Script/Mordhau.MordhauGameMode]
+  SpawnServerActorsOnMapLoad=/EZConfig/BP_EZConfigB.BP_EZConfigB_C
+
   [EZConfigPlatform]
   GameServerKey=ezc_gsk_...
   PlatformUrl="https://platform.example.org"
   ```
 
   `Mods=5696753` is EZConfig's mod.io id, which installs it on the game server.
-  `PlatformUrl` is optional and needed only to override the URL built into the
-  mod. The setup checklist pastes everything here except `PlatformUrl`. It tells
-  the owner to add the game session lines to that section if Game.ini already
-  has one, since the game writes `bAllowHttpRequests` there itself.
+  `SpawnServerActorsOnMapLoad` starts the mod's actor on each map; it is a list,
+  so another mod's line stays beside it. `PlatformUrl` is optional and needed
+  only to override the URL built into the mod. The setup checklist pastes
+  everything here except `PlatformUrl`. It tells the owner to add a section's
+  lines to it if Game.ini already has that section, since the game writes both
+  of them, `bAllowHttpRequests` included, itself.
 
 ### The poll exchange (the platform–mod contract)
 
