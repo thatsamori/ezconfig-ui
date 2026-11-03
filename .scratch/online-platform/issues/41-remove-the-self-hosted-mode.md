@@ -143,3 +143,16 @@ Left for others:
   and `bun.lock`, and the platform tests' `SETTINGS` and `scenario()`
   helpers (the `root` parameter is gone) are where #37, #40 and #43 may
   meet this branch.
+
+2026-11-03: Merged main `7463859` (#43, #40 and #37) as `fa3351b`.
+- `AGENTS.md` was the only conflict. It keeps this branch's rewrite, with
+  #37's server owners line in Layout and #40's one-time import under
+  `scripts/`. The import line stays until #42 deletes the script.
+- `tests/platform-server-owners.test.ts` still set `RCON_HOST` and
+  `RCON_AUTO_SYNC_ENABLED`; they are gone (`0311c7d`). No other new file
+  sets or reads a removed setting or imports a removed module, and
+  `package.json` changed on neither side.
+- The `routes` scenario covers #37's four server-owners routes. #40's
+  script passes its own tests.
+- 209 tests pass across 41 files (190 + 3 + 10 + 6), typecheck is clean,
+  lint has 5 problems, and `bun --bun next build` succeeds.
