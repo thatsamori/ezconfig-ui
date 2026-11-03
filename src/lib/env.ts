@@ -13,6 +13,8 @@ export const env = {
   usersPath: process.env.USERS_PATH || './users.json',
   adminUsername: process.env.ADMIN_USERNAME || '',
   adminPassword: process.env.ADMIN_PASSWORD || '',
+  // Online platform
+  discordClientSecret: process.env.DISCORD_CLIENT_SECRET || '',
 } as const;
 
 // Validation - call this in server actions
