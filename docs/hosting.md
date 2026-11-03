@@ -96,7 +96,10 @@ for about 10 to 20 s. The SSH host defaults to the `ezconfig-platform` alias;
   and one after more than 5 minutes without:
   `journalctl -u ezconfig-platform -o cat | grep backup.heartbeat`.
   Litestream itself logs nothing per heartbeat. To watch them arrive, capture
-  loopback traffic:
-  `sudo tcpdump -i lo -l -nn -tttt -A 'tcp dst port 3000' | grep --line-buffered -E '^20|GET /internal/backup-heartbeat'`.
+  loopback traffic, which prints the time of each one:
+
+  ```bash
+  sudo tcpdump -i lo -l -nn -tttt -A 'tcp dst port 3000' | awk '/^20[0-9][0-9]-/{t=$1" "$2} /GET \/internal\/backup-heartbeat/{print t; fflush()}'
+  ```
 - Logs: `journalctl -u ezconfig-platform`, `journalctl -u litestream`,
   `journalctl -u caddy`.
