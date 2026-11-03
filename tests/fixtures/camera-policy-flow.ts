@@ -1,73 +1,19 @@
-/** Real store, Draft and Ruleset routes, startup and RCON sender against a local TCP fixture.
- * The fixture acknowledges known-good cases; native parser/camera proof is
- * intentionally separate and uses the retained command capture.
- * The editor and Apply part is camera-policy-review.ts, on the feature review
- * harness. This keeps the Draft route's refusal of hand-made input, saving and
- * loading Ruleset versions (online-platform#35), and automatic startup sync,
- * which delivers the self-hosted files until online-platform#41.
+/** Real store, Draft and Ruleset routes. The editor and Apply part is
+ * camera-policy-review.ts, on the feature review harness. This keeps the
+ * Draft route's refusal of hand-made input, and saving and loading Ruleset
+ * versions (online-platform#35).
  */
 import assert from 'node:assert/strict';
-import { createServer, type Socket } from 'node:net';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { signInForTest, type TestSession } from '../helpers/platform-session';
 
 const root = await mkdtemp(join(tmpdir(), 'ezconfig-camera-'));
-process.env.DATABASES_PATH = join(root, 'Databases');
-process.env.PRESETS_PATH = join(root, 'Presets');
 process.env.DATABASE_PATH = join(root, 'platform.db');
-process.env.RCON_HOST = '127.0.0.1'; process.env.RCON_PASSWORD = 'local-fixture-only';
-const sockets = new Set<Socket>();
-const captures: { name: string; commands: string[]; wire: string[] }[] = [];
-let name = 'setup', token = 0;
-function packet(id: number, type: number, payload: string) {
-  const content = Buffer.from(payload); const output = Buffer.alloc(content.length + 14);
-  output.writeInt32LE(content.length + 10, 0); output.writeInt32LE(id, 4); output.writeInt32LE(type, 8); content.copy(output, 12); return output;
-}
-const server = createServer(socket => {
-  sockets.add(socket); socket.on('close', () => sockets.delete(socket));
-  let data = Buffer.alloc(0), processed = 0, totalAccepted = 0, cleared = false, batchToken = '';
-  let capture: typeof captures[number] | undefined;
-  socket.on('data', chunk => {
-    data = Buffer.concat([data, chunk]);
-    while (data.length >= 4 && data.length >= data.readInt32LE(0) + 4) {
-      const length = data.readInt32LE(0), body = data.subarray(4, length + 4); data = data.subarray(length + 4);
-      const id = body.readInt32LE(0), type = body.readInt32LE(4), text = body.subarray(8, -2).toString();
-      if (type === 3) { socket.write(packet(id, 2, '')); continue; }
-      socket.write(packet(id, 0, text === 'listen custom' ? 'Now listening to custom' : ''));
-      if (!text.startsWith('string ezconfig batch ')) continue;
-      const frame = JSON.parse(text.slice('string ezconfig batch '.length));
-      let accepted = 0;
-      if (frame.op === 'begin') {
-        capture = { name, commands: [], wire: [] }; captures.push(capture);
-        batchToken = `camera-fixture-${++token}`; processed = 0; totalAccepted = 0; cleared = false;
-      } else if (frame.op === 'command') {
-        capture!.commands.push('string ' + frame.command); processed++;
-        const wipe = frame.command === 'ezconfig WipeDatabases'; cleared ||= wipe;
-        accepted = wipe ? 0 : Object.keys(JSON.parse(frame.command.slice(frame.command.indexOf('{')))).length;
-        totalAccepted += accepted;
-      }
-      capture!.wire.push(text);
-      socket.write(packet(-1, 0, 'Custom: EZCONFIG_BATCH_RESULT ' + JSON.stringify({
-        protocol: 'EZConfigBatch/1', request: frame.request, op: frame.op, token: batchToken,
-        seq: Number(frame.seq ?? 0), success: true, accepted, ignored: 0, totalAccepted, totalIgnored: 0,
-        processed, cleared, state: frame.op === 'end' ? 'complete' : 'active', reason: '',
-        ...(frame.op === 'begin' ? { maxCommands: 2048, idleTimeoutSeconds: 30 } : {}),
-      })));
-    }
-  });
-});
-await new Promise<void>(done => server.listen(0, '127.0.0.1', done));
-process.env.RCON_PORT = String((server.address() as { port: number }).port);
 const originalFetch = globalThis.fetch;
-let stopSync: (() => Promise<void>) | undefined;
 let session: TestSession | undefined;
 const json = (method: string, body: unknown) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-async function until(check: () => boolean) {
-  const end = Date.now() + 5000;
-  while (!check()) { assert(Date.now() < end, 'Fixture did not settle'); await Bun.sleep(5); }
-}
 try {
   session = await signInForTest();
   const { POST: register } = await import('../../src/app/api/game-servers/route');
@@ -139,40 +85,9 @@ try {
   await assertSaved({ CustomFOV: false, CustomFOVMax: 135 }, 'string ezconfig Character Camera {"CustomFOV":"False","CustomFOVMax":"135"}');
   assert.deepEqual(await store.loadRulesetVersion(storedVersion('{"Character":{"CustomFOV":true,"CustomFOVMax":1.2e2}}')), { dropped: 0, errors: [] });
   await assertSaved({ CustomFOV: true, CustomFOVMax: 120 }, 'string ezconfig Character Camera {"CustomFOV":"True","CustomFOVMax":"120"}');
-
-  // Automatic sync delivers the self-hosted files, which the Draft does not write.
-  const { patchCategory } = await import('../../src/lib/database/service');
-  await patchCategory('Character', 'Camera', { CustomFOV: true, CustomFOVMax: 135 });
-  const { registerServerStartup } = await import('../../src/lib/server-startup');
-  const { stopRegisteredAutomaticSync } = await import('../../src/lib/rcon/automatic-sync-bootstrap'); stopSync = stopRegisteredAutomaticSync;
-  const lease = createServer(); await new Promise<void>(done => lease.listen(0, '127.0.0.1', done));
-  const leasePort = (lease.address() as { port: number }).port; await new Promise<void>(done => lease.close(() => done()));
-  name = 'automatic-startup'; const count = captures.length;
-  await registerServerStartup({ ...process.env, NEXT_RUNTIME: 'nodejs', RCON_AUTO_SYNC_ENABLED: 'true', RCON_AUTO_SYNC_OWNER_PORT: String(leasePort) });
-  await until(() => captures.length > count && captures.at(-1)!.wire.at(-1)?.includes('"op":"end"') === true);
-  assert.deepEqual(captures.at(-1)!.commands, ['string ezconfig WipeDatabases', 'string ezconfig Character Camera {"CustomFOV":"True","CustomFOVMax":"135"}']);
-  name = 'automatic-requestupdate'; const count2 = captures.length;
-  for (const socket of sockets) socket.write(packet(-1, 0, 'Custom: ezconfig requestupdate'));
-  await until(() => captures.length > count2 && captures.at(-1)!.wire.at(-1)?.includes('"op":"end"') === true);
-  assert.deepEqual(captures.at(-1)!.commands, captures[count].commands);
-  await stopSync(); stopSync = undefined;
-
-  // Automatic sync's strict build refuses damaged storage and leaves it as it was; Apply's refusal is in camera-policy-review.
-  const cameraPath = join(process.env.DATABASES_PATH!, 'Character', 'Camera.json');
-  const { buildRconCommands } = await import('../../src/lib/database/apply');
-  for (const damaged of [{ CustomFOV: true, CustomFOVMax: 120.5 }, { CustomFOV: 'garbage', CustomFOVMax: 120 }]) {
-    await writeFile(cameraPath, JSON.stringify(damaged));
-    await assert.rejects(buildRconCommands({ strictStorage: true }), /Invalid saved configuration/);
-    assert.deepEqual(JSON.parse(await readFile(cameraPath, 'utf8')), damaged);
-  }
-  if (process.env.EZ_CAMERA_CAPTURE_PATH) await writeFile(process.env.EZ_CAMERA_CAPTURE_PATH, JSON.stringify({
-    boundary: 'Actual startup and sync listener with the acknowledged RCON sender over local TCP, delivering the self-hosted files. Server replies are controlled fixture acknowledgments; no native parser/camera claim.', captures,
-  }, null, 2));
-  console.log(`PASS Camera policy: ${captures.length} real TCP RCON batches; refused hand-made input, Ruleset versions, startup/requestupdate and strict storage.`);
+  console.log('PASS Camera policy: refused hand-made input and Ruleset versions.');
 } finally {
-  globalThis.fetch = originalFetch; await stopSync?.(); session?.close();
-  for (const socket of sockets) socket.destroy();
-  await new Promise<void>(done => server.close(() => done()));
+  globalThis.fetch = originalFetch; session?.close();
   const target = resolve(root); assert(target.startsWith(resolve(tmpdir()) + sep) && target.split(sep).at(-1)!.startsWith('ezconfig-camera-'));
   await rm(target, { recursive: true, force: true });
 }

@@ -7,7 +7,7 @@ export const REFRESH_INTERVAL_MS = 2_000;
 type Loaded<T> = { url: string; data?: T; error: string };
 
 /**
- * GETs a self-hosted route's `{ success, data }` now and about every 2 s while
+ * GETs a platform route's `{ success, data }` now and about every 2 s while
  * the page is visible, and at once when it is shown again. The last data stays
  * while a refresh fails, with the error beside it. `refresh()` checks at once.
  */

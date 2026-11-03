@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { countOverrides, sweepValue, toggleAttackGroup } from '../src/components/console/model';
+import { parrySections } from '../src/components/console/parry-sections';
+import { CHARACTER_CONFIG_OPTIONS } from '../src/lib/config/characterConfigSchema';
+import { DataType } from '../src/lib/config/types';
 describe('attack columns', () => {
   test('General is exclusive and attacks keep schema order', () => {
     expect(toggleAttackGroup(['Strike', 'Stab'], 'General')).toEqual(['General']);
@@ -42,4 +45,20 @@ describe('override counts', () => {
       }
     }
   })).toBe(2));
+});
+describe('Parry sections', () => {
+  test('they retain geometry types, feature dependencies and every key exactly once', () => {
+    const sections = parrySections(CHARACTER_CONFIG_OPTIONS.Parry);
+    expect(sections.map(section => section.title)).toEqual(['Timing and recovery', 'Angles and geometry', 'Features']);
+    const geometry = sections[1].entries;
+    // The six block collider transforms, which older schemas kept in Combat.
+    for (const key of ['LowBlockColliderRelativeOffsetLocation', 'LowBlockColliderRelativeOffsetRotation', 'LowBlockColliderRelativeOffsetScale', 'HighBlockColliderRelativeOffsetLocation', 'HighBlockColliderRelativeOffsetRotation', 'HighBlockColliderRelativeOffsetScale']) {
+      expect(CHARACTER_CONFIG_OPTIONS.Combat.some(entry => entry.configKey === key)).toBe(false);
+      expect(geometry.find(entry => entry.configKey === key)?.dataType).toBe(DataType.Vector);
+    }
+    expect(geometry.find(entry => entry.configKey === 'MaxParryAngle')).toBeDefined();
+    expect(sections[0].entries.find(entry => entry.configKey === 'ParryUpTime')).toBeDefined();
+    expect(sections[2].entries.find(entry => entry.configKey === 'TrueComboStamina')?.gatedBy).toBe('TrueCombo');
+    expect(sections.flatMap(section => section.entries)).toHaveLength(CHARACTER_CONFIG_OPTIONS.Parry.length);
+  });
 });

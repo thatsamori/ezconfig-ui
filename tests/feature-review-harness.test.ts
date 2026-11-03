@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
@@ -30,39 +30,27 @@ test('feature review harness applies the whole configuration as a wipe then one 
   }
 });
 
-test('feature review harness isolates storage and never opens an RCON connection', async () => {
-  // Stand-ins for real data and a real server, which the fixture must not touch.
+test('feature review harness keeps its platform database in its own temp root and removes it', async () => {
+  // A stand-in for a real platform database, which the fixture must not touch.
   const realData = await mkdtemp(join(tmpdir(), 'ezconfig-harness-real-'));
-  let connections = 0;
-  const server = Bun.listen({ hostname: '127.0.0.1', port: 0, socket: { open: () => { connections++; }, data: () => {} } });
   try {
-    const saved = JSON.stringify({ MaxWalkSpeed: 1 });
-    await mkdir(join(realData, 'Databases', 'Character'), { recursive: true });
-    await writeFile(join(realData, 'Databases', 'Character', 'Movement.json'), saved);
-    const env = {
-      DATABASES_PATH: join(realData, 'Databases'), PRESETS_PATH: join(realData, 'Presets'),
-      DATABASE_PATH: join(realData, 'platform.db'),
-    };
+    const saved = 'a stand-in, not a database';
+    await writeFile(join(realData, 'platform.db'), saved);
     const child = Bun.spawn([process.execPath, 'run', 'tests/fixtures/feature-review-harness-check.ts'], {
       cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
-      // The harness pins RCON_HOST to 127.0.0.1, where this listener would see any connection.
-      env: { ...process.env, ...env, RCON_HOST: 'localhost', RCON_PORT: String(server.port), RCON_PASSWORD: 'not-a-real-password' },
+      env: { ...process.env, DATABASE_PATH: join(realData, 'platform.db') },
     });
     const [exitCode, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
     expect({ exitCode, stderr }).toEqual({ exitCode: 0, stderr: '' });
-    expect(connections).toBe(0);
-    expect(await readFile(join(realData, 'Databases', 'Character', 'Movement.json'), 'utf8')).toBe(saved);
-    expect((await readdir(realData, { recursive: true })).sort()).toEqual(['Databases', join('Databases', 'Character'), join('Databases', 'Character', 'Movement.json')]);
+    expect(await readFile(join(realData, 'platform.db'), 'utf8')).toBe(saved);
+    expect(await readdir(realData, { recursive: true })).toEqual(['platform.db']);
 
-    // What the app resolved inside the review: all storage in one temp root, removed afterwards.
+    // What the app resolved inside the review: the database in one temp root, removed afterwards.
     const storage = JSON.parse(stdout.split('\n').find(line => line.startsWith('STORAGE '))!.slice('STORAGE '.length));
-    expect(storage.rcon).toBe('127.0.0.1');
-    const temp = dirname(storage.databases);
+    const temp = dirname(storage.platform);
     expect(dirname(temp)).toBe(resolve(tmpdir()));
-    expect([storage.databases, storage.presets, storage.platform].map(path => dirname(path))).toEqual([temp, temp, temp]);
     expect(existsSync(temp)).toBe(false);
   } finally {
-    server.stop(true);
     await rm(realData, { recursive: true, force: true });
   }
 });

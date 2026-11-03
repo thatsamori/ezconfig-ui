@@ -1,46 +1,61 @@
 # AGENTS.md - ezconfig-ui
 
 ## Purpose
-Next.js + bun web app that is the source of truth for EZConfig values. It stores
-overrides in local JSON databases and pushes `string ezconfig ...` commands to a
-Mordhau server over RCON, where the EZConfig mod applies them. Config key names
-are the contract between this app and the mod.
+Next.js + Bun web app: the hosted, invite-only EZConfig platform and the source
+of truth for EZConfig values. Server owners sign in with Discord, register
+their Mordhau game servers and edit each one's Draft; Apply makes it the Live
+configuration. The EZConfig mod on the game server long-polls the platform
+with its Game server key, receives the Live configuration as `string ezconfig
+...` commands and processes them itself. Everything is stored in one SQLite
+database. Config key names are the contract between this app and the mod.
 
 ## Read first
 1. This file.
-2. The mod's `AGENTS.md`, `CONTEXT.md` and `STATUS.md` at
-   `C:\Program Files\Epic Games\MORDHAUEditor\Mordhau\Mods\EZConfig`.
-   For online-platform work, also this repo's `CONTEXT.md` and
-   `.scratch/online-platform/map.md`.
-3. The mod ticket for your feature: `<mod>/.scratch/<feature>/` (spec, tickets).
+2. This repo's `CONTEXT.md` (platform terms) and `.scratch/online-platform/map.md`
+   (the spec is `spec.md` beside it).
+3. For config keys or mod-side work: the mod's `AGENTS.md`, `CONTEXT.md` and
+   `STATUS.md` at `C:\Program Files\Epic Games\MORDHAUEditor\Mordhau\Mods\EZConfig`,
+   and the mod ticket for your feature: `<mod>/.scratch/<feature>/`.
 
 ## Commands
 `bun` must be on PATH: some tests spawn `bun` as a child process.
 - `bun install` - dependencies (`bun.lock` is the only lockfile).
 - `bun test ./tests` - full suite. Run as `bun --no-env-file test ./tests` with
-  `DATABASES_PATH`/`PRESETS_PATH` pointing at temp dirs,
-  `DATABASE_PATH` at a file in one (tests that call routes in-process sign in
-  there), and `RCON_HOST=127.0.0.1`, so no real data or server is touched.
+  `DATABASE_PATH` at a file in a temp dir (tests that call routes in-process
+  sign in there), so no real data is touched. Child fixtures get their own.
 - `bun run typecheck` - `tsc --noEmit`.
 - `bun run lint` - ESLint flat config (`eslint.config.mjs`, eslint-config-next).
-- `bun run init-db` - create empty databases; writes to `./Databases` (ignores
-  `DATABASES_PATH`).
-- Never run `bun run dev`/`start` against a real server without the user: the
-  startup hook migrates storage and, with `RCON_AUTO_SYNC_ENABLED=true`, sends RCON.
+- `bun --bun next build` - production build; builds never migrate.
+- `bun --bun run dev` / `bun --bun next start` - only with `DATABASE_PATH` at a
+  temp file: startup migrates the database it names.
+- `bun run deploy <commit>` - deploys to the live instance; the owner runs it
+  (`docs/hosting.md`).
+
+## Environment settings
+`.env.example` lists every setting the app reads and what it means;
+`src/lib/env.ts` reads them. `DATABASE_PATH` is required: startup refuses to
+run without it. On the instance the settings live in
+`/etc/ezconfig-platform/platform.env` (`docs/hosting.md`); the repo holds no
+instance's settings or secrets.
 
 ## Layout
 - `src/lib/config/` - schemas (`characterConfigSchema.ts` aggregates the
-  category schemas; `weaponConfigSchema.ts`), `gameDefaults.json`, `defaults.ts`.
-- `src/lib/rcon/` - RCON service, acknowledged batch protocol, automatic sync.
-- `src/lib/migrations/`, `src/lib/server-startup.ts`, `src/instrumentation.ts` -
-  startup hook: platform migrations, then the parry-geometry storage migration.
+  category schemas; `weaponConfigSchema.ts`), `gameDefaults.json`, `defaults.ts`;
+  `formatters.ts` writes each value in the mod's command encoding.
+- `src/lib/database/` - `validation.ts` (each value against the schema) and
+  `types.ts`. Database is the mod's term (Character, or a weapon class);
+  platform storage is `src/lib/platform/`.
+- `src/lib/server-startup.ts`, `src/instrumentation.ts` - startup hook: the
+  platform migrations, then the daily sweep.
 - `src/lib/platform/` - platform storage: `storage.ts` is the only app module that
   opens the SQLite database; `migrations/` holds its numbered SQL migrations.
   Logging: `log.ts`. Sign-in with Discord: `discord.ts` (the OAuth exchange, the
   one module tests replace), `sign-in.ts`, `users.ts`, `sessions.ts` and `auth.ts`,
-  whose `requireSession` every route handler outside `src/app/api/auth/` calls
-  first (Origin check on requests that change data, then the session cookie);
-  operator-only routes call `requireOperator` instead. Invites: `invites.ts`
+  whose `requireSession` every route handler calls first (Origin check on
+  requests that change data, then the session cookie), except sign-in
+  (`src/app/api/auth/discord/`), the poll endpoint and the heartbeat; the
+  sign-in fixture's `routes` scenario checks every route file. Operator-only
+  routes call `requireOperator` instead. Invites: `invites.ts`
   (codes stored as hashes only) and `src/app/api/operator/invites/`. Server
   owners: `server-owners.ts` (the operator's list, Remove and Restore access,
   Delete with the foreign keys' cascade, none against an operator) behind
@@ -53,7 +68,8 @@ are the contract between this app and the mod.
   endpoint, `src/app/game-server/poll/`, sits outside `src/app/api/`: game
   servers send their key, not a session. `supported-build.ts` is the one
   build stamp anything is sent to, set at `src/app/api/operator/supported-build/`.
-  The operator's Status page: `status.ts`, with `backup-heartbeat.ts` and
+  The operator's Status page: `status.ts`, with `backup-heartbeat.ts` (fed by
+  the localhost-only `src/app/internal/backup-heartbeat/`) and
   `restore-check.ts` (the weekly check's status file beside the database).
   Drafts: `drafts.ts` (one values document per game server, revision-checked
   whole saves) behind `src/app/api/game-servers/[id]/draft/` and its `reset/`.
@@ -74,15 +90,16 @@ are the contract between this app and the mod.
   adds no inline `<script>` or `on*` handler; the root layout renders per request
   so Next.js can put the nonce on its scripts. A new external source is a
   policy change.
-- `src/lib/database/`, `src/app/api/` - persistence and API routes.
+- `src/app/api/` - the route handlers; `src/lib/store/configStore.ts` - the
+  editor's client store for the open Draft.
 - `string-schemas/` - generated `characterConfigSchema.txt`/`weaponConfigSchema.txt`.
 - `tests/` (`*.test.ts`), `tests/fixtures/` (standalone child fixtures) and
   `tests/helpers/`: `runPlatformFixture`/`withPlatformDatabase` (child fixtures
   on a fresh, migrated platform database) and `signInForTest` (a session for
   tests that call routes directly; the feature review harness uses it).
-- `scripts/` - init-db, defaults export/import, parry migration CLI, and the
-  one-time import (`import-self-hosted.ts`, online-platform#40; deleted after
-  the owner's import, #42).
+- `scripts/` - `deploy.ts`, the game defaults export and import
+  (`docs/game-defaults.md`), and the one-time import (`import-self-hosted.ts`,
+  online-platform#40; deleted after the owner's import, #42).
 - `docs/` - see index below; `docs/design/`, `docs/archive/` are reference only.
 - `deploy/` - the platform instance's units, Caddyfile, Litestream template and
   provisioning; `scripts/deploy.ts` (`bun run deploy <commit>`) runs
@@ -113,31 +130,29 @@ of the old one, coordinated with the mod.
 - Startup runs each file in its own transaction, sets `user_version` inside it
   and runs `PRAGMA foreign_key_check` before it commits, with foreign keys off
   (SQLite's table-rebuild procedure). A file holds no `BEGIN`/`COMMIT`.
-- Startup migrates only when `DATABASE_PATH` is set, and then needs Bun
-  (`bun --bun next start`).
+- Startup runs on Bun (`bun --bun next start`), which `bun:sqlite` needs.
 
-## RCON safety
-- Tests mock `src/lib/rcon/service` (see `tests/fixtures/*`); never open a real
-  connection from a test or script.
-- Automatic sync is opt-in (`RCON_AUTO_SYNC_ENABLED`) on one authoritative instance.
-- Sending to a live server or wipes need the user's go-ahead.
+## Platform safety
+- Tests and scripts open no real connection: no game server, Discord, the live
+  instance or its bucket. Tests run on temp databases, play the game server's
+  polls in-process, and replace `src/lib/platform/discord` (see
+  `tests/fixtures/platform-sign-in.ts`).
+- Nothing is sent to a live game server or the live instance without the
+  owner's go-ahead: no deploy, no Apply to a real game server, no request to
+  the instance.
 
 ## Data and secrets
-`Databases/`, `Presets/User/`, `Notes/` and `users.json` (the last three no
-longer read by the app; the one-time import moves `Presets/` and `Notes/`), `.env*`
-(except `.env.example`) are gitignored user data. So is the platform database at
-`DATABASE_PATH` with its `.bak` copies (ignored only as `./platform.db*`).
-Never print, commit or overwrite them.
-Locations come from `DATABASES_PATH` (default `./Databases`) and
-`DATABASE_PATH`; see `src/lib/env.ts`. The parry-geometry startup migration
-still reads `PRESETS_PATH` (default `./Presets`) until online-platform#41.
-No test or script calls Discord: tests replace `src/lib/platform/discord` (see
-`tests/fixtures/platform-sign-in.ts`), and `DISCORD_CLIENT_SECRET` lives only in `.env`.
+`.env*` (except `.env.example`) and the platform database at `DATABASE_PATH`
+with its `.bak` copies (ignored only as `./platform.db*`) are gitignored user
+data. So are the self-hosted app's `Databases/`, `Presets/User/`, `Notes/` and
+`users.json`, which only the one-time import reads. Never print, commit or
+overwrite them. `DISCORD_CLIENT_SECRET` lives only in `.env` and the
+instance's `platform.env`.
 
 ## Tracking
 - Mod features: the mod's `.scratch/<feature>/` is canonical for specs, tickets
   and status. This repo's `.scratch/<feature>-ui/` holds UI harnesses and
-  captured-RCON evidence only.
+  captured-command evidence only.
 - Online platform: this repo's `.scratch/online-platform/` is canonical (a
   wayfinder map with tickets and research). Platform terms are in this repo's
   `CONTEXT.md`.
@@ -146,24 +161,20 @@ No test or script calls Discord: tests replace `src/lib/platform/discord` (see
   operations) and `docs/agents/triage-labels.md` in the mod repo.
 
 ## Docs index
-- `docs/automatic-sync.md` - startup/reconnect/reload responder: ownership, deployment, failures.
-- `docs/game-defaults.md` - default snapshot, coverage and refresh procedure.
-- `docs/parry-geometry-migration.md` - Combat-to-Parry key move and startup migration hook.
 - `docs/poll-exchange.md` - the platform-mod poll contract: request fields, answers, status codes.
-- `docs/server-processing-results.md` - acknowledged batch results protocol and status.
-- `docs/stun-rules-validation.md` - stun/acknowledgment validation record (human pass deferred).
-- `docs/weapon-reliability-validation.md` - weapon reliability validation record.
-- `docs/archive/README.md` - Jan 2026 planning archive (superseded).
 - `docs/hosting.md` - the platform instance: what runs where, settings files, provisioning, `bun run deploy`, the restore check, checks.
 - `docs/restore-runbook.md` - rebuilding the instance from the bucket, and the restore drill.
-
-Pending decision: removing the temporary parry-geometry startup migration hook.
+- `docs/adr/` - architecture decisions (0001: one SQLite file for platform storage).
+- `docs/game-defaults.md` - default snapshot, coverage and refresh procedure.
+- `docs/stun-rules-validation.md` - stun/acknowledgment validation record (human pass deferred).
+- `docs/weapon-reliability-validation.md` - weapon reliability validation record.
+- `docs/archive/README.md` - superseded: the Jan 2026 planning archive and the self-hosted app's docs.
 
 ## Hand-off checklist
 - `bun run typecheck` and the full test suite pass; lint count not increased.
 - New keys: string schemas regenerated, mod key lists copied and graphs rebuilt,
   check_contract and check_weapon_contract pass.
-- Mod ticket updated; evidence in `.scratch/<feature>-ui/` if RCON was captured.
+- Mod ticket updated; evidence in `.scratch/<feature>-ui/` if commands were captured.
 - Small commits, explicit paths; never commit user data or secrets; never push.
 
 ## Optional tooling

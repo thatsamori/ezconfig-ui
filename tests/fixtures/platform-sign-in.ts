@@ -228,12 +228,19 @@ const scenarios: Record<string, () => Promise<void>> = {
     assert.equal(await sessionStatus(token), 200, 'a refused sign-out leaves the session');
   },
 
-  /** Every self-hosted route handler answers 401 without a session, and 403 to a cross-site change. */
+  /**
+   * No route answers without a session except sign-in, the poll endpoint (which takes a Game server key) and
+   * the localhost-only heartbeat: every other route handler in src/app answers 401 without one, and 403 to a
+   * cross-site change. There are no server actions, which would be endpoints too.
+   */
   async routes() {
     const token = await signedIn('operator-code');
-    const files = [...new Glob('src/app/api/**/route.ts').scanSync('.')].map(file => file.replaceAll('\\', '/')).filter(file => !file.startsWith('src/app/api/auth/')).sort();
-    assert(files.length >= 15, `found ${files.length} route files`);
-    const context = { params: Promise.resolve({ path: ['Character', 'Movement'], schema: 'Character', name: 'fixture' }) };
+    const open = ['src/app/api/auth/discord/callback/route.ts', 'src/app/api/auth/discord/route.ts', 'src/app/game-server/poll/route.ts', 'src/app/internal/backup-heartbeat/route.ts'];
+    const all = [...new Glob('src/app/**/route.ts').scanSync('.')].map(file => file.replaceAll('\\', '/')).sort();
+    assert.deepEqual(open.filter(file => !all.includes(file)), [], 'each route that answers without a session is still there');
+    const files = all.filter(file => !open.includes(file));
+    assert(files.length >= 20, `found ${files.length} route files`);
+    const context = { params: Promise.resolve({ id: '1' }) };
     let handlers = 0;
     for (const file of files) {
       const route = await import(`../../${file}`) as Record<string, unknown>;
@@ -248,7 +255,9 @@ const scenarios: Record<string, () => Promise<void>> = {
         if (method !== 'GET' && method !== 'HEAD') assert.equal((await call({ token, origin: 'https://elsewhere.example' })).status, 403, `${method} ${path} from another site`);
       }
     }
-    assert(handlers >= 20, `checked ${handlers} handlers`);
+    assert(handlers >= 29, `checked ${handlers} handlers`);
+    const actions = [...new Glob('src/**/*.{ts,tsx}').scanSync('.')].filter(file => /['"]use server['"]/.test(readFileSync(file, 'utf8')));
+    assert.deepEqual(actions, [], 'no server actions');
   },
 
   async 'state'() {

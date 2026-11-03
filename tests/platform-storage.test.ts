@@ -20,14 +20,11 @@ async function fixture(run: (root: string) => Promise<void>) {
   }
 }
 /** Starts the app once from `cwd`, the release whose migrations it carries. */
-function start(root: string, cwd: string, database: string | null = join(root, 'platform.db')): Start {
-  const env: Record<string, string | undefined> = {
-    ...process.env, DATABASES_PATH: join(root, 'Databases'), PRESETS_PATH: join(root, 'Presets'),
-    RCON_AUTO_SYNC_ENABLED: 'false', RCON_HOST: '127.0.0.1', DATABASE_PATH: database ?? undefined,
-  };
+function start(root: string, cwd: string, database: string | null = join(root, 'platform.db'), scenario?: 'repeated'): Start {
+  const env: Record<string, string | undefined> = { ...process.env, DATABASE_PATH: database ?? undefined };
   delete env.NEXT_PHASE;
   if (database === null) delete env.DATABASE_PATH;
-  const result = Bun.spawnSync([process.execPath, 'run', join(repo, 'tests', 'fixtures', 'platform-startup.ts')], { cwd, env, stdout: 'pipe', stderr: 'pipe' });
+  const result = Bun.spawnSync([process.execPath, 'run', join(repo, 'tests', 'fixtures', 'platform-startup.ts'), ...(scenario ? [scenario] : [])], { cwd, env, stdout: 'pipe', stderr: 'pipe' });
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
   return JSON.parse(result.stdout.toString());
 }
@@ -51,13 +48,18 @@ const inspect = (path: string) => ({
 const steps = (path: string) => rows(path, 'SELECT step FROM log ORDER BY rowid').map(row => row.step);
 const copies = async (root: string) => (await readdir(root)).filter(name => name.startsWith('platform.db.v')).sort();
 
-test("a fresh database gets every one of the repo's migrations before automatic sync registers", async () => fixture(async root => {
+test("a fresh database gets every one of the repo's migrations before the daily sweep starts", async () => fixture(async root => {
   const latest = (await readdir(join(repo, PLATFORM_MIGRATIONS_DIRECTORY))).filter(name => name.endsWith('.sql')).length;
-  expect(start(root, repo)).toEqual({ events: [`sync after version ${latest}`], logged: [expect.stringContaining('[EZConfig platform storage]')] });
+  expect(start(root, repo)).toEqual({ events: [`sweep after version ${latest}`], logged: [expect.stringContaining('[EZConfig platform storage]')] });
   expect(inspect(join(root, 'platform.db')).version).toBe(latest);
 }));
 
-test('pending migrations apply in order, each in its own transaction; a failed one rolls back and blocks startup and sync until a fixed release', async () => fixture(async root => {
+test('a build or the edge runtime never opens the database, and calls at once migrate and start the sweep once', async () => fixture(async root => {
+  const latest = (await readdir(join(repo, PLATFORM_MIGRATIONS_DIRECTORY))).filter(name => name.endsWith('.sql')).length;
+  expect(start(root, repo, join(root, 'platform.db'), 'repeated').events).toEqual(['build and edge leave version none', `sweep after version ${latest}`]);
+}));
+
+test('pending migrations apply in order, each in its own transaction; a failed one rolls back and blocks startup until a fixed release', async () => fixture(async root => {
   const first = {
     '0001-create-log.sql': 'CREATE TABLE log (step INTEGER NOT NULL);\nINSERT INTO log VALUES (1);',
     '0002-second.sql': 'INSERT INTO log VALUES (2);',
@@ -73,7 +75,7 @@ test('pending migrations apply in order, each in its own transaction; a failed o
   expect(steps(join(root, 'platform.db'))).toEqual([1, 2]);
 
   const fixed = await release(root, 'fixed', { ...first, '0003-half-done.sql': 'CREATE TABLE half (id INTEGER);\nINSERT INTO log VALUES (3);', '0004-fourth.sql': 'INSERT INTO log VALUES (4);' });
-  expect(start(root, fixed).events).toEqual(['sync after version 4']);
+  expect(start(root, fixed).events).toEqual(['sweep after version 4']);
   expect(inspect(join(root, 'platform.db'))).toEqual({ version: 4, tables: ['half', 'log'] });
   expect(steps(join(root, 'platform.db'))).toEqual([1, 2, 3, 4]);
 }));
@@ -86,7 +88,7 @@ test('migrations follow the table-rebuild procedure: a rebuilt parent keeps its 
     '0002-rebuild-parent.sql': `CREATE TABLE parent_new (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
       INSERT INTO parent_new SELECT id, name FROM parent; DROP TABLE parent; ALTER TABLE parent_new RENAME TO parent;`,
   };
-  expect(start(root, await release(root, 'rebuild', migrations)).events).toEqual(['sync after version 2']);
+  expect(start(root, await release(root, 'rebuild', migrations)).events).toEqual(['sweep after version 2']);
   expect(rows(join(root, 'platform.db'), 'SELECT child.id, parent.name FROM child JOIN parent ON parent.id = child.parent')).toEqual([{ id: 10, name: 'kept' }]);
 
   migrations['0003-dangling.sql'] = 'INSERT INTO child VALUES (11, 99);';
@@ -97,9 +99,9 @@ test('migrations follow the table-rebuild procedure: a rebuilt parent keeps its 
   expect(rows(join(root, 'platform.db'), 'SELECT id FROM child')).toEqual([{ id: 10 }]);
 }));
 
-test('a database newer than this release is refused before anything is written, and sync never registers', async () => fixture(async root => {
+test('a database newer than this release is refused before anything is written, and the sweep never starts', async () => fixture(async root => {
   const one = { '0001-create-log.sql': 'CREATE TABLE log (step INTEGER NOT NULL);' };
-  expect(start(root, await release(root, 'newer', { ...one, '0002-second.sql': 'INSERT INTO log VALUES (2);' })).events).toEqual(['sync after version 2']);
+  expect(start(root, await release(root, 'newer', { ...one, '0002-second.sql': 'INSERT INTO log VALUES (2);' })).events).toEqual(['sweep after version 2']);
   const before = await readdir(root);
   const outcome = start(root, await release(root, 'older', one));
   expect(outcome.events).toEqual([]);
@@ -115,7 +117,7 @@ const copyName = (version: number, time: number) => `platform.db.v${version}.${n
 
 test('a migrating start first writes a VACUUM INTO copy beside the database named by version, keeping the last 3 and none older than 14 days', async () => fixture(async root => {
   const migrations: Record<string, string> = { '0001-create-log.sql': 'CREATE TABLE log (step INTEGER NOT NULL);\nINSERT INTO log VALUES (1);' };
-  expect(start(root, await release(root, 'r1', migrations)).events).toEqual(['sync after version 1']);
+  expect(start(root, await release(root, 'r1', migrations)).events).toEqual(['sweep after version 1']);
   const [first] = await copies(root);
   expect(first).toMatch(/^platform\.db\.v0\.\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{3}Z\.bak$/);
   expect(inspect(join(root, first))).toEqual({ version: 0, tables: [] });
@@ -124,7 +126,7 @@ test('a migrating start first writes a VACUUM INTO copy beside the database name
   const unrelated = ['platform.db.v1.notes.bak', 'other.db.v1.2026-11-01T00-00-00.000Z.bak'];
   for (const name of [stale, ...unrelated]) await writeFile(join(root, name), 'planted');
   migrations['0002-second.sql'] = 'INSERT INTO log VALUES (2);';
-  expect(start(root, await release(root, 'r2', migrations)).events).toEqual(['sync after version 2']);
+  expect(start(root, await release(root, 'r2', migrations)).events).toEqual(['sweep after version 2']);
   const [second] = (await copies(root)).filter(name => name.startsWith('platform.db.v1.') && name !== stale && name !== unrelated[0]);
   expect(inspect(join(root, second))).toEqual({ version: 1, tables: ['log'] });
   expect(steps(join(root, second))).toEqual([1]);
@@ -132,7 +134,7 @@ test('a migrating start first writes a VACUUM INTO copy beside the database name
 
   for (const days of [1, 2]) await writeFile(join(root, copyName(1, Date.now() - days * DAY)), 'planted');
   migrations['0003-third.sql'] = 'INSERT INTO log VALUES (3);';
-  expect(start(root, await release(root, 'r3', migrations)).events).toEqual(['sync after version 3']);
+  expect(start(root, await release(root, 'r3', migrations)).events).toEqual(['sweep after version 3']);
   const [third] = (await copies(root)).filter(name => name.startsWith('platform.db.v2.'));
   expect(steps(join(root, third))).toEqual([1, 2]);
   expect(await copies(root), 'only the last 3').toEqual([first, second, third, unrelated[0]].sort());
@@ -147,8 +149,11 @@ test('migrations that are not numbered 0001, 0002, ... without gaps block startu
   expect(await readdir(root)).toEqual(['gap']);
 }));
 
-test('without DATABASE_PATH, startup runs only the self-hosted work and creates no platform database', async () => fixture(async root => {
-  expect(start(root, root, null)).toEqual({ events: ['sync after version none'], logged: [] });
+test('without DATABASE_PATH, startup is blocked and creates no database', async () => fixture(async root => {
+  const outcome = start(root, root, null);
+  expect(outcome.events).toEqual([]);
+  expect(outcome.blocked).toContain('DATABASE_PATH is not set');
+  expect(outcome.logged).toEqual([expect.stringContaining('[EZConfig platform storage] startup blocked')]);
   expect((await readdir(root)).filter(name => name.includes('.db'))).toEqual([]);
 }));
 

@@ -1,12 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { join } from 'node:path';
 import { withPlatformDatabase } from './helpers/platform-database';
 
 // Two made-up platform operators; no real Discord account.
 const SETTINGS = {
   PUBLIC_URL: 'https://ezconfig.test',
   OPERATOR_DISCORD_IDS: '80351110224678912,53908232506183680',
-  RCON_HOST: '127.0.0.1', RCON_AUTO_SYNC_ENABLED: 'false',
 };
 
 type Line = Record<string, unknown>;
@@ -15,7 +13,7 @@ const without = (line: Line, ...fields: string[]) => Object.fromEntries(Object.e
 
 /** Runs one scenario of the Supported build fixture on its own database; info lines (stdout) and warnings (stderr) come back apart. */
 function runScenario(name: string) {
-  const result = withPlatformDatabase((run, root) => run('tests/fixtures/platform-supported-build.ts', { args: [name], env: { ...SETTINGS, DATABASES_PATH: join(root, 'Databases') } }));
+  const result = withPlatformDatabase(run => run('tests/fixtures/platform-supported-build.ts', { args: [name], env: SETTINGS }));
   if (result.exitCode !== 0) throw new Error(`${name} exited ${result.exitCode}\n${result.stderr}\n${result.stdout}`);
   const parse = (text: string) => text.split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line) as Line);
   const out = parse(result.stdout), err = parse(result.stderr);

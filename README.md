@@ -1,8 +1,13 @@
 # ezconfig-ui
 
-Web control panel for the EZConfig Mordhau mod. Stores config in local JSON
-databases (`Databases/`) and pushes it to the game server as
-`string ezconfig ...` commands over RCON.
+The EZConfig platform: a hosted, invite-only Next.js app on Bun where server
+owners sign in with Discord, register their Mordhau game servers and edit
+each one's EZConfig configuration. Everything it stores is in one SQLite
+database. A game server's EZConfig mod polls the platform over HTTPS with its
+Game server key and receives its Live configuration as `string ezconfig ...`
+commands, which it processes itself. Platform terms are in
+[CONTEXT.md](CONTEXT.md); the poll contract is
+[docs/poll-exchange.md](docs/poll-exchange.md).
 
 ## App setup
 
@@ -12,54 +17,46 @@ To install dependencies:
 bun install
 ```
 
-Create the database folder structure (idempotent):
-
-```bash
-bun run init-db
-```
-
-Copy `.env.example` to `.env` and fill in your server's RCON details and the
-Discord sign-in settings, then run the app on Bun (platform storage uses
-`bun:sqlite`):
+Copy `.env.example` to `.env` and fill in `DATABASE_PATH`, `PUBLIC_URL`, a
+Discord application's client id and secret, and `OPERATOR_DISCORD_IDS`. Then
+run the app on Bun (platform storage uses `bun:sqlite`); startup creates and
+migrates the database:
 
 ```bash
 bun --bun run dev
 ```
 
-## Mordhau server setup
+The hosted instance, its settings files and deploys are in
+[docs/hosting.md](docs/hosting.md).
 
-The game server needs two things in `Game.ini`
-(`Mordhau/Saved/Config/WindowsServer/Game.ini` or `LinuxServer/` on Linux),
+## Game server setup
+
+Register the game server on its page under Game servers. The page shows its
+Game server key once, in the block to paste into the server's `Game.ini`
+(`Mordhau/Saved/Config/WindowsServer/Game.ini`, or `LinuxServer/` on Linux),
 followed by a server restart:
-
-**1. RCON enabled** — must match `RCON_PORT` / `RCON_PASSWORD` in `.env`:
 
 ```ini
 [/Script/Mordhau.MordhauGameSession]
-RconPassword=your_password
-RconPort=4747
+bAllowHttpRequests=True
+
+[EZConfigPlatform]
+GameServerKey=<the key>
 ```
 
-**2. The EZConfig mod actor spawned on map load** — without this the mod never
-runs and RCON commands are silently ignored:
-
-```ini
-[/Script/Mordhau.MordhauGameMode]
-SpawnServerActorsOnMapLoad=/EZConfig/BP_EZConfigB.BP_EZConfigB_C
-```
-
-The RCON port is TCP and separate from the game port — make sure it's open in
-the server's firewall.
+The EZConfig mod must also be in the server's mod list. The page shows
+Connected once the mod's first poll arrives, and the platform sends
+configuration only to the Supported build that the platform operator sets.
 
 ## Development
 
 | Command | Purpose |
 | --- | --- |
-| `bun --bun run dev` | Next dev server on Bun (connects to the RCON server in `.env`) |
-| `bun test ./tests` | Test suite (RCON and disk writes are mocked) |
+| `bun --bun run dev` | Next dev server on Bun, on the database at `DATABASE_PATH` |
+| `bun test ./tests` | Test suite (temp databases; Discord is never called) |
 | `bun run typecheck` | TypeScript check (`tsc --noEmit`) |
 | `bun run lint` | ESLint (`eslint.config.mjs`) |
-| `bun run init-db` | Create the empty `Databases/` structure |
+| `bun run deploy <commit>` | Deploy a commit to the hosted instance (owner only; `docs/hosting.md`) |
 
 Contributors and coding agents should read [AGENTS.md](AGENTS.md) first.
 
@@ -95,20 +92,12 @@ schema lacks are not shown, are counted, and stay stored. The encoder
 (`src/lib/config/encodeValues.ts`) turns a document into the wipe and one
 command per non-empty category, in today's command encoding.
 
-Notes remain shared by schema key, using the existing rich-text editor and author edit/delete controls. Presets snapshot the open Draft as saved, and loading one replaces it.
+Notes are shared by config key with every server owner, using the rich-text
+editor. Their authors edit or delete them, and the platform operator can
+delete any. Save as Ruleset version
+snapshots the open Draft as a numbered version of a Ruleset, and loading a
+version replaces the Draft.
 
 `NEXT_BUILD_DIR` can point to a separate build directory for an isolated preview while another development server is running.
 
-Run redesign regression tests with `bun test ./tests`. They cover attack-column selection, unknown defaults, Sweep math, the Draft's saves and the encoder. Tests mock RCON and use temp storage.
-
-## Automatic synchronization
-
-The app includes a managed RCON responder for game startup, reconnect and
-`ezconfig reload`. It is disabled by default; enable it explicitly with
-`RCON_AUTO_SYNC_ENABLED=true` after configuring the intended server and saved
-database directory. Each sync uses the same acknowledged batch protocol as
-manual apply. See [automatic synchronization](docs/automatic-sync.md) for
-ownership, deployment and failure behavior.
-
-Human validation for the Stun/acknowledgment batch is deferred by user request;
-see [validation status](docs/stun-rules-validation.md).
+Run the regression tests with `bun test ./tests`. They cover attack-column selection, unknown defaults, Sweep math, the Draft's saves, the encoder and the platform's routes, on temp databases.

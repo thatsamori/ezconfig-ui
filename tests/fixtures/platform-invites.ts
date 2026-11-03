@@ -31,7 +31,6 @@ mock.module('../../src/lib/platform/discord', () => ({
     return account;
   },
 }));
-mock.module('../../src/lib/rcon/automatic-sync-bootstrap', () => ({ stopRegisteredAutomaticSync: async () => {}, registerAutomaticSync: async () => {} }));
 
 const { env } = await import('../../src/lib/env');
 const { INVITE_COOKIE, SESSION_COOKIE, SIGN_IN_STATE_COOKIE } = await import('../../src/lib/platform/auth');

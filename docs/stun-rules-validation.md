@@ -19,8 +19,9 @@ The counts above are a historical record of this validation pass. As of
 2026-10-31 the suite is 147 UI tests across 30 files, and the contract is
 182 Character keys in 14 categories and 65 Weapon keys.
 
-Automatic sync is opt-in through `RCON_AUTO_SYNC_ENABLED=true` on one authoritative
-long-lived UI instance; see [automatic sync](automatic-sync.md). Existing user
+Automatic sync was opt-in on one authoritative long-lived UI instance; it went
+with the self-hosted mode (online-platform#41) and is described in
+[docs/archive/automatic-sync.md](archive/automatic-sync.md). Existing user
 environment files were not changed by this work.
 
 The SDK test cook exited 3 during late shutdown despite zero commandlet errors.

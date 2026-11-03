@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { join } from 'node:path';
 
-test('combined geometry and migrated transforms cross actual startup, the editor and Apply', () => {
+test('combined geometry and the block collider transforms cross the editor and Apply', () => {
   const result = Bun.spawnSync(['bun', join(import.meta.dir, 'fixtures', 'geometry-combined.ts')], { cwd: join(import.meta.dir, '..'), env: process.env });
   expect(result.exitCode, new TextDecoder().decode(result.stderr) + new TextDecoder().decode(result.stdout)).toBe(0);
 });

@@ -1,15 +1,8 @@
-// Server-side only env config
+// Server-side only env config: the instance's settings (see .env.example)
 const publicUrl = process.env.PUBLIC_URL || 'http://localhost:3000';
 
 export const env = {
-  rcon: {
-    host: process.env.RCON_HOST || 'localhost',
-    port: parseInt(process.env.RCON_PORT || '27015', 10),
-    password: process.env.RCON_PASSWORD || '',
-  },
-  databasesPath: process.env.DATABASES_PATH || './Databases',
-  ezconfigPassword: process.env.EZCONFIG_PASSWORD || '',
-  // Online platform (instance settings; see .env.example)
+  /** The platform's SQLite database file; startup migrates it. */
   databasePath: process.env.DATABASE_PATH || '',
   /** The address browsers use; requests that change data must come from its origin. */
   publicUrl,
@@ -19,10 +12,3 @@ export const env = {
   /** Platform operators: comma-separated Discord user ids. */
   operatorDiscordIds: (process.env.OPERATOR_DISCORD_IDS || '').split(',').map(id => id.trim()).filter(Boolean),
 } as const;
-
-// Validation - call this in server actions
-export function validateEnv() {
-  if (!process.env.RCON_PASSWORD) {
-    throw new Error('RCON_PASSWORD environment variable is required');
-  }
-}
