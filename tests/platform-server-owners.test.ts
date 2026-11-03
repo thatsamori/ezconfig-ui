@@ -8,7 +8,6 @@ const SETTINGS = {
   DISCORD_CLIENT_SECRET: 'fixture-client-secret',
   DISCORD_REDIRECT_URL: '',
   OPERATOR_DISCORD_IDS: '80351110224678912, 11111111111111111',
-  RCON_HOST: '127.0.0.1', RCON_AUTO_SYNC_ENABLED: 'false',
 };
 
 type Line = Record<string, unknown>;
