@@ -471,4 +471,25 @@ body { -webkit-font-smoothing: antialiased; }
 .needs-updating-tag { color: #e0a83c; font-size: 12px; white-space: nowrap; }
 .supported-build-line { color: #d4d4d8; font-size: 14px; margin-bottom: 20px; }
 .supported-build-page code { font-family: var(--font-mono); font-size: 12.5px; background: #26272b; border-radius: 5px; padding: 1px 5px; }
-@media (max-width: 560px) { .ini-copy { flex-direction: column; align-items: stretch; } .server-row { flex-wrap: wrap; } }
+.status-page code { font-family: var(--font-mono); font-size: 12px; background: #26272b; border-radius: 5px; padding: 1px 5px; overflow-wrap: anywhere; }
+.status-warnings p + p { margin-top: 6px; }
+.status-section { margin-bottom: 32px; }
+.status-section > h2 { margin-bottom: 12px; }
+.status-line { color: #d4d4d8; font-size: 14px; line-height: 1.55; }
+.status-line + .status-line { margin-top: 6px; }
+.status-line time { cursor: default; }
+.status-muted { color: #9a9ba1; font-size: 13px; line-height: 1.55; margin-top: 4px; overflow-wrap: anywhere; }
+.status-builds { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; color: #d4d4d8; font-size: 13.5px; }
+.status-builds li { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.status-builds .role-pill { margin: 0 0 0 4px; }
+.status-log { display: flex; flex-direction: column; margin-top: 16px; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; overflow: hidden; }
+.status-log li { display: grid; grid-template-columns: max-content 64px minmax(0,1fr); align-items: baseline; gap: 4px 14px; padding: 10px 16px; background: #16171a; font-size: 12.5px; }
+.status-log li + li { border-top: 1px solid rgba(255,255,255,.05); }
+.status-log time { color: #9a9ba1; font-variant-numeric: tabular-nums; }
+.status-log .level { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.status-log .warn .level { color: #e0a83c; }
+.status-log .error .level { color: #e5484d; }
+.status-log code { justify-self: start; }
+.status-log .message { grid-column: 2 / -1; color: #d4d4d8; overflow-wrap: anywhere; }
+.status-log-empty { margin-top: 16px; }
+@media (max-width: 560px) { .ini-copy { flex-direction: column; align-items: stretch; } .server-row { flex-wrap: wrap; } .status-log li { grid-template-columns: max-content minmax(0,1fr); } .status-log code { grid-column: 1 / -1; } .status-log .message { grid-column: 1 / -1; } }

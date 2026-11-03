@@ -49,6 +49,8 @@ are the contract between this app and the mod.
   endpoint, `src/app/game-server/poll/`, sits outside `src/app/api/`: game
   servers send their key, not a session. `supported-build.ts` is the one
   build stamp anything is sent to, set at `src/app/api/operator/supported-build/`.
+  The operator's Status page: `status.ts`, with `backup-heartbeat.ts` and
+  `restore-check.ts` (the weekly check's status file beside the database).
 - `src/proxy.ts` - the Content-Security-Policy, with a fresh nonce per request, on
   every page. Inline script runs only with the nonce, so a new page or component
   adds no inline `<script>` or `on*` handler; the root layout renders per request
