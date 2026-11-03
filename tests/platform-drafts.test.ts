@@ -11,7 +11,7 @@ function scenario(name: string) {
     if (result.exitCode !== 0) throw new Error(`${name} exited ${result.exitCode}\n${result.stderr}\n${result.stdout}`);
     const lines = (result.stdout + result.stderr).split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line) as Record<string, unknown>);
     expect(lines).toContainEqual({ fixture: 'passed' });
-    return lines.filter(line => 'event' in line && line.event !== 'game-server.registered').map(({ time: _, ...line }) => line);
+    return lines.filter(line => 'event' in line && line.event !== 'game-server.registered').map(line => Object.fromEntries(Object.entries(line).filter(([field]) => field !== 'time')));
   });
 }
 
