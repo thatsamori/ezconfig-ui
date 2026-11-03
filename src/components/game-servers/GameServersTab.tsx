@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { useRefreshingJson } from '@/lib/hooks/useRefreshingJson';
 import type { ConnectionStatus, GameServerView } from '@/lib/platform/game-servers';
 import type { ApplyReview, ReviewEntry } from '@/lib/platform/live-configurations';
-import { flushConfigWrites } from '@/lib/store/configStore';
+import { flushConfigWrites, useConfigStore } from '@/lib/store/configStore';
 
 /** What the setup checklist pastes into Game.ini: the HTTP switch and the key, not the optional PlatformUrl. */
 const gameIni = (gameServerKey: string) => `[/Script/Mordhau.MordhauGameSession]
@@ -170,7 +170,7 @@ const blockedReason = (server: GameServerView) => !server.applyBlocked ? undefin
 
 /** The review of an Apply now, once the editor's saves have finished; undefined after saying in a toast why it failed. */
 async function loadReview(id: number): Promise<ApplyReview | undefined> {
-  // The review is of the saved Draft; the editor shows any save that failed.
+  // The review is of the saved Draft. The editor shows any save that failed, and names the edits a rejected one lost until they are dismissed.
   await flushConfigWrites().catch(() => {});
   return (await send<ApplyReview>(`/api/game-servers/${id}/apply`, 'GET'))?.data;
 }
@@ -197,12 +197,11 @@ function DraftSection({ server, onEditDraft, onChanged }: { server: GameServerVi
   };
   const discard = async (base: ApplyReview) => {
     try {
-      const response = await fetch(`/api/game-servers/${server.id}/draft/discard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revision: base.revision }) });
-      const body = await response.json().catch(() => ({})) as { success?: boolean; error?: string; data?: unknown };
-      if (response.ok && body.success) toast.success('Changes discarded: the Draft is the Live configuration again');
-      else toast.error(response.status === 409 && body.data ? 'The Draft changed meanwhile, so nothing was discarded. Check it, then discard again' : body.error || `The platform refused (${response.status})`);
-    } catch {
-      toast.error('Could not reach the platform');
+      // A stale Discard hands the current Draft to the editor, which names the edits it did not save.
+      await useConfigStore.getState().discardChanges(server.id, base.revision);
+      toast.success('Changes discarded: the Draft is the Live configuration again');
+    } catch (error) {
+      toast.error((error as Error).message);
     }
     onChanged();
   };
