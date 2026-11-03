@@ -136,3 +136,6 @@ lint stays at 5. No migration.
   body, not the button that opened it. The dialogs are controlled, with no
   `DialogTrigger` for Radix to return focus to; the server page's dialogs do
   the same today.
+
+2026-11-03: At the owner's request, merged into `main` as `5fe3bc1`, pushed and
+deployed at 20:43 UTC; the deploy's record is in #42.
