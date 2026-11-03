@@ -76,3 +76,10 @@ live game server and the live instance are the owner's.
   are active, and the app logged no errors. `/` answers 200; the session API
   and a poll with no key answer 401. The releases kept are `5c6158f`,
   `c1da8be` and one of `a347200`.
+- 20:43: `main` at `5fe3bc1` deployed in 72 s, with #47. There was no migration
+  this time. The app, Litestream, Caddy and the timer are active, and the app
+  logged no errors. `/` answers 200; the session API and a poll with no key
+  answer 401. The releases kept are `5fe3bc1`, `5c6158f` and `c1da8be`. A first
+  try minutes earlier stopped at the fetch: the owner had set the repo to
+  private, and `release.sh` fetches it without credentials. It changed nothing
+  on the instance, and the second try ran once the repo was public again.
