@@ -29,8 +29,8 @@ export interface OpenDraft {
   origin: Origin | null;
 }
 
-/** The Draft as the platform sends it: on load, after a reset or a Ruleset write, and with a stale write's refusal. */
-type DraftView = { values: DraftValues; revision: number; savedAt: number | null; dropped: number; origin: Origin | null };
+/** The Draft as the platform sends it: on load, after a reset or a Ruleset write, and with a stale write's refusal. `errors`: the shown values the schema refuses. */
+type DraftView = { values: DraftValues; revision: number; savedAt: number | null; dropped: number; errors: FieldError[]; origin: Origin | null };
 
 /** Where Save as Ruleset version puts the Draft: the next version of a Ruleset, or version 1 of a new one. */
 export type VersionTarget = { rulesetId: number } | { name: string };
@@ -45,7 +45,11 @@ export interface ConfigState {
   loadError: string;
   saveState: SaveState;
   saveError: string;
-  /** The last refused save's errors, by fieldName(database, category, key). */
+  /**
+   * The values the current schema refuses, by fieldName(database, category,
+   * key): as the platform sent the Draft (a later deploy may have tightened a
+   * key), or as the last refused save named them.
+   */
   fieldErrors: Record<string, string>;
   /** Edits made here that another tab's save left unsaved, named until dismissed; a null value was a Reset. */
   unsaved: ValueChange[];
@@ -88,6 +92,8 @@ export interface ConfigState {
 }
 
 export const fieldName = (database: string, category: string | undefined, key: string) => `${database}/${category ?? ''}/${key}`;
+/** Refused values as the editor marks them, each where it shows. */
+const marks = (errors: FieldError[]) => Object.fromEntries(errors.map(error => [fieldName(error.database, error.category, error.key), error.error]));
 /** How an edit is named to the owner: Character or the weapon, then its category and key. */
 export const editName = ({ database, category, key }: Omit<ValueChange, 'value'>) => `${database} · ${category} · ${key}`;
 
@@ -145,7 +151,7 @@ function adopt(gameServerId: number, view: DraftView): ValueChange[] {
   useConfigStore.setState({
     values: view.values,
     draft: opened(gameServerId, view),
-    saveState: 'saved', saveError: '', fieldErrors: {},
+    saveState: 'saved', saveError: '', fieldErrors: marks(view.errors),
     unsaved: [...lost, ...unsaved.filter(edit => !names.has(fieldName(edit.database, edit.category, edit.key)))],
   });
   if (lost.length) toast.error(notSaved(lost));
@@ -203,7 +209,7 @@ async function runSaves() {
     } else if (status === 400 && body.details?.length) {
       const [first, ...rest] = body.details;
       const saveError = `Not saved: ${first.key} ${first.error}${rest.length ? ` (and ${rest.length} more)` : ''}`;
-      useConfigStore.setState({ saveState: 'invalid', saveError, fieldErrors: Object.fromEntries(body.details.map(error => [fieldName(error.database, error.category, error.key), error.error])) });
+      useConfigStore.setState({ saveState: 'invalid', saveError, fieldErrors: marks(body.details) });
       toast.error(saveError);
     } else if (status === 409 && body.data && 'values' in body.data) {
       const lost = adopt(draft.gameServerId, body.data);
@@ -282,7 +288,7 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
         set({ loading: false, loadError: body.error || `Could not load the Draft (${response.status})` });
         return;
       }
-      set({ values: body.data.values, draft: opened(gameServerId, body.data), loading: false });
+      set({ values: body.data.values, draft: opened(gameServerId, body.data), loading: false, fieldErrors: marks(body.data.errors) });
     } catch {
       if (token === opening) set({ loading: false, loadError: 'Could not reach the platform to load the Draft' });
     }
@@ -333,7 +339,7 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
       'Not saved as a Ruleset version: the Draft changed in another tab. The editor now shows it; save again to keep it.',
     );
     if (!saved) throw new Error('Another Draft was opened meanwhile');
-    set({ values: saved.draft.values, draft: opened(draft.gameServerId, saved.draft), saveState: 'saved', saveError: '', fieldErrors: {} });
+    set({ values: saved.draft.values, draft: opened(draft.gameServerId, saved.draft), saveState: 'saved', saveError: '', fieldErrors: marks(saved.draft.errors) });
     return { ruleset: saved.ruleset, version: saved.version };
   },
 
@@ -347,8 +353,7 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
     );
     if (!loaded) throw new Error('Another Draft was opened meanwhile');
     // The loaded values this build refuses are named where they show, as a refused save names them.
-    const fieldErrors = Object.fromEntries(loaded.errors.map(error => [fieldName(error.database, error.category, error.key), error.error]));
-    set({ values: loaded.draft.values, draft: opened(draft.gameServerId, loaded.draft), saveState: 'saved', saveError: '', fieldErrors });
+    set({ values: loaded.draft.values, draft: opened(draft.gameServerId, loaded.draft), saveState: 'saved', saveError: '', fieldErrors: marks(loaded.errors) });
     return { dropped: loaded.dropped, errors: loaded.errors };
   },
 
@@ -359,15 +364,15 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
     const reset = await draftWrite<DraftView>(draft.gameServerId, 'reset', { revision: draft.revision }, 'reset the Draft',
       'Not reset: the Draft changed in another tab. The editor now shows it; reset again to empty it.');
     if (!reset) return;
-    set({ values: reset.values, draft: opened(draft.gameServerId, reset), saveState: 'saved', saveError: '', fieldErrors: {} });
+    set({ values: reset.values, draft: opened(draft.gameServerId, reset), saveState: 'saved', saveError: '', fieldErrors: marks(reset.errors) });
   },
 
   discardChanges: async (gameServerId, revision) => {
     await settled();
     const discarded = await draftWrite<DraftView>(gameServerId, 'discard', { revision }, 'discard the changes',
       'Nothing was discarded: the Draft changed in another tab. Check it, then discard again.');
-    // Values and base together, as Reset sets them: the discarded edits are not named.
-    if (discarded) set({ values: discarded.values, draft: opened(gameServerId, discarded), saveState: 'saved', saveError: '', fieldErrors: {} });
+    // Values and base together, as Reset sets them: the discarded edits are not named. The Live configuration's values the schema now refuses are marked.
+    if (discarded) set({ values: discarded.values, draft: opened(gameServerId, discarded), saveState: 'saved', saveError: '', fieldErrors: marks(discarded.errors) });
   },
 
   refreshDraft: async (typing = () => false) => {

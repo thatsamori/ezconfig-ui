@@ -76,8 +76,9 @@ instance's settings or secrets.
   The document's shape and placement are in `src/lib/config/valuesDocument.ts`.
   Its encoder, `src/lib/config/encodeValues.ts`, builds the wipe-then-category batch.
   Live configurations: `live-configurations.ts` (the review, Apply, delivery,
-  Discard changes, and the Pending, Confirmed or Failed state computed from
-  the last report) behind `src/app/api/game-servers/[id]/apply/` and
+  Discard changes, and the Pending, Blocked, Confirmed or Failed state
+  computed from the last report and the current schema) behind
+  `src/app/api/game-servers/[id]/apply/` and
   `.../draft/discard/`; the poll route delivers from it.
   Rulesets: `rulesets.ts` (Save as Ruleset version, loading a version,
   rename and delete) behind `src/app/api/rulesets/` and `.../draft/save-version/`

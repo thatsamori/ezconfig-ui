@@ -22,19 +22,24 @@
  *   a Failed configuration is sent again only by an Apply, which makes a new
  *   id even when nothing changed, or after a build change, when the mod
  *   reports none.
- * - Its state (Pending, Confirmed or Failed) is computed from the game
- *   server's last report, never stored.
+ * - A Live configuration holding a value the current schema refuses, as a
+ *   later deploy that tightens a key can leave one (online-platform#44), is
+ *   Blocked: it is never sent, whole or in part. The poll is held as if there
+ *   were nothing to send, until an Apply of the fixed Draft wakes it.
+ * - Its state (Pending, Blocked, Confirmed or Failed) is computed from the
+ *   game server's last report and the current schema, never stored.
  * - Discard changes resets the Draft to the Live configuration, origin
  *   included.
  * - Apply copies the Draft's origin (a Ruleset version, or none) with its
  *   values. The page shows each origin and whether it is modified (origins.ts).
  *
- * Nothing here logs: the routes log Apply and each delivery, by id only.
+ * Nothing here logs: the routes log Apply, each delivery and each Blocked Live
+ * configuration, by id only.
  */
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { encodeValues } from '@/lib/config/encodeValues';
-import { documentErrors, documentFields, type DocumentField, type FieldError, type ValuesDocument } from '@/lib/config/valuesDocument';
+import { documentFields, refusedValues, type DocumentField, type FieldError, type ValuesDocument } from '@/lib/config/valuesDocument';
 import type { ConfigValue } from '@/lib/database/types';
 import { discardDraft, readDraft, type CheckedWrite, type Draft } from './drafts';
 import type { GameServer, GameServerView } from './game-servers';
@@ -116,14 +121,11 @@ export function valueChanges(draft: unknown, live: unknown): ValueChanges {
   return changes;
 }
 
-/** The Draft's values the current schema refuses; a value it has no place for is not sent, so it never blocks Apply. */
-const applyErrors = (document: unknown) => documentErrors(document).filter(error => error.category !== undefined);
-
 const review = (draft: Draft, live: LiveConfiguration | undefined): ApplyReview => ({
   revision: draft.revision,
   liveConfigurationId: live?.id ?? null,
   ...valueChanges(draft.document, live?.document ?? {}),
-  errors: applyErrors(draft.document),
+  errors: refusedValues(draft.document),
 });
 
 /** The review of an Apply now; undefined when the game server has no Draft. */
@@ -134,24 +136,32 @@ export function applyReview(gameServerId: number): ApplyReview | undefined {
 
 /**
  * What the game server has reported of its Live configuration, computed from
- * its last report and never stored:
+ * its last report and the current schema, never stored:
  * - Confirmed: it reports processing this Live configuration, and every
  *   command succeeded. Keys its build does not know were skipped: `ignoredKeys`.
  * - Failed: it reports processing this Live configuration, and processing
  *   stopped at a failed command (the wipe, when `database` and `category` are
  *   ''). It runs only the categories before it, and is not sent it again
  *   until a build change or an Apply.
+ * - Blocked: it has not reported processing this Live configuration, and the
+ *   current schema refuses `refusedValues` in it, so it cannot be sent. Fixing
+ *   them in the Draft and Apply sends the new one. Confirmed and Failed stay
+ *   as reported, since they say what the game server runs.
  * - Pending: anything else, including an id the platform does not know, or
  *   none (it is sent the Live configuration at its next poll).
  * `reportedAt` is when the report first arrived.
  */
 export type LiveConfigurationState =
   | { state: 'pending' }
+  | { state: 'blocked'; refusedValues: FieldError[] }
   | { state: 'confirmed'; reportedAt: number; ignoredKeys: UnknownKey[] }
   | { state: 'failed'; reportedAt: number; failure: NonNullable<ProcessingResult['failure']> };
 
-export function liveConfigurationState(liveConfigurationId: string, server: Pick<GameServer, 'lastPollAt' | 'reportedLiveConfigurationId' | 'reportedResult' | 'reportedProcessedAt'>): LiveConfigurationState {
-  if (server.reportedLiveConfigurationId !== liveConfigurationId || server.reportedResult === null) return { state: 'pending' };
+export function liveConfigurationState(live: Pick<LiveConfiguration, 'id' | 'document'>, server: Pick<GameServer, 'lastPollAt' | 'reportedLiveConfigurationId' | 'reportedResult' | 'reportedProcessedAt'>): LiveConfigurationState {
+  if (server.reportedLiveConfigurationId !== live.id || server.reportedResult === null) {
+    const refused = refusedValues(live.document);
+    return refused.length ? { state: 'blocked', refusedValues: refused } : { state: 'pending' };
+  }
   const result = JSON.parse(server.reportedResult) as ProcessingResult;
   const reportedAt = server.reportedProcessedAt ?? server.lastPollAt!;
   // A result reads as succeeded with no failure, or failed with one (poll-exchange.ts).
@@ -169,7 +179,7 @@ export function liveConfigurationView(server: GameServer): Pick<GameServerView, 
   const draft = readDraft(server.id);
   const { added, changed, reset } = valueChanges(draft?.document ?? {}, live?.document ?? {});
   return {
-    liveConfiguration: live ? { id: live.id, appliedAt: live.appliedAt, ...liveConfigurationState(live.id, server) } : null,
+    liveConfiguration: live ? { id: live.id, appliedAt: live.appliedAt, ...liveConfigurationState(live, server) } : null,
     unappliedChanges: added.length + changed.length + reset.length > 0,
     draftOrigin: draft ? originOf(draft.originId, draft.document) : null,
     liveOrigin: live ? originOf(live.originId, live.document) : null,
@@ -190,7 +200,7 @@ export function applyDraft(gameServerId: number, base: { revision: number; liveC
     if (!draft) return undefined;
     const current = readLiveConfiguration(gameServerId);
     if (draft.revision !== base.revision || (current?.id ?? null) !== base.liveConfigurationId) return { ok: false, reason: 'stale', review: review(draft, current) };
-    const errors = applyErrors(draft.document);
+    const errors = refusedValues(draft.document);
     if (errors.length) return { ok: false, reason: 'invalid', errors };
     const applied: LiveConfiguration = { gameServerId, id: randomUUID(), document: draft.document, appliedAt: now, originId: draft.originId };
     store.run('DELETE FROM live_configurations WHERE game_server_id = ?', gameServerId);
@@ -202,7 +212,7 @@ export function applyDraft(gameServerId: number, base: { revision: number; liveC
   return result;
 }
 
-/** The answer that delivers a Live configuration: its id, and its values grouped by category with the deploy's schema. */
+/** The answer that delivers a Live configuration: its id, and its values grouped by category with the deploy's schema, which must accept them all (never a Blocked one). */
 export function deliveryOf(live: LiveConfiguration): Extract<PollAnswer, { answer: 'live-configuration' }> {
   return { answer: 'live-configuration', liveConfigurationId: live.id, commands: encodeValues(live.document) };
 }
@@ -210,12 +220,14 @@ export function deliveryOf(live: LiveConfiguration): Extract<PollAnswer, { answe
 /**
  * What a poll on the Supported build is answered with at once: the whole Live
  * configuration when the game server reports processing another id, one the
- * platform does not know, or none. Undefined when it has no Live
- * configuration, or reports processing this one.
+ * platform does not know, or none. `blocked`, with its id, when that Live
+ * configuration is Blocked: it is never sent, so the poll is held. Undefined
+ * when it has no Live configuration, or reports processing this one.
  */
-export function pendingDelivery(gameServerId: number, processedId: string | null): ReturnType<typeof deliveryOf> | undefined {
+export function pendingDelivery(gameServerId: number, processedId: string | null): ReturnType<typeof deliveryOf> | { blocked: string } | undefined {
   const live = readLiveConfiguration(gameServerId);
-  return live && live.id !== processedId ? deliveryOf(live) : undefined;
+  if (!live || live.id === processedId) return undefined;
+  return refusedValues(live.document).length ? { blocked: live.id } : deliveryOf(live);
 }
 
 /**

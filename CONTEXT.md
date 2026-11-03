@@ -74,6 +74,13 @@ _Avoid_: rejected, incomplete, error
 A Live configuration the game server has not yet reported processing.
 _Avoid_: queued, unsynced
 
+**Blocked**:
+A Live configuration the platform cannot send because the current schema
+refuses some of its values, as after a deploy that tightened a key. It is
+never sent in part. Fixing those values in the Draft and Apply sends the new
+one.
+_Avoid_: refused, unsendable, stuck
+
 **Supported build**:
 The one EZConfig build, named by its build stamp, that the platform sends
 configuration to. Set by the platform operator.

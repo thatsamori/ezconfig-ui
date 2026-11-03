@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from 'bun:test';
 import { useConfigStore, flushConfigWrites, fieldName, type DraftValues } from '../src/lib/store/configStore';
+import type { FieldError } from '../src/lib/config/valuesDocument';
 const originalFetch = globalThis.fetch;
 afterEach(() => {
   globalThis.fetch = originalFetch;
@@ -7,9 +8,9 @@ afterEach(() => {
   useConfigStore.getState().closeDraft();
 });
 type Call = { method: string; url: string; body?: { revision: number; document?: unknown } & Record<string, unknown> };
-type View = { values: DraftValues; revision: number; savedAt: number | null; dropped: number };
+type View = { values: DraftValues; revision: number; savedAt: number | null; dropped: number; errors: FieldError[] };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
-const empty = (revision = 3): View => ({ values: { character: {}, weapons: {} }, revision, savedAt: null, dropped: 0 });
+const empty = (revision = 3): View => ({ values: { character: {}, weapons: {} }, revision, savedAt: null, dropped: 0, errors: [] });
 /** Serves the Draft's GET with `draft()`, and answers each write with `answer`, recording every write. */
 function serve(answer: (call: Call, calls: Call[]) => Response | Promise<Response>, draft: () => View | Promise<View> = empty) {
   const calls: Call[] = [];
@@ -23,7 +24,7 @@ function serve(answer: (call: Call, calls: Call[]) => Response | Promise<Respons
 }
 const saved = (call: Call) => json({ success: true, data: { revision: call.body!.revision + 1, savedAt: 1 } });
 /** Another tab's Draft at `revision`: MaxWalkSpeed 600 and the Axe's Strike Windup at 0.3. */
-const theirs = (revision: number): View => ({ values: { character: { Movement: { MaxWalkSpeed: 600 } }, weapons: { Axe: { Strike: { Windup: 0.3 } } } }, revision, savedAt: 9, dropped: 0 });
+const theirs = (revision: number): View => ({ values: { character: { Movement: { MaxWalkSpeed: 600 } }, weapons: { Axe: { Strike: { Windup: 0.3 } } } }, revision, savedAt: 9, dropped: 0, errors: [] });
 const stale = (draft: View) => json({ success: false, error: 'The Draft changed since this page loaded it', data: draft }, 409);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 test('each save sends the whole Draft with its revision; edits made during a save go in the next', async () => {
@@ -60,6 +61,21 @@ test("a refused save names each field's error, and keeps the edit for fixing", a
   expect(useConfigStore.getState()).toMatchObject({ saveState: 'invalid', fieldErrors: { [fieldName('Axe', 'Strike', 'Windup')]: 'Expected Float, got String' } });
   expect(store.getValue('Axe', 'Strike', 'Windup')).toBe('slow');
   expect(useConfigStore.getState().draft?.revision).toBe(3);
+});
+test('a Draft opens with the values the schema refuses marked, as a deploy that tightened a key leaves them; a save that fixes them clears the marks, and Discard to them marks them again', async () => {
+  const refused = [{ database: 'Character', category: 'Camera', key: 'CustomFOVMax', error: 'Use a whole number.' }];
+  const marked = { [fieldName('Character', 'Camera', 'CustomFOVMax')]: 'Use a whole number.' };
+  const live = { character: { Camera: { CustomFOVMax: 120.5 } }, weapons: {} };
+  serve(call => call.url.endsWith('/discard') ? json({ success: true, data: { ...empty(call.body!.revision + 1), values: live, errors: refused } }) : saved(call),
+    () => ({ ...empty(), values: live, errors: refused }));
+  const store = useConfigStore.getState();
+  await store.openDraft(7);
+  expect(useConfigStore.getState()).toMatchObject({ saveState: 'saved', fieldErrors: marked });
+  store.setValue('Character', 'Camera', 'CustomFOVMax', 120);
+  await flushConfigWrites();
+  expect(useConfigStore.getState().fieldErrors).toEqual({});
+  await store.discardChanges(7, 4);
+  expect(useConfigStore.getState()).toMatchObject({ values: live, saveState: 'saved', fieldErrors: marked });
 });
 test('a save that does not arrive is retried with the whole Draft', async () => {
   let fail = true;
@@ -296,7 +312,7 @@ test("a refresh at the same revision takes the origin a Ruleset's rename or dele
 });
 test('Reset to game defaults sends the revision and opens the emptied Draft', async () => {
   const calls = serve(call => call.url.endsWith('/reset')
-    ? json({ success: true, data: { values: { character: {}, weapons: {} }, revision: call.body!.revision + 1, savedAt: 2, dropped: 0 } })
+    ? json({ success: true, data: { values: { character: {}, weapons: {} }, revision: call.body!.revision + 1, savedAt: 2, dropped: 0, errors: [] } })
     : saved(call));
   const store = useConfigStore.getState();
   await store.openDraft(7);
