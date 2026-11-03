@@ -55,6 +55,8 @@ export interface FeatureReview {
    * rejects, and nothing is delivered.
    */
   apply(stage?: string): Promise<string[]>;
+  /** Batches the self-hosted automatic sync delivered on its own (its startup snapshot), oldest first; mocked like Apply. */
+  synced(): string[][];
 }
 
 export interface FeatureReviewOptions {
@@ -79,9 +81,15 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
   Object.assign(process.env, storage, { RCON_HOST: '127.0.0.1', RCON_AUTO_SYNC_ENABLED: 'false' });
   const delivered: string[][] = [];
   const stages: Record<string, string[]> = {};
+  const synced: string[][] = [];
   mock.module('../../src/lib/rcon/service', () => ({
     executeAcknowledgedBatch: async (commands: readonly string[]) => {
       delivered.push([...commands]);
+      return successfulProcessingFixture(commands);
+    },
+    // The automatic sync's own target, kept apart so each Apply still delivers one batch.
+    executeAcknowledgedBatchAt: async (_target: unknown, commands: readonly string[]) => {
+      synced.push([...commands]);
       return successfulProcessingFixture(commands);
     },
   }));
@@ -140,6 +148,7 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
         stages[stage] = delivered[before];
         return [...delivered[before]];
       },
+      synced: () => synced.map(batch => [...batch]),
     });
     if (options.capture) {
       await mkdir(dirname(options.capture), { recursive: true });
