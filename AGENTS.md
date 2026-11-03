@@ -71,7 +71,9 @@ are the contract between this app and the mod.
 - `docs/` - see index below; `docs/design/`, `docs/archive/` are reference only.
 - `deploy/` - the platform instance's units, Caddyfile, Litestream template and
   provisioning; `scripts/deploy.ts` (`bun run deploy <commit>`) runs
-  `deploy/release.sh` on it. Kept LF (`.gitattributes`).
+  `deploy/release.sh` on it. `deploy/restore-check.ts` is the weekly restore
+  check: standalone (no app imports, installed by `provision.sh`), it opens the
+  database read-only and writes only the status file. Kept LF (`.gitattributes`).
 
 ## Adding a config key
 1. Add the entry to the right schema in `src/lib/config/`.
@@ -135,7 +137,8 @@ No test or script calls Discord: tests replace `src/lib/platform/discord` (see
 - `docs/stun-rules-validation.md` - stun/acknowledgment validation record (human pass deferred).
 - `docs/weapon-reliability-validation.md` - weapon reliability validation record.
 - `docs/archive/README.md` - Jan 2026 planning archive (superseded).
-- `docs/hosting.md` - the platform instance: what runs where, provisioning, `bun run deploy`, checks.
+- `docs/hosting.md` - the platform instance: what runs where, settings files, provisioning, `bun run deploy`, the restore check, checks.
+- `docs/restore-runbook.md` - rebuilding the instance from the bucket, and the restore drill.
 
 Pending decision: removing the temporary parry-geometry startup migration hook.
 
