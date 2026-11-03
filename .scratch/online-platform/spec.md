@@ -6,9 +6,7 @@ Created: 2026-11-02
 Map: [Map: EZConfig online platform](map.md)
 
 V1 was marked complete by the owner on 2026-11-03, live at modhau.com on `217893e`.
-Tickets still open then: [#34](issues/34-mod-processes-live-configuration.md)
-(the owner's in-game look at the delivery message),
-[#53](issues/53-tidy-after-the-value-editor.md),
+Tickets still open then: [#53](issues/53-tidy-after-the-value-editor.md),
 [#55](issues/55-a-ruleset-name-can-stretch-the-page-or-hide-what-it-is.md) and
 [#56](issues/56-a-vector-with-an-extra-field-cant-be-fixed-by-typing.md).
 

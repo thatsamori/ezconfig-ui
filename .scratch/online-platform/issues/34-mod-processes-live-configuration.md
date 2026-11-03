@@ -1,6 +1,6 @@
 # 34: Mod processes a delivered Live configuration
 
-Status: blocked; waits on the owner to see the delivery message in chat on a server with a player
+Status: completed
 Type: task
 Created: 2026-11-02
 Blocked by: 29, 33
@@ -31,7 +31,7 @@ The processed id is saved with the snapshot, so:
 - [x] After processing, the mod polls again at once with the result.
 - [x] The result carries the counts and unknown keys, and on failure the
       category (and weapon) and the error.
-- [ ] The delivery message counts changed values (added, changed, or removed
+- [x] The delivery message counts changed values (added, changed, or removed
       back to the game default) against what the server had. It goes to chat
       and the log, for example "EZConfig: received 140 values, 12 changed",
       with "incomplete" added when processing stopped. With nothing changed it
@@ -170,3 +170,9 @@ renders.
   migration's backup is tied to its storage paths. That may matter for a
   restore onto different paths (#39's runbook). The proofs used fresh data
   instead.
+
+2026-11-03, later still: The owner saw "EZConfig: received N values, M changed" in
+chat when an Apply reached the Oregon game server with their player connected, so
+the last criterion is ticked. Nobody watched chat during an unchanged Apply. That
+half rests on the sandbox's log line and the graph, which broadcasts only when the
+changed count is above 0. A failed wipe and an invalid answer are still not run.
