@@ -256,3 +256,13 @@ backup status.
   (ruled out of scope): earlier Live configurations are not kept, so the
   about 2 GB a year of them no longer applies. Each game server holds at most
   one.
+- 2026-11-02, from
+  [What does the platform record, and who can read it?](15-platform-records-and-logs.md):
+  journald keeps 30 days and at most 2 GB, set explicitly, and Caddy writes no
+  access log. Litestream is pinned to 0.5.x, at least 0.5.12, with
+  `heartbeat-url` pointing at the app on localhost every minute, on a path
+  Caddy refuses from outside; the operator's page warns after 5 minutes
+  without a heartbeat. The restore check writes its result to a status file
+  beside the database, never into it. The migration `VACUUM INTO` copies keep
+  the last 3, none older than 14 days. The first build slice proves the
+  heartbeat along with Litestream.

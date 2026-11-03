@@ -258,3 +258,12 @@ deletes a server owner on request. Added to the map.
   the value survives one. A key shaped like an issued one reads back exactly
   and needs no quotes. If the setup block also carries a `PlatformUrl` line,
   quote the URL: unquoted, it reads and is saved as `https:`.
+- 2026-11-02, from
+  [What does the platform record, and who can read it?](15-platform-records-and-logs.md):
+  revoking an Invite sets a revoked time instead of deleting it; an unused
+  Invite's row is deleted 30 days after it expires or is revoked, and a used
+  one goes with its server owner on Delete. The Supported build records set at
+  and set by. Operator actions are journal lines, with no audit table. Sign-in
+  refused is logged as "invite-only" with no Discord id. The operator's page
+  adds counts of game servers by reported build stamp, a health panel and
+  backup status, and still shows no other owner's game servers.

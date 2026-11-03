@@ -137,11 +137,18 @@ ready to slice into implementation tickets. This map builds nothing.
   others have no author. Values the schema won't take are dropped and
   reported. The self-hosted app stops for good first, and the script is
   deleted after use.
+- [What does the platform record, and who can read it?](issues/15-platform-records-and-logs.md):
+  the systemd journal is the only log, kept 30 days. It records state changes,
+  never polls, by id only, with no secrets, values, names or IPs. The database
+  stores no delivery events or audit trail; records carry their own times. The
+  operator's page adds counts by build stamp, a health panel from memory, and
+  Litestream's heartbeat beside the restore check. A deleted server owner
+  leaves every backup within 14 days.
 
 ## Not yet specified
 
-<!-- nothing at present: the Logs fog graduated into
-[What does the platform record, and who can read it?](issues/15-platform-records-and-logs.md) -->
+<!-- nothing at present: no fog remains and no ticket is open, so the next
+step is assembling spec.md from the resolved tickets (Notes) -->
 
 ## Out of scope
 

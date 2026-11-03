@@ -163,3 +163,10 @@ and sent whole; a typical document is a few KB, every key about 100 KB.
   transaction with a new random id. This replaces "Every Live configuration
   is kept" and the about 2 GB a year estimate; deleting a Ruleset clears the
   origins of Drafts and each server's one Live configuration.
+- 2026-11-02, from
+  [What does the platform record, and who can read it?](15-platform-records-and-logs.md):
+  two fields join the schema. An Invite gains a revoked time (or none), and the
+  Supported build setting gains set at and set by. A daily sweep deletes
+  expired sessions, and an unused Invite's row is deleted 30 days after it
+  expires or is revoked. There is no table for delivery events, operator
+  actions or errors: the systemd journal holds them for 30 days.
