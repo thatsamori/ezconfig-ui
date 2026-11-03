@@ -1,6 +1,6 @@
 # 42: Launch and cutover
 
-Status: blocked; waits on the owner for the Discord application, the mod publish and the cutover
+Status: completed
 Type: task
 Created: 2026-11-02
 Blocked by: 24, 28, 34, 37, 39, 40, 41
@@ -20,31 +20,31 @@ live game server and the live instance are the owner's.
 
 ## Acceptance criteria
 
-- [ ] A Discord application exists for the instance with the platform's
+- [x] A Discord application exists for the instance with the platform's
       redirect URL. The instance env file holds its client id and secret, the
       redirect URL, `OPERATOR_DISCORD_IDS`, `DATABASE_PATH` and the public
       URL, and the master copy is in the owner's password manager.
-- [ ] Release order:
+- [x] Release order:
       1. The mod's built-in platform URL is set to the hostname from
          [Hosting walking skeleton](22-hosting-walking-skeleton.md), and that
          mod build is published.
       2. The platform is deployed and its Supported build set to that
          build's stamp.
-- [ ] The restore drill from
+- [x] The restore drill from
       [Weekly restore check and restore runbook](39-restore-check-and-runbook.md)
       has passed.
-- [ ] The cutover from the spec, in order:
+- [x] The cutover from the spec, in order (the owner narrowed it; see Comments):
       1. Stop the self-hosted app on Markbox for good.
       2. Copy `Databases/`, `Presets/` and `Notes/` to the instance.
       3. Sign in and register the game server.
       4. Dry-run the import, read the report, then `--commit`.
       5. Set up Game.ini (`bAllowHttpRequests`, `[EZConfigPlatform]`).
       6. Review the Draft and Apply.
-- [ ] The owner's game server shows Connected and then Confirmed, and players
+- [x] The owner's game server shows Connected and then Confirmed, and players
       see the delivery message.
-- [ ] Afterwards, the import script and its tests are deleted in their own
+- [x] Afterwards, the import script and its tests are deleted in their own
       commit.
-- [ ] The outcome is recorded under this ticket's Comments.
+- [x] The outcome is recorded under this ticket's Comments.
 
 ## Comments
 
@@ -89,3 +89,49 @@ live game server and the live instance are the owner's.
   200; the session API, the game servers API and a poll with no key answer 401;
   `/internal/backup-heartbeat` answers 403. The releases kept are `d04dfcb`,
   `5fe3bc1` and `5c6158f`.
+
+2026-11-03, the owner's import, with their go-ahead before each live step
+(times UTC):
+- The owner narrowed what comes over to their Rulesets and Notes. Without
+  `Databases/` there is no Draft to fill, so the game server entry stayed: no
+  delete and register again, no new Game server key, no `Game.ini` change and
+  no restart. Its Draft and Live configuration are still those of the owner's
+  test Apply. `Databases/` stays on Markbox, not imported.
+- The self-hosted app on Markbox is stopped for good. The owner confirmed it,
+  and Markbox showed no process, port 3000 listener, unit or cron entry for it.
+  The newest data file was from 2026-11-02 22:01.
+- `e078bee` changed the script for this. `--databases` and `--game-server`
+  became optional, together. `--old-username` can repeat. `--note-author <old
+  username>=<Discord id>` gives another server owner the Notes of that name, and
+  the script refuses when that account has no record. No other code differed
+  from `d04dfcb`, so that one file went into the release folder under a temporary
+  name: no deploy and no restart.
+- A rehearsal on a throwaway database, with a copy of the real data, passed its
+  commit once one preset's 1,120-character description was out of the way (the
+  limit is 500; it refused until then). The owner chose to import that preset
+  with no description and to leave out a preset that held no values. Both edits
+  were on the copies; the originals stay on Markbox.
+- About 22:33:
+  - the dry run passed on the instance;
+  - a SQLite backup went beside the database as
+    `platform.db.pre-import.2026-11-03T22-*.bak`, and its `integrity_check` is ok;
+  - `--commit` wrote 7 Rulesets and 83 Notes. No values or Notes were dropped,
+    none are on hidden keys, and the sanitizer changed no body.
+- All 7 Rulesets are the owner's; they share them with the file export from #54.
+  79 Notes went to the account of the other server owner the owner named, and
+  the other 4, from the owner's test accounts on the self-hosted app, to the
+  owner.
+- After the commit, Drafts and Live configurations were unchanged and
+  `integrity_check` and `foreign_key_check` were clean. The app and Litestream
+  were active, with no warnings or errors logged.
+- The owner checked the result on modhau.com and confirmed it.
+- The game server: the platform holds its report of the Live configuration
+  applied at 21:45:18, success with 7 values accepted, 5 changed and no unknown
+  keys. Markbox's log has the delivery message, "EZConfig: received 7 values, 5
+  changed", and the owner's player was connected. The mod sends it to chat when
+  values changed; nobody here read the chat itself, so the log is the evidence.
+- The temp copies and the temporary script are deleted from the PC and the
+  instance. The script and its test are deleted in `e048886`.
+- This ticket's Discord, release order and restore drill criteria are ticked from
+  the records above and #39. The master copy of the settings is the owner's and
+  was not checked here.

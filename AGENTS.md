@@ -99,9 +99,8 @@ instance's settings or secrets.
   `tests/helpers/`: `runPlatformFixture`/`withPlatformDatabase` (child fixtures
   on a fresh, migrated platform database) and `signInForTest` (a session for
   tests that call routes directly; the feature review harness uses it).
-- `scripts/` - `deploy.ts`, the game defaults export and import
-  (`docs/game-defaults.md`), and the one-time import (`import-self-hosted.ts`,
-  online-platform#40; deleted after the owner's import, #42).
+- `scripts/` - `deploy.ts`, and the game defaults export and import
+  (`docs/game-defaults.md`).
 - `docs/` - see index below; `docs/design/`, `docs/archive/` are reference only.
 - `deploy/` - the platform instance's units, Caddyfile, Litestream template and
   provisioning; `scripts/deploy.ts` (`bun run deploy <commit>`) runs
@@ -147,7 +146,7 @@ of the old one, coordinated with the mod.
 `.env*` (except `.env.example`) and the platform database at `DATABASE_PATH`
 with its `.bak` copies (ignored only as `./platform.db*`) are gitignored user
 data. So are the self-hosted app's `Databases/`, `Presets/User/`, `Notes/` and
-`users.json`, which only the one-time import reads. Never print, commit or
+`users.json`, which nothing reads any more. Never print, commit or
 overwrite them. `DISCORD_CLIENT_SECRET` lives only in `.env` and the
 instance's `platform.env`.
 
