@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-test('typed Attack controls and repaired knockback survive save, review, selection and wipe', () => {
+test('typed Attack controls and repaired knockback survive the editor, Apply and reset', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/weapon-attack-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });
