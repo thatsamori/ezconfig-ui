@@ -220,7 +220,7 @@ function DraftSection({ server, onEditDraft, onChanged }: { server: GameServerVi
     </div>
     {review && review !== 'loading' && <ApplyDialog server={server} review={review} onReview={setReview} onClose={() => setReview(null)} onApplied={onChanged} />}
     <Confirm open={discarding !== null} onClose={() => setDiscarding(null)} onConfirm={() => { if (discarding) void discard(discarding); }} title="Discard changes?" action="Discard changes">
-      {changes ? `The Draft's ${changes} unapplied change${changes === 1 ? '' : 's'} are lost, and it` : 'The Draft'} goes back to the Live configuration applied {live ? relativeTime(live.appliedAt) : ''}. This can&apos;t be undone.
+      {changes ? `The Draft's ${changes} unapplied change${changes === 1 ? ' is' : 's are'} lost, and it` : 'The Draft'} goes back to the Live configuration applied {live ? relativeTime(live.appliedAt) : ''}. This can&apos;t be undone.
     </Confirm>
   </section>;
 }

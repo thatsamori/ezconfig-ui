@@ -3,8 +3,7 @@
  * operator makes, lists and revokes them, sign-in with Discord spends them,
  * and the daily sweep tidies expired sessions and old Invite rows. One
  * scenario per run (argv[2]), each in its own process with the env set by
- * tests/platform-invites.test.ts. Discord's OAuth exchange is replaced, and
- * so is automatic sync, which the startup hook would otherwise register.
+ * tests/platform-invites.test.ts. Discord's OAuth exchange is replaced.
  *
  * Asserts as it goes, then prints one `{"fixture": …}` line with the secrets it
  * handled (Invite codes and links, session tokens, Discord ids, names and OAuth
