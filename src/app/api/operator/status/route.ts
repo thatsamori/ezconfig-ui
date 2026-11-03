@@ -2,7 +2,7 @@
  * GET /api/operator/status
  *
  * The platform operator's status page, computed when it loads
- * (`src/lib/platform/status.ts`): { now, gameServers, health, backup,
+ * (`src/lib/platform/status.ts`): { now, gameServers, activity, health, backup,
  * restoreCheck }. Names no game server or owner.
  *
  * The platform operator only. Reading it changes nothing and is not logged.

@@ -1,8 +1,8 @@
 /**
  * The platform operator's status page through its route handler
  * (online-platform#38): counts by build stamp, the health list, the backup
- * heartbeat's warnings and the restore check's states, and access. One
- * scenario per run (argv[2]), each in its own process with the env set by
+ * heartbeat's warnings and the restore check's states, access, and the
+ * activity counts (online-platform#48). One scenario per run (argv[2]), each in its own process with the env set by
  * tests/platform-status.test.ts, since the log health and the heartbeat live
  * in process memory. The clock is moved with setSystemTime; polls are held for
  * a short real time (setPollHoldMs).
@@ -24,7 +24,12 @@ const { log } = await import('../../src/lib/platform/log');
 const { answerHeldPoll, setPollHoldMs } = await import('../../src/lib/platform/polls');
 const { PROCESS_STARTED_AT } = await import('../../src/lib/platform/status');
 const { restoreCheckPath } = await import('../../src/lib/platform/restore-check');
+const { removeAccess } = await import('../../src/lib/platform/server-owners');
+const { endAllSessions } = await import('../../src/lib/platform/sessions');
+const { platformStore } = await import('../../src/lib/platform/storage');
 const gameServersRoute = await import('../../src/app/api/game-servers/route');
+const gameServerRoute = await import('../../src/app/api/game-servers/[id]/route');
+const applyRoute = await import('../../src/app/api/game-servers/[id]/apply/route');
 const supportedBuildRoute = await import('../../src/app/api/operator/supported-build/route');
 const statusRoute = await import('../../src/app/api/operator/status/route');
 const pollRoute = await import('../../src/app/game-server/poll/route');
@@ -52,12 +57,33 @@ async function registered(session: TestSession, name: string) {
   return data;
 }
 /** A game server polling with its key and a build stamp ('' for none), as the mod sends it. */
-async function poll(key: string, buildStamp: string) {
+async function poll(key: string, buildStamp: string, processed: unknown = null) {
   const response = await pollRoute.POST(new Request(new URL('/game-server/poll', env.publicUrl), {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, body: JSON.stringify({ buildStamp, instanceId: 'instance-one' }),
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, body: JSON.stringify({ buildStamp, instanceId: 'instance-one', processed }),
   }));
   return (await response.json() as { answer: string }).answer;
 }
+
+const json = (method: string, body: unknown) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const params = (id: number) => ({ params: Promise.resolve({ id: String(id) }) });
+async function setSupportedBuild(operator: TestSession, stamp: string) {
+  const response = await supportedBuildRoute.PUT(operator.request('/api/operator/supported-build', json('PUT', { stamp })));
+  assert.equal(response.status, 200);
+}
+/** Apply now, as the owner does with the game server Connected on the Supported build; resolves to the new Live configuration's id. */
+async function apply(session: TestSession, { gameServer: { id }, key }: { gameServer: GameServerView; key: string }): Promise<string> {
+  setPollHoldMs(1);
+  await poll(key, SUPPORTED);
+  const review = await (await applyRoute.GET(session.request(`/api/game-servers/${id}/apply`), params(id))).json();
+  const { revision, liveConfigurationId } = review.data;
+  const response = await applyRoute.POST(session.request(`/api/game-servers/${id}/apply`, json('POST', { revision, liveConfigurationId })), params(id));
+  assert.equal(response.status, 200, 'Apply goes through');
+  return (await response.json()).data.liveConfigurationId;
+}
+const succeeded = (liveConfigurationId: string) => ({ liveConfigurationId, result: { success: true, acceptedValues: 0, changedValues: 0, unknownKeys: [], failure: null } });
+const failed = (liveConfigurationId: string) => ({ liveConfigurationId, result: { success: false, acceptedValues: 0, changedValues: 0, unknownKeys: [], failure: { database: '', category: '', error: 'The wipe failed' } } });
+/** What a deploy that tightens a key leaves: the stored Live configuration now holds a value the schema refuses. */
+const tighten = (id: number) => platformStore().run('UPDATE live_configurations SET overrides = ? WHERE game_server_id = ?', JSON.stringify({ Character: { CustomFOVMax: 120.5 } }), id);
 
 type Answer = { status: number; cache: string | null; body: PlatformStatus & { success?: boolean; error?: string } };
 async function readStatus(session?: TestSession): Promise<Answer> {
@@ -275,6 +301,141 @@ const scenarios: Record<string, () => Promise<void>> = {
     assert.equal((await check()).state, 'never-checked');
   },
 
+  /** Server owners, and how many were seen in the last 24 h and the last 7 days, by the latest last seen of their sessions. */
+  async 'activity-server-owners'() {
+    at(T0);
+    const operator = await signIn('Op Activity', OPERATOR_ID);
+    const owners = async () => (await statusOf(operator)).activity.serverOwners;
+    assert.deepEqual(await owners(), { total: 1, seenLast24h: 1, seenLast7Days: 1 }, 'the operator is a server owner, seen by opening the page');
+
+    const signedInAgo = async (name: string, ago: number, discordId?: string) => {
+      at(T0 - ago);
+      const session = await signIn(name, discordId);
+      at(T0);
+      return session;
+    };
+    // Either edge of a window counts; a millisecond past it does not.
+    await signedInAgo('Seen Exactly A Day', DAY);
+    assert.deepEqual(await owners(), { total: 2, seenLast24h: 2, seenLast7Days: 2 });
+    await signedInAgo('Seen Just Past A Day', DAY + 1);
+    assert.deepEqual(await owners(), { total: 3, seenLast24h: 2, seenLast7Days: 3 });
+    await signedInAgo('Seen Exactly A Week', 7 * DAY);
+    assert.deepEqual(await owners(), { total: 4, seenLast24h: 2, seenLast7Days: 4 });
+    await signedInAgo('Seen Just Past A Week', 7 * DAY + 1);
+    assert.deepEqual(await owners(), { total: 5, seenLast24h: 2, seenLast7Days: 4 });
+
+    // Two sessions are one server owner, seen when the later one was.
+    await signedInAgo('Two Sessions', 8 * DAY, '70000000000000001');
+    assert.deepEqual(await owners(), { total: 6, seenLast24h: 2, seenLast7Days: 4 });
+    const twoSessions = await signedInAgo('Two Sessions', HOUR, '70000000000000001');
+    assert.deepEqual(await owners(), { total: 6, seenLast24h: 3, seenLast7Days: 5 });
+
+    // Using a session writes last seen once it is an hour old, so the count follows.
+    const returning = await signedInAgo('Returning', 25 * HOUR);
+    assert.deepEqual(await owners(), { total: 7, seenLast24h: 3, seenLast7Days: 6 });
+    at(T0 - 23 * HOUR);
+    assert.equal((await gameServersRoute.GET(returning.request('/api/game-servers'))).status, 200);
+    at(T0);
+    assert.deepEqual(await owners(), { total: 7, seenLast24h: 4, seenLast7Days: 6 });
+
+    // Within that hour nothing is written, so a count can run up to an hour low.
+    const withinTheHour = await signedInAgo('Within The Hour', DAY + 30 * MINUTE);
+    at(T0 - DAY + 10 * MINUTE);
+    assert.equal((await gameServersRoute.GET(withinTheHour.request('/api/game-servers'))).status, 200);
+    at(T0);
+    assert.deepEqual(await owners(), { total: 8, seenLast24h: 4, seenLast7Days: 7 }, 'used 23 h 50 min ago, last seen 24 h 30 min ago');
+
+    // Last seen lives on the session: signing out takes it with it. A server owner still counts, as the Server owners tab lists them.
+    endAllSessions(twoSessions.userId);
+    assert.deepEqual(await owners(), { total: 8, seenLast24h: 3, seenLast7Days: 6 });
+    assert(removeAccess(returning.userId).ok);
+    assert.deepEqual(await owners(), { total: 8, seenLast24h: 2, seenLast7Days: 5 });
+  },
+
+  /** Live configurations by state, as each game server's page shows them, and game servers with none yet. */
+  async 'activity-live-configurations'() {
+    at(T0);
+    const operator = await signIn('Op Activity', OPERATOR_ID);
+    const owner = await signIn('Fixture Owner Alpha');
+    const other = await signIn('Fixture Owner Beta');
+    const states = async () => (await statusOf(operator)).activity.liveConfigurations;
+    assert.deepEqual(await states(), { pending: 0, blocked: 0, confirmed: 0, failed: 0, none: 0 }, 'nothing registered');
+    await setSupportedBuild(operator, SUPPORTED);
+    setPollHoldMs(1);
+
+    const servers = [
+      await registered(owner, 'Never Applied'), await registered(other, 'Never Applied Either'), await registered(owner, 'Applied Unreported'),
+      await registered(owner, 'Confirmed One'), await registered(other, 'Confirmed Two'), await registered(owner, 'Failed One'),
+      await registered(owner, 'Tightened Unreported'), await registered(other, 'Tightened After Confirmed'), await registered(owner, 'Tightened After Failed'),
+      await registered(owner, 'Reported An Older One'),
+    ];
+    const [, , unreported, confirmedOne, confirmedTwo, failedOne, tightened, tightenedConfirmed, tightenedFailed, reportedOlder] = servers;
+    assert.deepEqual(await states(), { pending: 0, blocked: 0, confirmed: 0, failed: 0, none: 10 });
+
+    await apply(owner, unreported);
+    assert.deepEqual(await states(), { pending: 1, blocked: 0, confirmed: 0, failed: 0, none: 9 }, 'Applied: Pending until it reports');
+    await poll(confirmedOne.key, SUPPORTED, succeeded(await apply(owner, confirmedOne)));
+    await poll(confirmedTwo.key, SUPPORTED, succeeded(await apply(other, confirmedTwo)));
+    await poll(failedOne.key, SUPPORTED, failed(await apply(owner, failedOne)));
+    assert.deepEqual(await states(), { pending: 1, blocked: 0, confirmed: 2, failed: 1, none: 6 });
+
+    // A value the schema now refuses: Blocked until it reports, and Confirmed and Failed stay as reported.
+    await apply(owner, tightened);
+    tighten(tightened.gameServer.id);
+    await poll(tightenedConfirmed.key, SUPPORTED, succeeded(await apply(other, tightenedConfirmed)));
+    tighten(tightenedConfirmed.gameServer.id);
+    await poll(tightenedFailed.key, SUPPORTED, failed(await apply(owner, tightenedFailed)));
+    tighten(tightenedFailed.gameServer.id);
+    assert.deepEqual(await states(), { pending: 1, blocked: 1, confirmed: 3, failed: 2, none: 3 });
+
+    // A new Apply is Pending again, whatever it last reported.
+    await poll(reportedOlder.key, SUPPORTED, succeeded(await apply(owner, reportedOlder)));
+    assert.deepEqual(await states(), { pending: 1, blocked: 1, confirmed: 4, failed: 2, none: 2 });
+    await apply(owner, reportedOlder);
+    assert.deepEqual(await states(), { pending: 2, blocked: 1, confirmed: 3, failed: 2, none: 2 });
+
+    // Each count is what the game server's page shows, whoever owns it.
+    const shown = { pending: 0, blocked: 0, confirmed: 0, failed: 0, none: 0 };
+    for (const [index, { gameServer: { id } }] of servers.entries()) {
+      const session = [1, 4, 7].includes(index) ? other : owner;
+      const view: GameServerView = (await (await gameServerRoute.GET(session.request(`/api/game-servers/${id}`), params(id))).json()).data;
+      shown[view.liveConfiguration?.state ?? 'none']++;
+    }
+    assert.deepEqual(await states(), shown);
+  },
+
+  /** Game servers Applied in the last 24 h and the last 7 days, by each one's Live configuration: game servers, not Applies. */
+  async 'activity-applied'() {
+    at(T0 - 9 * DAY);
+    const operator = await signIn('Op Activity', OPERATOR_ID);
+    const owner = await signIn('Fixture Owner Alpha');
+    await setSupportedBuild(operator, SUPPORTED);
+    const servers = [
+      await registered(owner, 'Past A Week'), await registered(owner, 'Exactly A Week'), await registered(owner, 'Past A Day'),
+      await registered(owner, 'Exactly A Day'), await registered(owner, 'Applied Three Times'), await registered(owner, 'Never Applied'),
+    ];
+    const [pastWeek, exactlyWeek, pastDay, exactlyDay, threeTimes] = servers;
+    const applied = async () => (await statusOf(operator)).activity.gameServersApplied;
+    assert.deepEqual(await applied(), { last24h: 0, last7Days: 0 }, 'none yet');
+
+    const applyAt = async (time: number, server: (typeof servers)[number]) => { at(time); await apply(owner, server); };
+    await applyAt(T0 - 7 * DAY - 1, pastWeek);
+    await applyAt(T0 - 7 * DAY, exactlyWeek);
+    await applyAt(T0 - 6 * DAY, threeTimes);
+    await applyAt(T0 - DAY - 1, pastDay);
+    await applyAt(T0 - DAY, exactlyDay);
+    await applyAt(T0 - 2 * HOUR, threeTimes);
+    await applyAt(T0 - HOUR, threeTimes);
+    at(T0);
+    assert.deepEqual(await applied(), { last24h: 2, last7Days: 4 }, 'exactly at each edge counts; the game server Applied three times counts once');
+
+    // Only its latest Apply is kept, so one that moved on from a window leaves it.
+    at(T0 + 23 * HOUR);
+    assert.deepEqual(await applied(), { last24h: 1, last7Days: 3 });
+    at(T0 + 8 * DAY);
+    assert.deepEqual(await applied(), { last24h: 0, last7Days: 0 });
+  },
+
   /** Only the platform operator opens it: signed out 401, a server owner 403 and logged. */
   async access() {
     const operator = await signIn('Op Access', OPERATOR_ID);
@@ -284,7 +445,7 @@ const scenarios: Record<string, () => Promise<void>> = {
     assert.deepEqual([refused.status, refused.body], [403, { success: false, error: 'Only the platform operator can do this' }]);
     const allowed = await readStatus(operator);
     assert.deepEqual([allowed.status, allowed.cache], [200, 'no-store']);
-    assert.deepEqual(Object.keys(allowed.body).sort(), ['backup', 'gameServers', 'health', 'now', 'restoreCheck']);
+    assert.deepEqual(Object.keys(allowed.body).sort(), ['activity', 'backup', 'gameServers', 'health', 'now', 'restoreCheck']);
   },
 };
 
