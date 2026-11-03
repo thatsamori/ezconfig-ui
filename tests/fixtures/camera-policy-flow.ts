@@ -1,9 +1,10 @@
-/** Real store/routes/presets/startup/RCON sender against a local TCP fixture.
+/** Real store, Draft and preset routes, startup and RCON sender against a local TCP fixture.
  * The fixture acknowledges known-good cases; native parser/camera proof is
  * intentionally separate and uses the retained command capture.
  * The editor and Apply part is camera-policy-review.ts, on the feature review
- * harness. This keeps the routes' refusal of hand-made input, presets (until
- * Rulesets replaces them) and automatic startup sync.
+ * harness. This keeps the Draft route's refusal of hand-made input, presets
+ * (until Rulesets replaces them) and automatic startup sync, which delivers
+ * the self-hosted files until online-platform#41.
  */
 import assert from 'node:assert/strict';
 import { createServer, type Socket } from 'node:net';
@@ -63,72 +64,62 @@ process.env.RCON_PORT = String((server.address() as { port: number }).port);
 const originalFetch = globalThis.fetch;
 let stopSync: (() => Promise<void>) | undefined;
 let session: TestSession | undefined;
-const request = (body: unknown) => session!.request('/api', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-const params = { params: Promise.resolve({ path: ['Character', 'Camera'] }) };
+const json = (method: string, body: unknown) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 async function until(check: () => boolean) {
   const end = Date.now() + 5000;
   while (!check()) { assert(Date.now() < end, 'Fixture did not settle'); await Bun.sleep(5); }
 }
 try {
   session = await signInForTest();
-  const { POST: save, GET: read } = await import('../../src/app/api/config/[...path]/route');
-  const { DELETE: clear } = await import('../../src/app/api/config/clear/route');
-  const { GET: preview } = await import('../../src/app/api/apply/preview/route');
-  const { POST: apply } = await import('../../src/app/api/apply/route');
+  const { POST: register } = await import('../../src/app/api/game-servers/route');
+  const { GET: read, PUT: save } = await import('../../src/app/api/game-servers/[id]/draft/route');
   const { POST: savePreset } = await import('../../src/app/api/presets/user/route');
   const { POST: importPreset } = await import('../../src/app/api/presets/import/route');
   const { loadUserPresetData } = await import('../../src/lib/presets/service');
+  const { readDraft } = await import('../../src/lib/platform/drafts');
+  const { commandBatch } = await import('../../src/lib/config/encodeValues');
   const { useConfigStore, flushConfigWrites } = await import('../../src/lib/store/configStore');
+  const registered = await register(session.request('/api/game-servers', json('POST', { name: 'Camera' })));
+  assert.equal(registered.status, 201);
+  const gameServerId: number = (await registered.json()).data.gameServer.id;
+  const draftUrl = `/api/game-servers/${gameServerId}/draft`;
+  const at = { params: Promise.resolve({ id: String(gameServerId) }) };
   let writes = 0;
-  globalThis.fetch = (async (url: string, init: RequestInit) => {
+  globalThis.fetch = (async (url: string, init: RequestInit = {}) => {
+    const method = init.method ?? 'GET';
+    if (url === draftUrl && method === 'GET') return read(session!.request(url, init), at);
     writes++;
-    if (url === '/api/config/clear') return clear(session!.request(url, init));
-    return save(session!.request(url, init) as never, { params: Promise.resolve({ path: url.slice('/api/config/'.length).split('/') }) });
+    if (url === draftUrl && method === 'PUT') return save(session!.request(url, init), at);
+    assert.fail(`the fixture does not serve ${method} ${url}`);
   }) as unknown as typeof fetch;
   const store = useConfigStore.getState();
-  async function applySaved(stage: string, expected: Record<string, unknown>) {
-    name = stage; await flushConfigWrites();
-    const saved = await read(request({}) as never, params); assert.equal(saved.status, 200);
-    assert.deepEqual((await saved.json()).data, expected);
-    const response = await preview(session!.request('/api/apply/preview')); assert.equal(response.status, 200);
-    const { commands } = await response.json();
-    const result = await apply(request({})); assert.equal(result.status, 200);
-    assert.equal((await result.json()).success, true);
-    assert.deepEqual(captures.at(-1)!.commands, ['string ezconfig WipeDatabases', ...commands]);
+  await store.openDraft(gameServerId);
+  const camera = async () => (await (await read(session!.request(draftUrl), at)).json()).data.values.character.Camera;
+  /** The saved Draft's Camera, and the Camera command of the batch Apply builds from it. */
+  async function assertSaved(expected: Record<string, unknown>, command: string) {
+    await flushConfigWrites();
+    assert.deepEqual(await camera(), expected);
+    assert.deepEqual(commandBatch(readDraft(gameServerId)!.document), ['string ezconfig WipeDatabases', command]);
   }
 
   store.setValue('Character', 'Camera', 'CustomFOVMax', 179); store.setValue('Character', 'Camera', 'CustomFOV', false);
-  await flushConfigWrites();
-  // A whole-category write refuses a null maximum, which the editor's per-key saves treat as Reset.
-  assert.equal((await save(request({ entries: { CustomFOV: true, CustomFOVMax: null } }) as never, params)).status, 400);
-  assert.deepEqual((await (await read(request({}) as never, params)).json()).data, { CustomFOVMax: 179, CustomFOV: false });
-  for (const raw of ['120.0000001', '120.00000000000000000000001', '179.0000001', '100.9999999', '1.201e2', 'Infinity', ' 120', '120 ', '\t120', '120\n']) {
-    const count = captures.length;
-    const invalid = await apply(request({ commands: [`string ezconfig Character Camera ${JSON.stringify({ CustomFOV: 'False', CustomFOVMax: raw })}`], wipeDatabase: true }));
-    assert.equal(invalid.status, 400); assert.equal(captures.length, count, 'Invalid raw maximum must not admit a wipe');
+  await assertSaved({ CustomFOVMax: 179, CustomFOV: false }, 'string ezconfig Character Camera {"CustomFOVMax":"179","CustomFOV":"False"}');
+  // A hand-made save the policy refuses saves nothing, valid fields included; a null is no Reset in a whole document.
+  const { revision } = readDraft(gameServerId)!;
+  for (const entries of [{ CustomFOVMax: 120.0000001 }, { CustomFOVMax: 179.0000001 }, { CustomFOVMax: 100.9999999 }, { CustomFOVMax: 1.201e2 }, { CustomFOVMax: '120' }, { CustomFOVMax: null }, { CustomFOV: 'garbage' }, { CustomFOV: 1 }, { CustomFOV: 'True' }]) {
+    const refused = await save(session.request(draftUrl, json('PUT', { revision, document: { Character: { CustomFOV: true, CustomFOVMax: 135, ...entries } } })), at);
+    assert.equal(refused.status, 400, JSON.stringify(entries));
   }
-  const beforeMultiline = captures.length;
-  assert.equal((await apply(request({ commands: ['string ezconfig Character Camera {\n"customfovmax":"120.0000001"\n}'] }))).status, 400);
-  assert.equal(captures.length, beforeMultiline);
-  for (const value of ['garbage', true, 1]) {
-    const count = captures.length;
-    assert.equal((await apply(request({ commands: [`string ezconfig Character Camera ${JSON.stringify({ CustomFOV: value })}`] }))).status, 400);
-    assert.equal(captures.length, count);
-  }
-  for (const raw of ['120.0', '1.2e2', '12000e-2', '.12e3', '+00120.000e+000']) {
-    name = 'semantic-integer-' + raw;
-    const command = `string ezconfig Character Camera ${JSON.stringify({ CustomFOVMax: raw })}`;
-    assert.equal((await apply(request({ commands: [command], wipeDatabase: false }))).status, 200);
-    assert.deepEqual(captures.at(-1)!.commands, [command]);
-  }
+  assert.equal(readDraft(gameServerId)!.revision, revision);
+  assert.deepEqual(await camera(), { CustomFOVMax: 179, CustomFOV: false });
 
-  assert.equal((await savePreset(request({ name: 'camera', title: 'Camera', description: 'Fixture' }) as never)).status, 200);
+  assert.equal((await savePreset(session.request('/api/presets/user', json('POST', { name: 'camera', title: 'Camera', description: 'Fixture', gameServerId })) as never)).status, 200);
   const preset = await loadUserPresetData('camera'); assert.deepEqual(preset.character.Camera, { CustomFOVMax: 179, CustomFOV: false });
   const writesBeforePreset = writes;
   await assert.rejects(store.loadPreset({ character: { Camera: { CustomFOV: true, CustomFOVMax: 120.5 } }, weapons: {} }), /whole/);
-  assert.equal(writes, writesBeforePreset, 'Invalid preset must fail before clear');
+  assert.equal(writes, writesBeforePreset, 'Invalid preset must fail before the Draft is replaced');
   await store.loadPreset(preset);
-  await applySaved('preset-roundtrip', { CustomFOVMax: 179, CustomFOV: false });
+  await assertSaved({ CustomFOVMax: 179, CustomFOV: false }, 'string ezconfig Character Camera {"CustomFOVMax":"179","CustomFOV":"False"}');
   for (const value of [120.5, '120']) {
     const zip = new JSZip(); zip.file('manifest.json', JSON.stringify({ title: 'Bad camera', description: '' })); zip.file('Character/Camera.json', JSON.stringify({ CustomFOV: true, CustomFOVMax: value }));
     const form = new FormData(); form.append('name', 'invalid-camera'); form.append('file', new File([await zip.generateAsync({ type: 'arraybuffer' })], 'camera.zip'));
@@ -142,9 +133,11 @@ try {
   validForm.append('file', new File([await validZip.generateAsync({ type: 'arraybuffer' })], 'camera.zip'));
   assert.equal((await importPreset(session!.request('/api/presets/import', { method: 'POST', body: validForm }) as never)).status, 200);
   await store.loadPreset(await loadUserPresetData('imported-camera'));
-  await applySaved('imported-preset-semantic-integer', { CustomFOV: true, CustomFOVMax: 120 });
+  await assertSaved({ CustomFOV: true, CustomFOVMax: 120 }, 'string ezconfig Character Camera {"CustomFOV":"True","CustomFOVMax":"120"}');
 
-  store.setValue('Character', 'Camera', 'CustomFOV', true); store.setValue('Character', 'Camera', 'CustomFOVMax', 135); await flushConfigWrites();
+  // Automatic sync delivers the self-hosted files, which the Draft does not write.
+  const { patchCategory } = await import('../../src/lib/database/service');
+  await patchCategory('Character', 'Camera', { CustomFOV: true, CustomFOVMax: 135 });
   const { registerServerStartup } = await import('../../src/lib/server-startup');
   const { stopRegisteredAutomaticSync } = await import('../../src/lib/rcon/automatic-sync-bootstrap'); stopSync = stopRegisteredAutomaticSync;
   const lease = createServer(); await new Promise<void>(done => lease.listen(0, '127.0.0.1', done));
@@ -168,7 +161,7 @@ try {
     assert.deepEqual(JSON.parse(await readFile(cameraPath, 'utf8')), damaged);
   }
   if (process.env.EZ_CAMERA_CAPTURE_PATH) await writeFile(process.env.EZ_CAMERA_CAPTURE_PATH, JSON.stringify({
-    boundary: 'Actual store, API routes, presets, acknowledged RCON sender, startup and sync listener over local TCP. Server replies are controlled fixture acknowledgments; no native parser/camera claim.', captures,
+    boundary: 'Actual startup and sync listener with the acknowledged RCON sender over local TCP, delivering the self-hosted files. Server replies are controlled fixture acknowledgments; no native parser/camera claim.', captures,
   }, null, 2));
   console.log(`PASS Camera policy: ${captures.length} real TCP RCON batches; refused hand-made input, preset safety, startup/requestupdate and strict storage.`);
 } finally {
