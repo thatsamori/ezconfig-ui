@@ -1,5 +1,6 @@
 /**
- * Database layer types for JSON file storage
+ * Config value types, per database (Character, or a weapon class) and
+ * category in the mod's terms. Platform storage is src/lib/platform/.
  */
 
 /**
@@ -14,15 +15,7 @@ export type ConfigValue =
   | { x: number; y: number; z: number };
 
 /**
- * Config data stored in a category file - a single object with all key-value pairs
+ * One category's config values, a single object with all key-value pairs
  * Example: { "CanDodge": true, "Windup": 0.675 }
  */
 export type ConfigData = Record<string, ConfigValue>;
-
-/**
- * Parsed database path from URL segments
- */
-export type DatabasePath = {
-  database: string;
-  category: string;
-};

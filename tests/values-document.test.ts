@@ -1,8 +1,4 @@
 import { expect, test } from 'bun:test';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { buildRconCommands } from '../src/lib/database/apply';
 import { commandBatch, encodeValues, WIPE_COMMAND } from '../src/lib/config/encodeValues';
 import { documentErrors, isValuesDocument, placeValues, valuesDocument, type ValuesDocument } from '../src/lib/config/valuesDocument';
 
@@ -18,26 +14,20 @@ const document: ValuesDocument = {
   },
 };
 
-test("the encoder sends what today's command builder sends for the same saved values", async () => {
-  const root = await mkdtemp(join(tmpdir(), 'ezconfig-encoder-'));
-  try {
-    // The same values as the self-hosted files, one per category.
-    const { values } = placeValues(document);
-    const files: [string, Record<string, unknown>][] = [
-      ...Object.entries(values.character).map(([category, entries]) => [join('Character', `${category}.json`), entries] as [string, Record<string, unknown>]),
-      ...Object.entries(values.weapons).flatMap(([weapon, categories]) => Object.entries(categories).map(([category, entries]) => [join('Weapon', weapon, `${category}.json`), entries] as [string, Record<string, unknown>])),
-    ];
-    for (const [path, entries] of files) {
-      await mkdir(join(root, path, '..'), { recursive: true });
-      await writeFile(join(root, path), JSON.stringify(entries));
-    }
-    const batch = commandBatch(document);
-    expect(batch[0]).toBe(WIPE_COMMAND);
-    expect(batch.slice(1).toSorted()).toEqual((await buildRconCommands({ databasesRoot: root, strictStorage: true })).toSorted());
-    expect(batch.length).toBe(1 + files.length);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
+// What the self-hosted command builder sent for these values, one file per category, captured before
+// online-platform#41 removed it; the mod reads this encoding.
+test('the encoder sends what the self-hosted command builder sent for the same values', () => {
+  expect(commandBatch(document)).toEqual([
+    WIPE_COMMAND,
+    'string ezconfig Character Camera {"CustomFOVMax":"120","CustomFOV":"False"}',
+    'string ezconfig Character Movement {"MaxWalkSpeed":"450.00","CanDodge":"True","TimeToMaxSprint":"0.325"}',
+    'string ezconfig Character Chftp {"ChftpStunAnimation":"Default"}',
+    'string ezconfig Character Parry {"ForwardParryLength":"50","LowBlockColliderRelativeOffsetLocation":"X=1.00,Y=-2.50,Z=0.00"}',
+    'string ezconfig ArmingSword Stab {"Windup":"0.50"}',
+    'string ezconfig Greatsword General {"ParryTurnCap":"X=375.00,Y=262.50,Z=0.00"}',
+    'string ezconfig Greatsword Strike {"Windup":"0.675","Damage":"50.00,45.00,40.00"}',
+    'string ezconfig Greatsword AltStab {"Windup":"0.40"}',
+  ]);
 });
 
 test('the encoder orders categories as the schema does and keys as the document does, and sends no unknown value', () => {
