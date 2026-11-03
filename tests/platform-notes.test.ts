@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { withPlatformDatabase } from './helpers/platform-database';
 
 // One made-up platform operator; no real Discord account.
-const SETTINGS = { PUBLIC_URL: 'https://ezconfig.test', OPERATOR_DISCORD_IDS: '80351110224678912', RCON_HOST: '127.0.0.1', RCON_AUTO_SYNC_ENABLED: 'false' };
+const SETTINGS = { PUBLIC_URL: 'https://ezconfig.test', OPERATOR_DISCORD_IDS: '80351110224678912' };
 
 type Line = Record<string, unknown>;
 const without = (line: Line, ...fields: string[]) => Object.fromEntries(Object.entries(line).filter(([field]) => !fields.includes(field)));

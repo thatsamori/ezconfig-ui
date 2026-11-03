@@ -1,6 +1,6 @@
 // Run after NEXT_BUILD_DIR=.next-automatic-sync-test/csp bun run build.
-// Uses the actual Next entry point on Bun, isolated storage, a platform session
-// and disabled automatic sync. Each page response carries the
+// Uses the actual Next entry point on Bun, an isolated platform database and a
+// platform session. Each page response carries the
 // Content-Security-Policy with its own nonce, and every script in the page
 // carries that nonce (online-platform#24). `--keep-open` leaves the server up
 // for a browser check of the console.
@@ -19,9 +19,7 @@ await new Promise<void>(resolve => portProbe.close(() => resolve()));
 const url = `http://127.0.0.1:${port}`;
 const env = {
   ...process.env, NEXT_BUILD_DIR: '.next-automatic-sync-test/csp',
-  DATABASES_PATH: join(root, 'Databases'), PRESETS_PATH: join(root, 'Presets'),
   DATABASE_PATH: join(root, 'platform.db'), PUBLIC_URL: url,
-  RCON_AUTO_SYNC_ENABLED: 'false', RCON_HOST: '127.0.0.1', RCON_PORT: '17947', RCON_PASSWORD: 'isolated-unused',
 };
 // The session is made in this process, in the database the server opens.
 Object.assign(process.env, { DATABASE_PATH: env.DATABASE_PATH, PUBLIC_URL: env.PUBLIC_URL });

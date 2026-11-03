@@ -1,15 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { join } from 'node:path';
 import { withPlatformDatabase } from './helpers/platform-database';
 
-const SETTINGS = { PUBLIC_URL: 'https://ezconfig.test', RCON_HOST: '127.0.0.1', RCON_AUTO_SYNC_ENABLED: 'false' };
+const SETTINGS = { PUBLIC_URL: 'https://ezconfig.test' };
 
 type Line = Record<string, unknown>;
 
 /** Runs one scenario of tests/fixtures/platform-apply.ts, which asserts as it goes; returns the Live configuration ids it applied and what it logged, without times. */
 function scenario(name: string) {
-  return withPlatformDatabase((run, root) => {
-    const result = run('tests/fixtures/platform-apply.ts', { args: [name], env: { ...SETTINGS, DATABASES_PATH: join(root, 'Databases') } });
+  return withPlatformDatabase(run => {
+    const result = run('tests/fixtures/platform-apply.ts', { args: [name], env: SETTINGS });
     if (result.exitCode !== 0) throw new Error(`${name} exited ${result.exitCode}\n${result.stderr}\n${result.stdout}`);
     const parse = (text: string) => text.split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line) as Line);
     const out = parse(result.stdout), err = parse(result.stderr);

@@ -1,16 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { join } from 'node:path';
 import { withPlatformDatabase, type PlatformFixtureRunner } from './helpers/platform-database';
 
-const SETTINGS = { PUBLIC_URL: 'https://ezconfig.test', RCON_HOST: '127.0.0.1', RCON_AUTO_SYNC_ENABLED: 'false' };
+const SETTINGS = { PUBLIC_URL: 'https://ezconfig.test' };
 
 type Line = Record<string, unknown>;
 type Fixture = { scenario: string; secrets: string[]; handover?: Record<string, unknown> };
 const without = (line: Line, ...fields: string[]) => Object.fromEntries(Object.entries(line).filter(([field]) => !fields.includes(field)));
 
 /** Runs one scenario of the game servers fixture and splits what it wrote into log lines and its own result. */
-function scenario(run: PlatformFixtureRunner, root: string, name: string, env: Record<string, string> = {}) {
-  const result = run('tests/fixtures/platform-game-servers.ts', { args: [name], env: { ...SETTINGS, DATABASES_PATH: join(root, 'Databases'), ...env } });
+function scenario(run: PlatformFixtureRunner, name: string, env: Record<string, string> = {}) {
+  const result = run('tests/fixtures/platform-game-servers.ts', { args: [name], env: { ...SETTINGS, ...env } });
   if (result.exitCode !== 0) throw new Error(`${name} exited ${result.exitCode}\n${result.stderr}\n${result.stdout}`);
   const parse = (text: string) => text.split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line) as Line);
   const out = parse(result.stdout), err = parse(result.stderr);
@@ -29,7 +28,7 @@ function expectNoKeysLogged({ stdout, stderr, fixture }: ReturnType<typeof scena
   expect(written).not.toContain('ezconfig_session=');
 }
 
-const runScenario = (name: string) => withPlatformDatabase((run, root) => scenario(run, root, name));
+const runScenario = (name: string) => withPlatformDatabase(run => scenario(run, name));
 const registered = (userId: number, gameServerId: number) => ({ level: 'info', event: 'game-server.registered', userId, gameServerId });
 
 describe('registering a game server', () => {
@@ -129,11 +128,11 @@ describe('connection status', () => {
     expectNoKeysLogged(result);
   });
 
-  test('after a restart, last seen comes from the last poll written, which an unchanged poll writes at most every 5 minutes', () => withPlatformDatabase((run, root) => {
-    const before = scenario(run, root, 'before-restart');
+  test('after a restart, last seen comes from the last poll written, which an unchanged poll writes at most every 5 minutes', () => withPlatformDatabase(run => {
+    const before = scenario(run, 'before-restart');
     expect(before.log).toEqual([registered(1, 1), { level: 'info', event: 'poll.not-supported-build', gameServerId: 1, buildStamp: '20261103-090000' }]);
     expectNoKeysLogged(before);
-    const after = scenario(run, root, 'after-restart', { EZ_FIXTURE_HANDOVER: JSON.stringify(before.fixture.handover) });
+    const after = scenario(run, 'after-restart', { EZ_FIXTURE_HANDOVER: JSON.stringify(before.fixture.handover) });
     expect(after.log).toEqual([]);
   }));
 });

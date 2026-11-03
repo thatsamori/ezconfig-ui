@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import { join } from 'node:path';
 import { withPlatformDatabase, type PlatformFixtureRunner } from './helpers/platform-database';
 
 // The instance settings sign-in reads (.env.example); no real Discord application.
@@ -9,7 +8,6 @@ const SETTINGS = {
   DISCORD_CLIENT_SECRET: 'fixture-client-secret',
   DISCORD_REDIRECT_URL: '',
   OPERATOR_DISCORD_IDS: '11111111111111111, 80351110224678912',
-  RCON_HOST: '127.0.0.1', RCON_AUTO_SYNC_ENABLED: 'false',
 };
 
 type Line = Record<string, unknown>;
@@ -17,8 +15,8 @@ type Fixture = { scenario: string; secrets: string[]; token?: string };
 const without = (line: Line, ...fields: string[]) => Object.fromEntries(Object.entries(line).filter(([field]) => !fields.includes(field)));
 
 /** Runs one scenario of the sign-in fixture and splits what it wrote into log lines and its own result. */
-function scenario(run: PlatformFixtureRunner, root: string, name: string, env: Record<string, string> = {}) {
-  const result = run('tests/fixtures/platform-sign-in.ts', { args: [name], env: { ...SETTINGS, DATABASES_PATH: join(root, 'Databases'), ...env } });
+function scenario(run: PlatformFixtureRunner, name: string, env: Record<string, string> = {}) {
+  const result = run('tests/fixtures/platform-sign-in.ts', { args: [name], env: { ...SETTINGS, ...env } });
   if (result.exitCode !== 0) throw new Error(`${name} exited ${result.exitCode}\n${result.stderr}\n${result.stdout}`);
   const parse = (text: string) => text.split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line) as Line);
   const out = parse(result.stdout), err = parse(result.stderr);
@@ -37,7 +35,7 @@ function expectNoSecretsLogged({ stdout, stderr, fixture }: ReturnType<typeof sc
   expect(written).not.toContain(SETTINGS.DISCORD_CLIENT_SECRET);
 }
 
-const runScenario = (name: string, env?: Record<string, string>) => withPlatformDatabase((run, root) => scenario(run, root, name, env));
+const runScenario = (name: string, env?: Record<string, string>) => withPlatformDatabase(run => scenario(run, name, env));
 
 describe('sign in with Discord', () => {
   test('a platform operator signs in without an Invite; the first sign-in creates the record and later ones copy name and avatar', () => {
@@ -106,10 +104,10 @@ describe('sessions', () => {
     expectNoSecretsLogged(result);
   });
 
-  test('a session survives a restart', () => withPlatformDatabase((run, root) => {
-    const before = scenario(run, root, 'before-restart');
+  test('a session survives a restart', () => withPlatformDatabase(run => {
+    const before = scenario(run, 'before-restart');
     expect(before.fixture.token).toMatch(/^[\w-]{43}$/);
-    const after = scenario(run, root, 'after-restart', { EZ_FIXTURE_SESSION_TOKEN: before.fixture.token! });
+    const after = scenario(run, 'after-restart', { EZ_FIXTURE_SESSION_TOKEN: before.fixture.token! });
     expect(after.log).toEqual([]);
     expectNoSecretsLogged(before);
     expectNoSecretsLogged(after);
