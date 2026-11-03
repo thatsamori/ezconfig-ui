@@ -93,7 +93,8 @@ platform migration.
   builds and were counted 3 / 1 / 1 with the Supported build marked. A
   loopback heartbeat got 204, and another Host 403. A refused request and a
   bad poll showed in the health list. A passed restore check, then a failed
-  one, showed the "Needs attention" box. Also checked at phone width.
+  one, showed the "Needs attention" box, and so did 5 minutes without a
+  heartbeat. Also checked at phone width.
 - Not done here: the spec's startup log line with the release commit
   ("Logging"). It needs a release-commit field in `log.ts`, and
   `readReleaseCommit()` can supply it.
