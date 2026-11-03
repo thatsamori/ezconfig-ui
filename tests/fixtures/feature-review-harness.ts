@@ -103,8 +103,8 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
   let hangUp = async () => {};
   try {
     const { env } = await import('../../src/lib/env');
-    assert.deepEqual([env.databasesPath, env.presetsPath, env.databasePath, env.rcon.host],
-      [storage.DATABASES_PATH, storage.PRESETS_PATH, storage.DATABASE_PATH, '127.0.0.1'],
+    assert.deepEqual([env.databasesPath, env.databasePath, env.rcon.host],
+      [storage.DATABASES_PATH, storage.DATABASE_PATH, '127.0.0.1'],
       'the app was imported before the review set its env: import it only inside the review');
     await mkdir(storage.DATABASES_PATH);
     const { closePlatformStore, platformStore } = await import('../../src/lib/platform/storage');

@@ -59,6 +59,10 @@ are the contract between this app and the mod.
   Live configurations: `live-configurations.ts` (the review, Apply, delivery
   and Discard changes) behind `src/app/api/game-servers/[id]/apply/` and
   `.../draft/discard/`; the poll route delivers from it.
+  Rulesets: `rulesets.ts` (Save as Ruleset version, loading a version,
+  rename and delete) behind `src/app/api/rulesets/` and `.../draft/save-version/`
+  and `.../draft/load/`; `origins.ts` gives a Draft's or Live configuration's
+  origin and whether it is modified.
   Notes: `notes.ts` (per database and key name, author from the session, and
   the body sanitizer, sanitize-html with an allowlist) behind `src/app/api/notes/`.
 - `src/proxy.ts` - the Content-Security-Policy, with a fresh nonce per request, on
@@ -108,16 +112,17 @@ of the old one, coordinated with the mod.
 - Tests mock `src/lib/rcon/service` (see `tests/fixtures/*`); never open a real
   connection from a test or script.
 - Automatic sync is opt-in (`RCON_AUTO_SYNC_ENABLED`) on one authoritative instance.
-- Sending to a live server, wipes or presets loads need the user's go-ahead.
+- Sending to a live server or wipes need the user's go-ahead.
 
 ## Data and secrets
-`Databases/`, `Presets/User/`, `Notes/` and `users.json` (both no longer read;
-the one-time import moves `Notes/`), `.env*`
+`Databases/`, `Presets/User/`, `Notes/` and `users.json` (the last three no
+longer read by the app; the one-time import moves `Presets/` and `Notes/`), `.env*`
 (except `.env.example`) are gitignored user data. So is the platform database at
 `DATABASE_PATH` with its `.bak` copies (ignored only as `./platform.db*`).
 Never print, commit or overwrite them.
-Locations come from `DATABASES_PATH` and `PRESETS_PATH` (defaults
-`./Databases`, `./Presets`) and `DATABASE_PATH`; see `src/lib/env.ts`.
+Locations come from `DATABASES_PATH` (default `./Databases`) and
+`DATABASE_PATH`; see `src/lib/env.ts`. The parry-geometry startup migration
+still reads `PRESETS_PATH` (default `./Presets`) until online-platform#41.
 No test or script calls Discord: tests replace `src/lib/platform/discord` (see
 `tests/fixtures/platform-sign-in.ts`), and `DISCORD_CLIENT_SECRET` lives only in `.env`.
 

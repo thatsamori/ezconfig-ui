@@ -6,9 +6,8 @@ import { toast } from 'sonner';
 import { AccountMenu, AuthGate } from '@/components/auth';
 import { Logo } from '@/components/Logo';
 import { InvitesPage, StatusPage, SupportedBuildPage } from '@/components/operator';
-import { PresetsTab } from '@/components/presets';
 import { GameServersTab } from '@/components/game-servers';
-import { SavePresetDialog } from '@/components/presets/SavePresetDialog';
+import { LoadVersionDialog, OriginLabel, RulesetsTab, SaveVersionDialog } from '@/components/rulesets';
 import { NotesDialog } from '@/components/notes';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
@@ -140,7 +139,7 @@ function ConsoleContent() {
   const contentRef = useRef<HTMLElement>(null);
   const [onlyOverrides, setOnlyOverrides] = useState(false);
   const [sweep, setSweep] = useState<ConfigEntry | null>(null);
-  const [presetOpen, setPresetOpen] = useState(false);
+  const [rulesetDialog, setRulesetDialog] = useState<'save' | 'load' | null>(null);
   const values = useConfigStore(state => state.values);
   const draft = useConfigStore(state => state.draft);
   const loading = useConfigStore(state => state.loading);
@@ -242,8 +241,8 @@ function ConsoleContent() {
         label: 'Weapons',
         icon: <Sword />
       }, {
-        id: 'presets',
-        label: 'Presets',
+        id: 'rulesets',
+        label: 'Rulesets',
         icon: <Bookmark />
       }, {
         id: 'servers',
@@ -271,8 +270,8 @@ function ConsoleContent() {
       <div className="config-scroll">{loading ? <p className="empty-state">Loading the Draft…</p> : loadError || !draft ? <div className="empty-state" role="alert">{loadError || 'The Draft is not open.'} <button className="outline-button" onClick={reopenDraft}>Retry</button></div> : <div className="config-table" role="table" aria-label={`${title} configuration`} style={{
             '--columns': visibleGroups.length
           } as React.CSSProperties}><div className="config-table-inner"><div className="config-grid table-heading" role="row"><span role="columnheader">Config key</span>{visibleGroups.map(group => <span role="columnheader" key={group}>{isCharacter ? 'Value' : group}{visibleGroups.length > 1 && <button className="icon-button" aria-label={`Hide ${group}`} onClick={() => setGroups(toggleAttackGroup(groups, group))}><X size={12} /></button>}</span>)}<span role="columnheader" className="sr-only">Actions</span></div>{rowSections.map(section => <div role="rowgroup" key={section.title}>{section.title && <div role="row" className="config-section-heading"><div role="cell" aria-colspan={visibleGroups.length + 2}><h2>{section.title}</h2></div></div>}{section.entries.map(entry => <KeyRow key={`${database}/${visibleGroups.join('/')}/${entry.configKey}`} entry={entry} database={database} groups={visibleGroups} values={values} onSweep={setSweep} highlighted={searchDestination?.configKey === entry.configKey && searchDestination.tab === tab && searchDestination.group === visibleGroups[0] && (isCharacter || searchDestination.weapon === weapon)} />)}</div>)}{rows.length === 0 && <p className="empty-state">No keys in this group</p>}</div></div>}</div>
-      <footer className="floating-bar"><span className={`status-dot${total ? ' changed' : ''}`} /><div className="bar-copy"><strong>{total ? `${total} override${total === 1 ? '' : 's'} in the Draft` : 'Everything at game default'}</strong>{total > 0 && <span>across {weaponCount ? `${weaponCount} weapon${weaponCount === 1 ? '' : 's'}` : ''}{countGroups(values.character) ? `${weaponCount ? ' and ' : ''}character` : ''}</span>}</div><button className="outline-button" disabled={!ready} onClick={() => setPresetOpen(true)}>Save as preset</button><button className="outline-button" disabled={!ready || resetting} onClick={() => setResetOpen(true)}>Reset to game defaults</button></footer></section>
-    </> : <section className="standalone-page" ref={contentRef}><div className="header-actions standalone-search">{globalSearch}</div>{tab === 'presets' ? <PresetsTab /> : tab === 'servers' ? <GameServersTab initialOpenId={serverPage} onEditDraft={editDraft} /> : tab === 'invites' && operator ? <InvitesPage /> : tab === 'supported-build' && operator ? <SupportedBuildPage /> : tab === 'status' && operator ? <StatusPage /> : tab === 'character' || tab === 'weapons' ? <div className="game-servers-page"><div className="standalone-heading"><div><h1>{isCharacter ? 'Character' : 'Weapons'}</h1><p className="page-description">The editor works on one game server&apos;s Draft. Open a game server and choose Edit Draft.</p></div></div><button className="primary-button" onClick={() => selectTab('servers')}>Game servers</button></div> : null}</section>}
+      <footer className="floating-bar"><span className={`status-dot${total ? ' changed' : ''}`} /><div className="bar-copy"><strong>{total ? `${total} override${total === 1 ? '' : 's'} in the Draft` : 'Everything at game default'}</strong>{total > 0 && <span>across {weaponCount ? `${weaponCount} weapon${weaponCount === 1 ? '' : 's'}` : ''}{countGroups(values.character) ? `${weaponCount ? ' and ' : ''}character` : ''}</span>}{draft?.origin && <span className="bar-origin">from <OriginLabel origin={draft.origin} /></span>}</div><button className="outline-button" disabled={!ready} onClick={() => setRulesetDialog('load')}>Load Ruleset version</button><button className="outline-button" disabled={!ready} onClick={() => setRulesetDialog('save')}>Save as Ruleset version</button><button className="outline-button" disabled={!ready || resetting} onClick={() => setResetOpen(true)}>Reset to game defaults</button></footer></section>
+    </> : <section className="standalone-page" ref={contentRef}><div className="header-actions standalone-search">{globalSearch}</div>{tab === 'rulesets' ? <RulesetsTab /> : tab === 'servers' ? <GameServersTab initialOpenId={serverPage} onEditDraft={editDraft} /> : tab === 'invites' && operator ? <InvitesPage /> : tab === 'supported-build' && operator ? <SupportedBuildPage /> : tab === 'status' && operator ? <StatusPage /> : tab === 'character' || tab === 'weapons' ? <div className="game-servers-page"><div className="standalone-heading"><div><h1>{isCharacter ? 'Character' : 'Weapons'}</h1><p className="page-description">The editor works on one game server&apos;s Draft. Open a game server and choose Edit Draft.</p></div></div><button className="primary-button" onClick={() => selectTab('servers')}>Game servers</button></div> : null}</section>}
     {sweep && <SweepPanel entry={sweep} weapon={weapon} groups={groups} onClose={() => setSweep(null)} />}
     {editing && <AlertDialog open={resetOpen} onOpenChange={open => {
       if (!resetting) setResetOpen(open);
@@ -280,7 +279,8 @@ function ConsoleContent() {
         event.preventDefault();
         void resetDraft();
       }}>{resetting ? 'Resetting…' : 'Reset to game defaults'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}
-    {presetOpen && <SavePresetDialog open={presetOpen} onOpenChange={setPresetOpen} />}
+    {rulesetDialog === 'save' && <SaveVersionDialog onOpenChange={open => { if (!open) setRulesetDialog(null); }} />}
+    {rulesetDialog === 'load' && editing && <LoadVersionDialog serverName={editing.name} onOpenChange={open => { if (!open) setRulesetDialog(null); }} />}
   </main>;
 }
 export function ConfigConsole() {

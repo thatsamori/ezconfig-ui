@@ -52,7 +52,7 @@ describe('global search', () => {
 
   test('empty search offers navigation and never lists thousands of config keys', () => {
     const { results } = searchGlobal('  ', context);
-    expect(results.some(result => result.tab === 'presets')).toBe(true);
+    expect(results.some(result => result.tab === 'rulesets')).toBe(true);
     expect(results.every(result => !result.configKey)).toBe(true);
   });
 

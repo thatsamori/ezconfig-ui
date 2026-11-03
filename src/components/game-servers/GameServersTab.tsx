@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent, type ReactNode, type RefObject } from
 import { ArrowLeft, Check, Copy, Server, Trash2, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { relativeTime } from '@/components/console/model';
+import { OriginLabel } from '@/components/rulesets';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
@@ -29,8 +30,9 @@ GameServerKey=${gameServerKey}`;
  * server key is shown on the page that registering or regenerating leaves
  * open, and gone once the owner leaves it. Edit Draft opens the game server's
  * Draft in the editor; `initialOpenId` opens on a game server's page. The
- * page shows the Live configuration and Unapplied changes, and Applies the
- * Draft after a review, or discards its changes.
+ * page shows the Live configuration and Unapplied changes, each one's origin
+ * and whether it is modified from it, and Applies the Draft after a review,
+ * or discards its changes.
  */
 export function GameServersTab({ initialOpenId, onEditDraft }: { initialOpenId?: number; onEditDraft?: (server: { id: number; name: string }) => void } = {}) {
   const [openId, setOpenId] = useState<number | null>(initialOpenId ?? null);
@@ -162,7 +164,8 @@ async function loadReview(id: number): Promise<ApplyReview | undefined> {
 
 /**
  * The Draft beside the Live configuration: none yet, or Pending since it was
- * applied; Unapplied changes; Edit Draft, Discard changes and Apply. Apply
+ * applied; Unapplied changes; each one's origin, modified or not; Edit Draft,
+ * Discard changes and Apply. Apply
  * opens the review first, and is disabled, saying why, unless the game server
  * is Connected and on the Supported build.
  */
@@ -198,6 +201,7 @@ function DraftSection({ server, onEditDraft, onChanged }: { server: GameServerVi
       <p className="live-state">Live configuration: {live ? <>
         <strong>Pending</strong> · applied <time dateTime={new Date(live.appliedAt).toISOString()} title={new Date(live.appliedAt).toLocaleString()}>{relativeTime(live.appliedAt)}</time>. The game server has not reported processing it yet.
       </> : <><strong>none yet</strong>. The game server runs its own saved EZConfig values until the first Apply.</>}</p>
+      <p className="origin-state">Draft origin: {server.draftOrigin ? <OriginLabel origin={server.draftOrigin} /> : 'none'}{live && <> · Live origin: {server.liveOrigin ? <OriginLabel origin={server.liveOrigin} /> : 'none'}</>}</p>
     </div>
     <div className="draft-actions">
       {onEditDraft && <button className="outline-button" onClick={() => onEditDraft({ id: server.id, name: server.name })}>Edit Draft</button>}

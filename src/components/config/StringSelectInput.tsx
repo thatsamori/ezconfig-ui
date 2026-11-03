@@ -18,7 +18,7 @@ export interface StringSelectInputProps {
 /**
  * Fixed-choice input for String config entries.
  * The choice names are the contract with the mod (ADR 0003); a value that is
- * not in the list (an old preset, say) is still shown so it can be replaced.
+ * not in the list (an old Ruleset version's, say) is still shown so it can be replaced.
  */
 export function StringSelectInput({
   value,
