@@ -158,12 +158,6 @@ try {
   phases.push({ reconnect: "closed only the actual listener socket", oldPeer: listener.id, completed: completed().length });
   await reloadAndComplete(); await reloadAndComplete();
   phases.push({ nativeReloadAndUnchangedReload: true, completed: completed().length });
-  const beforeManual = batches.length;
-  const manual = await fetch(`http://127.0.0.1:${config.httpPort}/api/apply`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ commands: ['string ezconfig Character Stun {"OutOfStaminaStunDuration":"0.9"}'], wipeDatabase: false }) });
-  const manualResult = await manual.json();
-  if (!manualResult.success) throw new Error("Manual selected apply regressed");
-  await sleep(200); if (batches.length !== beforeManual + 1) throw new Error("Result broadcast caused a responder feedback loop");
-  phases.push({ manualSelectedApply: manualResult, noFeedbackLoop: true });
   await writeFile(join(config.databasesRoot, "Character", "Stun.json"), '{"OutOfStaminaStunDuration":"invalid"}');
   const beforeInvalid = batches.length;
   await control.send("string ezconfig reload");

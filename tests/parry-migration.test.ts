@@ -139,7 +139,7 @@ test('real startup is gated before sync, including disabled sync, builds, repeat
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
 });
 
-test('canonical saved read/edit/review/apply and real startup snapshot preserve migrated values', () => {
+test('the real startup snapshot and an edited Draft of migrated values keep them under Parry', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/parry-migration-review.ts'], { cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe' });
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
 });

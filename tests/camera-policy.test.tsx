@@ -4,7 +4,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { join } from 'node:path';
 import { CAMERA_CONFIG_OPTIONS } from '../src/lib/config/cameraConfigSchema';
 import { constrainedFloatTextError } from '../src/lib/config/numericConstraints';
-import { cameraCommandError } from '../src/lib/config/cameraPolicyValidation';
 import { getSchemaForCategory, validateConfigEntry } from '../src/lib/database/validation';
 import { ValueEditor } from '../src/components/console/ValueEditor';
 
@@ -29,9 +28,6 @@ test('Camera exposes independent server policy with guarded whole-degree inputs'
 });
 
 test('raw decimal input cannot round a fractional maximum into a valid integer', () => {
-  for (const value of ['true', 'FALSE']) expect(cameraCommandError([
-    `string ezconfig Character Camera ${JSON.stringify({ CustomFOV: value })}`,
-  ])).toBeUndefined();
   for (const text of ['120', '+120', '120.0', '1.2e2', '12000e-2', '.12e3', '00120.000e+000', '1.7900E2']) {
     expect(constrainedFloatTextError(text, 101, 179, true), text).toBeUndefined();
   }

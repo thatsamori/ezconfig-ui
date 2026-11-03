@@ -179,8 +179,8 @@ const scenarios: Record<string, () => Promise<void>> = {
     const expired = await session(request('/api/auth/session', { token }));
     assert.equal(expired.status, 401);
     assert.equal(cookieNamed(expired, SESSION_COOKIE), `${SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);
-    const { GET: databases } = await import('../../src/app/api/databases/route');
-    assert.equal((await databases(request('/api/databases', { token }))).status, 401, 'an expired session reaches no route');
+    const { GET: gameServers } = await import('../../src/app/api/game-servers/route');
+    assert.equal((await gameServers(request('/api/game-servers', { token }))).status, 401, 'an expired session reaches no route');
     // The next sign-in clears expired sessions out.
     await signedIn('operator-code');
     assert.equal(rows('SELECT id FROM sessions').length, 1);
@@ -204,10 +204,14 @@ const scenarios: Record<string, () => Promise<void>> = {
 
   async origin() {
     const token = await signedIn('operator-code');
-    const { PATCH: save, GET: read } = await import('../../src/app/api/config/[...path]/route');
-    const at = { params: Promise.resolve({ path: ['Character', 'Movement'] }) };
-    const edit = (origin: string | null) => save(request('/api/config/Character/Movement', { method: 'PATCH', token, origin, body: { entries: { MaxWalkSpeed: 450 } } }) as never, at);
-    const saved = async () => (await (await read(request('/api/config/Character/Movement', { token, origin: null }) as never, at)).json()).data;
+    const { POST: register } = await import('../../src/app/api/game-servers/route');
+    const { PUT: save, GET: read } = await import('../../src/app/api/game-servers/[id]/draft/route');
+    const registered = await register(request('/api/game-servers', { method: 'POST', token, body: { name: 'Origin check' } }));
+    assert.equal(registered.status, 201);
+    const draft = `/api/game-servers/${(await registered.json()).data.gameServer.id}/draft`;
+    const at = { params: Promise.resolve({ id: draft.split('/')[3] }) };
+    const edit = (origin: string | null) => save(request(draft, { method: 'PUT', token, origin, body: { revision: 0, document: { Character: { MaxWalkSpeed: 450 } } } }), at);
+    const saved = async () => (await (await read(request(draft, { token, origin: null }), at)).json()).data.values.character;
     for (const origin of [null, 'https://elsewhere.example', 'http://localhost:3000', `${ORIGIN}.example`]) {
       const refused = await edit(origin);
       assert.equal(refused.status, 403, `Origin ${origin} is refused`);
@@ -215,7 +219,7 @@ const scenarios: Record<string, () => Promise<void>> = {
     }
     assert.deepEqual(await saved(), {}, 'a refused request changes nothing; a GET needs no Origin');
     assert.equal((await edit(ORIGIN)).status, 200);
-    assert.deepEqual(await saved(), { MaxWalkSpeed: 450 });
+    assert.deepEqual(await saved(), { Movement: { MaxWalkSpeed: 450 } });
 
     for (const origin of [null, 'https://elsewhere.example']) {
       assert.equal((await signOut(request('/api/auth/sign-out', { method: 'POST', token, origin }))).status, 403);
@@ -228,7 +232,7 @@ const scenarios: Record<string, () => Promise<void>> = {
   async routes() {
     const token = await signedIn('operator-code');
     const files = [...new Glob('src/app/api/**/route.ts').scanSync('.')].map(file => file.replaceAll('\\', '/')).filter(file => !file.startsWith('src/app/api/auth/')).sort();
-    assert(files.length >= 17, `found ${files.length} route files`);
+    assert(files.length >= 15, `found ${files.length} route files`);
     const context = { params: Promise.resolve({ path: ['Character', 'Movement'], schema: 'Character', name: 'fixture' }) };
     let handlers = 0;
     for (const file of files) {
