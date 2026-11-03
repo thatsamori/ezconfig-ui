@@ -40,6 +40,11 @@ are the contract between this app and the mod.
   one module tests replace), `sign-in.ts`, `users.ts`, `sessions.ts` and `auth.ts`,
   whose `requireSession` every route handler outside `src/app/api/auth/` calls
   first (Origin check on requests that change data, then the session cookie).
+  Game servers: `game-servers.ts` (registering, keys kept only as SHA-256 hashes,
+  connection status), `polls.ts` (the one in-process registry of held polls) and
+  `poll-exchange.ts` (reads a poll against `docs/poll-exchange.md`). The poll
+  endpoint, `src/app/game-server/poll/`, sits outside `src/app/api/`: game
+  servers send their key, not a session.
 - `src/lib/database/`, `src/app/api/` - persistence and API routes.
 - `string-schemas/` - generated `characterConfigSchema.txt`/`weaponConfigSchema.txt`.
 - `tests/` (`*.test.ts`), `tests/fixtures/` (standalone child fixtures) and
@@ -106,6 +111,7 @@ No test or script calls Discord: tests replace `src/lib/platform/discord` (see
 - `docs/automatic-sync.md` - startup/reconnect/reload responder: ownership, deployment, failures.
 - `docs/game-defaults.md` - default snapshot, coverage and refresh procedure.
 - `docs/parry-geometry-migration.md` - Combat-to-Parry key move and startup migration hook.
+- `docs/poll-exchange.md` - the platform-mod poll contract: request fields, answers, status codes.
 - `docs/server-processing-results.md` - acknowledged batch results protocol and status.
 - `docs/stun-rules-validation.md` - stun/acknowledgment validation record (human pass deferred).
 - `docs/weapon-reliability-validation.md` - weapon reliability validation record.
