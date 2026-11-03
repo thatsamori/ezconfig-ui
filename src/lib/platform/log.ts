@@ -7,7 +7,8 @@
  * Rules (what is logged at all is in the spec's Logging section; never routine polls):
  * - Name the event with a fixed string, never one built from input.
  * - A line names platform ids only: game server, user, Live configuration,
- *   Invite (its id, never its code). Any other field passed in is dropped.
+ *   Invite (its id, never its code); plus `count`, a number (how many polls
+ *   had an unknown key in an hour). Any other field passed in is dropped.
  *   A new field is added here, after checking it against the list below.
  * - Never logged, in an event name, a message or an error: any part of a Game
  *   server key; session tokens; `Cookie` or `Authorization` headers; Invite
@@ -31,7 +32,8 @@ type ProblemLevel = 'warn' | 'error';
 type Level = 'info' | ProblemLevel;
 
 const ID_FIELDS = ['userId', 'gameServerId', 'liveConfigurationId', 'inviteId'] as const;
-export type LogIds = Partial<Record<(typeof ID_FIELDS)[number], PlatformId>>;
+const COUNT_FIELDS = ['count'] as const;
+export type LogIds = Partial<Record<(typeof ID_FIELDS)[number], PlatformId> & Record<(typeof COUNT_FIELDS)[number], number>>;
 
 export interface LogHealthEntry {
   time: string;
@@ -56,12 +58,16 @@ const healthKey = Symbol.for('ezconfig-ui.platform-log.health.v1');
 const shared = globalThis as typeof globalThis & { [key: symbol]: LogHealth | undefined };
 const health = shared[healthKey] ??= { warnings: 0, errors: 0, recent: [] };
 
-// Copied field by field: a caller may hand over a whole row, and only its ids may leave.
+// Copied field by field: a caller may hand over a whole row, and only its ids and counts may leave.
 function pickIds(ids: LogIds): LogIds {
   const picked: LogIds = {};
   for (const field of ID_FIELDS) {
     const value: unknown = ids[field];
     if (typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value))) picked[field] = value;
+  }
+  for (const field of COUNT_FIELDS) {
+    const value: unknown = ids[field];
+    if (typeof value === 'number' && Number.isFinite(value)) picked[field] = value;
   }
   return picked;
 }

@@ -440,3 +440,29 @@ body { -webkit-font-smoothing: antialiased; }
 .notes-sheet .tiptap { background: #0f1012; border-radius: 0 0 10px 10px; }
 .default-caption { display: block; color: #888a91; font-size: 10px; margin-top: 3px; overflow-wrap: anywhere; }
 .game-default { height: auto; min-height: 30px; padding: 5px 8px; color: #9a9ba1; white-space: normal; text-align: left; overflow-wrap: anywhere; }
+.game-servers-page { max-width: 896px; }
+.register-server { display: flex; gap: 8px; max-width: 520px; margin-bottom: 24px; }
+.register-server [data-slot=input] { height: 34px; }
+.form-error { color: #e5484d; font-size: 12.5px; margin: -16px 0 24px; }
+.refresh-error { color: #e0a83c; font-size: 12px; margin-top: 12px; }
+.server-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.server-row { width: 100%; display: flex; align-items: center; gap: 12px; background: #16171a; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 14px 18px; text-align: left; }
+.server-row:hover { background: #1a1b1f; }
+.server-row > strong { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.connection { display: inline-flex; align-items: center; color: #9a9ba1; font-size: 12.5px; white-space: nowrap; }
+.connection.connected { color: #5fcf8c; }
+.status-dot.never-connected { background: transparent; border: 1px solid #6b6c72; }
+.back-button { margin-bottom: 20px; }
+.game-servers-page code { font-family: var(--font-mono); font-size: 12px; background: #26272b; border-radius: 5px; padding: 1px 5px; overflow-wrap: anywhere; }
+.setup-checklist { counter-reset: step; display: flex; flex-direction: column; gap: 20px; }
+.setup-checklist > li { counter-increment: step; position: relative; padding-left: 40px; }
+.setup-checklist > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%; background: #26272b; color: #d4d4d8; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.setup-checklist h3 { font-size: 14px; font-weight: 600; line-height: 26px; }
+.setup-checklist p { color: #9a9ba1; font-size: 13px; line-height: 1.55; margin-top: 4px; max-width: 720px; }
+.setup-checklist .connection { margin-left: 6px; }
+.ini-copy { display: flex; align-items: flex-start; gap: 8px; margin-top: 8px; max-width: 720px; }
+.ini-block { flex: 1; min-width: 0; background: #0f1012; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 12px 14px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; white-space: pre; overflow-x: auto; user-select: all; }
+.setup-checklist .key-warning { color: #e0a83c; font-weight: 500; }
+.server-facts { display: grid; grid-template-columns: max-content 1fr; gap: 10px 28px; font-size: 13px; }
+.server-facts dt { color: #9a9ba1; }
+@media (max-width: 560px) { .ini-copy { flex-direction: column; align-items: stretch; } .server-row { flex-wrap: wrap; } }

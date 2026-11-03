@@ -43,6 +43,11 @@ are the contract between this app and the mod.
   operator-only routes call `requireOperator` instead. Invites: `invites.ts`
   (codes stored as hashes only) and `src/app/api/operator/invites/`. `retention.ts`
   is the daily sweep of expired sessions and old Invites, started by the startup hook.
+  Game servers: `game-servers.ts` (registering, keys kept only as SHA-256 hashes,
+  connection status), `polls.ts` (the one in-process registry of held polls) and
+  `poll-exchange.ts` (reads a poll against `docs/poll-exchange.md`). The poll
+  endpoint, `src/app/game-server/poll/`, sits outside `src/app/api/`: game
+  servers send their key, not a session.
 - `src/proxy.ts` - the Content-Security-Policy, with a fresh nonce per request, on
   every page. Inline script runs only with the nonce, so a new page or component
   adds no inline `<script>` or `on*` handler; the root layout renders per request
@@ -117,6 +122,7 @@ No test or script calls Discord: tests replace `src/lib/platform/discord` (see
 - `docs/automatic-sync.md` - startup/reconnect/reload responder: ownership, deployment, failures.
 - `docs/game-defaults.md` - default snapshot, coverage and refresh procedure.
 - `docs/parry-geometry-migration.md` - Combat-to-Parry key move and startup migration hook.
+- `docs/poll-exchange.md` - the platform-mod poll contract: request fields, answers, status codes.
 - `docs/server-processing-results.md` - acknowledged batch results protocol and status.
 - `docs/stun-rules-validation.md` - stun/acknowledgment validation record (human pass deferred).
 - `docs/weapon-reliability-validation.md` - weapon reliability validation record.
