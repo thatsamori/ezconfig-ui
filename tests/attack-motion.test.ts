@@ -25,3 +25,10 @@ test('motion validation preserves zero, false and negative compensation while re
   expect(validateEntries({ StrikeFeintWindow: false }, 'Character', 'AttackMotion').valid).toBe(false);
   expect(validateEntries({ DisableStrikeEndReleaseGlances: 0 }, 'Character', 'AttackMotion').valid).toBe(false);
 });
+
+test('all 34 AttackMotion keys, including 0 and false, reach Apply through the editor', () => {
+  const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/attack-motion-review.ts'], {
+    cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
+  });
+  expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
+});

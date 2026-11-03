@@ -24,7 +24,7 @@ test('base parry controls remain independent and use explicit motion-dependent d
   expect(validateEntries({ ParryUpTime: false }, 'Character', 'Parry').valid).toBe(false);
 });
 
-test('base parry save, review selection and RCON apply preserve independent values', () => {
+test('base parry saves and Apply preserve independent values beside disabled features', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/base-parry-review.ts'], {
     cwd: process.cwd(),
     stdout: 'pipe',
