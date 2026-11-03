@@ -18,7 +18,7 @@ are the contract between this app and the mod.
 `bun` must be on PATH: some tests spawn `bun` as a child process.
 - `bun install` - dependencies (`bun.lock` is the only lockfile).
 - `bun test ./tests` - full suite. Run as `bun --no-env-file test ./tests` with
-  `DATABASES_PATH`/`PRESETS_PATH`/`NOTES_PATH` pointing at temp dirs,
+  `DATABASES_PATH`/`PRESETS_PATH` pointing at temp dirs,
   `DATABASE_PATH` at a file in one (tests that call routes in-process sign in
   there), and `RCON_HOST=127.0.0.1`, so no real data or server is touched.
 - `bun run typecheck` - `tsc --noEmit`.
@@ -59,6 +59,8 @@ are the contract between this app and the mod.
   Live configurations: `live-configurations.ts` (the review, Apply, delivery
   and Discard changes) behind `src/app/api/game-servers/[id]/apply/` and
   `.../draft/discard/`; the poll route delivers from it.
+  Notes: `notes.ts` (per database and key name, author from the session, and
+  the body sanitizer, sanitize-html with an allowlist) behind `src/app/api/notes/`.
 - `src/proxy.ts` - the Content-Security-Policy, with a fresh nonce per request, on
   every page. Inline script runs only with the nonce, so a new page or component
   adds no inline `<script>` or `on*` handler; the root layout renders per request
@@ -109,12 +111,13 @@ of the old one, coordinated with the mod.
 - Sending to a live server, wipes or presets loads need the user's go-ahead.
 
 ## Data and secrets
-`Databases/`, `Presets/User/`, `Notes/`, `users.json` (no longer read), `.env*`
+`Databases/`, `Presets/User/`, `Notes/` and `users.json` (both no longer read;
+the one-time import moves `Notes/`), `.env*`
 (except `.env.example`) are gitignored user data. So is the platform database at
 `DATABASE_PATH` with its `.bak` copies (ignored only as `./platform.db*`).
 Never print, commit or overwrite them.
-Locations come from `DATABASES_PATH`, `PRESETS_PATH` and `NOTES_PATH` (defaults
-`./Databases`, `./Presets`, `./Notes`) and `DATABASE_PATH`; see `src/lib/env.ts`.
+Locations come from `DATABASES_PATH` and `PRESETS_PATH` (defaults
+`./Databases`, `./Presets`) and `DATABASE_PATH`; see `src/lib/env.ts`.
 No test or script calls Discord: tests replace `src/lib/platform/discord` (see
 `tests/fixtures/platform-sign-in.ts`), and `DISCORD_CLIENT_SECRET` lives only in `.env`.
 

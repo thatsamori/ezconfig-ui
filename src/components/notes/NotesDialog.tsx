@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,18 +22,18 @@ import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 import { RichTextEditor } from "./RichTextEditor";
 import { relativeTime } from "@/components/console/model";
-import type { Note } from "@/lib/notes/types";
+import { useNotesContext } from "@/lib/notes/NotesContext";
+import type { NoteView } from "@/lib/platform/notes";
 
 export interface NotesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   configKey: string;
   context?: string;
-  notes: Note[];
-  onAddNote: (note: string) => Promise<boolean>;
-  onEditNote: (noteId: string, note: string) => Promise<boolean>;
-  onDeleteNote: (noteId: string) => Promise<boolean>;
-  currentUsername: string;
+  notes: NoteView[];
+  onAddNote: (body: string) => Promise<boolean>;
+  onEditNote: (noteId: number, body: string) => Promise<boolean>;
+  onDeleteNote: (noteId: number) => Promise<boolean>;
 }
 
 /**
@@ -54,11 +54,16 @@ export function NotesDialog({
   onAddNote,
   onEditNote,
   onDeleteNote,
-  currentUsername,
 }: NotesDialogProps) {
   const [noteText, setNoteText] = useState("");
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [deleteNoteId, setDeleteNoteId] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const [deleteNoteId, setDeleteNoteId] = useState<number | null>(null);
+  const { refresh } = useNotesContext();
+  // Other owners' newest Notes, each time the panel opens.
+  useEffect(() => {
+    if (open) refresh();
+  }, [open, refresh]);
+  const deleting = notes.find((note) => note.id === deleteNoteId);
 
   const handleSubmit = async () => {
     if (isHtmlEmpty(noteText)) return;
@@ -77,7 +82,7 @@ export function NotesDialog({
     }
   };
 
-  const handleEdit = (noteId: string, currentNote: string) => {
+  const handleEdit = (noteId: number, currentNote: string) => {
     setNoteText(currentNote);
     setEditingNoteId(noteId);
   };
@@ -87,7 +92,7 @@ export function NotesDialog({
     setEditingNoteId(null);
   };
 
-  const handleDeleteClick = (noteId: string) => {
+  const handleDeleteClick = (noteId: number) => {
     setDeleteNoteId(noteId);
   };
 
@@ -126,33 +131,38 @@ export function NotesDialog({
                     key={note.id}
                     className="note-item space-y-2"
                   >
+                    {/* Sanitized when it was saved (src/lib/platform/notes.ts). */}
                     <div
                       className="text-sm prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: note.note }}
+                      dangerouslySetInnerHTML={{ __html: note.body }}
                     />
                     <div className="flex items-center justify-between">
-                      <span className="note-author"><span className="note-avatar">{note.createdBy.slice(0, 1).toUpperCase()}</span>{note.createdBy}{/^\d{13}-/.test(note.id) && <time className="note-time" dateTime={new Date(Number(note.id.split("-")[0])).toISOString()}>{relativeTime(Number(note.id.split("-")[0]))}</time>}</span>
-                      {note.createdBy === currentUsername && (
+                      <span className="note-author"><span className="note-avatar">{note.author.slice(0, 1).toUpperCase()}</span>{note.author}<time className="note-time" dateTime={new Date(note.createdAt).toISOString()} title={new Date(note.createdAt).toLocaleString()}>{relativeTime(note.createdAt)}</time>{note.editedAt !== null && <time className="note-time" dateTime={new Date(note.editedAt).toISOString()} title={new Date(note.editedAt).toLocaleString()}>edited</time>}</span>
+                      {(note.canEdit || note.canDelete) && (
                         <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => handleEdit(note.id, note.note)}
-                            aria-label={`Edit note by ${note.createdBy}`}
-                            disabled={editingNoteId !== null}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteClick(note.id)}
-                            aria-label={`Delete note by ${note.createdBy}`}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          {note.canEdit && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleEdit(note.id, note.body)}
+                              aria-label={`Edit note by ${note.author}`}
+                              disabled={editingNoteId !== null}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {note.canDelete && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteClick(note.id)}
+                              aria-label={`Delete note by ${note.author}`}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -193,7 +203,7 @@ export function NotesDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete note?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone.
+              {deleting && !deleting.canEdit ? `This note is by ${deleting.author}; you are deleting it as the platform operator. ` : ""}This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

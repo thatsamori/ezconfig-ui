@@ -20,7 +20,7 @@ const without = (line: Line, ...fields: string[]) => Object.fromEntries(Object.e
 function runScenario(name: string) {
   const result = withPlatformDatabase((run, root) => run('tests/fixtures/platform-invites.ts', {
     args: [name],
-    env: { ...SETTINGS, DATABASES_PATH: join(root, 'Databases'), PRESETS_PATH: join(root, 'Presets'), NOTES_PATH: join(root, 'Notes') },
+    env: { ...SETTINGS, DATABASES_PATH: join(root, 'Databases'), PRESETS_PATH: join(root, 'Presets') },
   }));
   if (result.exitCode !== 0) throw new Error(`${name} exited ${result.exitCode}\n${result.stderr}\n${result.stdout}`);
   const parse = (text: string) => text.split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line) as Line);

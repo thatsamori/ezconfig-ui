@@ -82,7 +82,7 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
   const root = await mkdtemp(join(parent, prefix));
   const storage = {
     DATABASES_PATH: join(root, 'Databases'), PRESETS_PATH: join(root, 'Presets'),
-    NOTES_PATH: join(root, 'Notes'), DATABASE_PATH: join(root, 'platform.db'),
+    DATABASE_PATH: join(root, 'platform.db'),
   };
   // Nothing real is reachable: storage is in the temp root, RCON is mocked, and its host is loopback.
   Object.assign(process.env, storage, { RCON_HOST: '127.0.0.1', RCON_AUTO_SYNC_ENABLED: 'false' });
@@ -103,8 +103,8 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
   let hangUp = async () => {};
   try {
     const { env } = await import('../../src/lib/env');
-    assert.deepEqual([env.databasesPath, env.presetsPath, env.notesPath, env.databasePath, env.rcon.host],
-      [storage.DATABASES_PATH, storage.PRESETS_PATH, storage.NOTES_PATH, storage.DATABASE_PATH, '127.0.0.1'],
+    assert.deepEqual([env.databasesPath, env.presetsPath, env.databasePath, env.rcon.host],
+      [storage.DATABASES_PATH, storage.PRESETS_PATH, storage.DATABASE_PATH, '127.0.0.1'],
       'the app was imported before the review set its env: import it only inside the review');
     await mkdir(storage.DATABASES_PATH);
     const { closePlatformStore, platformStore } = await import('../../src/lib/platform/storage');

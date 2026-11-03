@@ -59,10 +59,9 @@ function KeyRow({
     notes,
     addNote,
     editNote,
-    deleteNote,
-    currentUsername
+    deleteNote
   } = useNotes({
-    schema: database === 'Character' ? 'character' : 'weapon',
+    database: database === 'Character' ? 'Character' : 'Weapon',
     configKey: entry.configKey
   });
   const setValue = useConfigStore(state => state.setValue);
@@ -79,7 +78,7 @@ function KeyRow({
       {groups.map((group, index) => <div role="cell" key={group} data-config-database={database} data-config-category={group} data-config-key={entry.configKey}><ValueEditor entry={entry} database={database} category={group} value={rowValues[index]} label={`${database} ${group} ${entry.label ?? entry.configKey}`} onChange={value => setValue(database, group, entry.configKey, value)} onReset={() => removeValue(database, group, entry.configKey)} />{fieldErrors[fieldName(database, group, entry.configKey)] && <small className="field-error" role="alert">{fieldErrors[fieldName(database, group, entry.configKey)]}</small>}</div>)}
       <div role="cell" className="row-actions">{groups.length > 1 && isOverride(first) && <button className="set-all" title={`Write ${showValue(first)} to ${groups.join(', ')}`} onClick={() => groups.forEach(group => setValue(database, group, entry.configKey, structuredClone(first)))}>Set all {groups.length}</button>}{database !== 'Character' && !entry.supportedWeapons && <button className="sweep-link" onClick={() => onSweep(entry)}>All weapons →</button>}</div>
     </div>
-    {notesOpen && <NotesDialog open={notesOpen} onOpenChange={setNotesOpen} configKey={entry.configKey} context={database === 'Character' ? `Character · ${groups[0]}` : database} notes={notes} onAddNote={addNote} onEditNote={editNote} onDeleteNote={deleteNote} currentUsername={currentUsername} />}
+    {notesOpen && <NotesDialog open={notesOpen} onOpenChange={setNotesOpen} configKey={entry.configKey} context={database === 'Character' ? `Character · ${groups[0]}` : database} notes={notes} onAddNote={addNote} onEditNote={editNote} onDeleteNote={deleteNote} />}
   </>;
 }
 /** The status of the open Draft's saves, with what the owner can do about a failed or stale one. */

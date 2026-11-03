@@ -1,127 +1,53 @@
 "use client";
 
-import { createContext, useContext, useState, useRef, useCallback, type ReactNode } from "react";
-import type { NotesData } from "./types";
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import type { KeyNotes, NotesByKey } from "@/lib/platform/notes";
 
 interface NotesContextValue {
-  /** Get notes for a schema (uses cache, fetches if not cached) */
-  getNotes: (schema: string) => Promise<NotesData>;
-  /** Get cached notes synchronously (returns empty object if not cached) */
-  getCachedNotes: (schema: string) => NotesData;
-  /** Update cache directly (used after mutations return fresh data) */
-  updateCache: (schema: string, data: NotesData) => void;
-  /** Invalidate cache and fetch fresh data */
-  invalidateAndRefetch: (schema: string) => Promise<NotesData>;
-  /** Check if schema is currently loading */
-  isLoading: (schema: string) => boolean;
-  /** Subscribe to loading state changes */
-  subscribeToLoading: (callback: () => void) => () => void;
+  /** Every Note shown, once loaded; null before. */
+  notes: NotesByKey | null;
+  /** Loads every Note the first time it is called; later calls share that load. */
+  load: () => Promise<void>;
+  /** Loads every Note again, for others' newest. */
+  refresh: () => Promise<void>;
+  /** Replaces one key's Notes with what a change returned. */
+  replaceKey: (change: KeyNotes) => void;
 }
 
 const NotesContext = createContext<NotesContextValue | null>(null);
 
+/** The platform's Notes for the editor: one load for every row, then each change's answer. */
 export function NotesProvider({ children }: { children: ReactNode }) {
-  // Use refs for synchronous access (prevents race conditions)
-  const cacheRef = useRef<Record<string, NotesData>>({});
-  const inFlightRef = useRef<Record<string, Promise<NotesData>>>({});
-  const loadingRef = useRef<Record<string, boolean>>({});
+  const [notes, setNotes] = useState<NotesByKey | null>(null);
+  const loading = useRef<Promise<void> | null>(null);
 
-  // State only for triggering re-renders when loading changes
-  const [, setLoadingVersion] = useState(0);
-  const subscribersRef = useRef<Set<() => void>>(new Set());
-
-  const notifySubscribers = useCallback(() => {
-    setLoadingVersion((v) => v + 1);
-    subscribersRef.current.forEach((cb) => cb());
-  }, []);
-
-  const subscribeToLoading = useCallback((callback: () => void) => {
-    subscribersRef.current.add(callback);
-    return () => {
-      subscribersRef.current.delete(callback);
-    };
-  }, []);
-
-  const isLoading = useCallback((schema: string) => {
-    return loadingRef.current[schema] ?? false;
-  }, []);
-
-  const getCachedNotes = useCallback((schema: string): NotesData => {
-    return cacheRef.current[schema] || {};
-  }, []);
-
-  const fetchFromServer = useCallback(async (schema: string): Promise<NotesData> => {
+  const fetchNotes = useCallback(async (): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/notes/${encodeURIComponent(schema)}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          return data.data || {};
-        }
-      }
+      const response = await fetch("/api/notes", { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok || !result.success) return false;
+      setNotes(result.data);
+      return true;
     } catch {
-      // Ignore fetch errors
+      return false;
     }
-    return {};
   }, []);
 
-  const getNotes = useCallback(async (schema: string): Promise<NotesData> => {
-    // Return cached data if available
-    if (schema in cacheRef.current) {
-      return cacheRef.current[schema];
-    }
+  const refresh = useCallback(async () => { await fetchNotes(); }, [fetchNotes]);
 
-    // If there's already a request in flight, return that promise
-    if (schema in inFlightRef.current) {
-      return inFlightRef.current[schema];
-    }
+  // The editor works without Notes: a failed first load is tried again by the next row that asks.
+  const load = useCallback(() => (loading.current ??= fetchNotes().then(loaded => { if (!loaded) loading.current = null; })), [fetchNotes]);
 
-    // Start a new request
-    loadingRef.current[schema] = true;
-    notifySubscribers();
+  const replaceKey = useCallback(({ database, key, notes: keyNotes }: KeyNotes) => {
+    setNotes(current => {
+      const next: NotesByKey = current ? { ...current, [database]: { ...current[database] } } : { Character: {}, Weapon: {} };
+      if (keyNotes.length) next[database][key] = keyNotes;
+      else delete next[database][key];
+      return next;
+    });
+  }, []);
 
-    const requestPromise = (async () => {
-      try {
-        const notesData = await fetchFromServer(schema);
-        cacheRef.current[schema] = notesData;
-        return notesData;
-      } finally {
-        delete inFlightRef.current[schema];
-        loadingRef.current[schema] = false;
-        notifySubscribers();
-      }
-    })();
-
-    inFlightRef.current[schema] = requestPromise;
-    return requestPromise;
-  }, [fetchFromServer, notifySubscribers]);
-
-  const updateCache = useCallback((schema: string, data: NotesData) => {
-    cacheRef.current[schema] = data;
-    notifySubscribers();
-  }, [notifySubscribers]);
-
-  const invalidateAndRefetch = useCallback(async (schema: string): Promise<NotesData> => {
-    // Fetch fresh data from server
-    const notesData = await fetchFromServer(schema);
-    // Update cache
-    cacheRef.current[schema] = notesData;
-    notifySubscribers();
-    return notesData;
-  }, [fetchFromServer, notifySubscribers]);
-
-  return (
-    <NotesContext.Provider value={{
-      getNotes,
-      getCachedNotes,
-      updateCache,
-      invalidateAndRefetch,
-      isLoading,
-      subscribeToLoading
-    }}>
-      {children}
-    </NotesContext.Provider>
-  );
+  return <NotesContext.Provider value={{ notes, load, refresh, replaceKey }}>{children}</NotesContext.Provider>;
 }
 
 export function useNotesContext() {

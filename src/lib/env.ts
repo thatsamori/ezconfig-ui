@@ -9,7 +9,6 @@ export const env = {
   },
   databasesPath: process.env.DATABASES_PATH || './Databases',
   presetsPath: process.env.PRESETS_PATH || './Presets',
-  notesPath: process.env.NOTES_PATH || './Notes',
   ezconfigPassword: process.env.EZCONFIG_PASSWORD || '',
   // Online platform (instance settings; see .env.example)
   databasePath: process.env.DATABASE_PATH || '',

@@ -1,150 +1,64 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { useSessionStore } from "@/lib/store/sessionStore";
 import { useNotesContext } from "@/lib/notes/NotesContext";
-import type { Note } from "@/lib/notes/types";
+import type { NoteDatabase, NoteView } from "@/lib/platform/notes";
 
 export interface UseNotesOptions {
-  schema: string;
+  database: NoteDatabase;
   configKey: string;
 }
 
 export interface UseNotesReturn {
-  notes: Note[];
-  loading: boolean;
-  addNote: (note: string) => Promise<boolean>;
-  editNote: (noteId: string, note: string) => Promise<boolean>;
-  deleteNote: (noteId: string) => Promise<boolean>;
-  currentUsername: string;
+  notes: NoteView[];
+  addNote: (body: string) => Promise<boolean>;
+  editNote: (noteId: number, body: string) => Promise<boolean>;
+  deleteNote: (noteId: number) => Promise<boolean>;
 }
 
-export function useNotes({ schema, configKey }: UseNotesOptions): UseNotesReturn {
-  const { getNotes, getCachedNotes, updateCache, isLoading, subscribeToLoading } = useNotesContext();
-  const [, setVersion] = useState(0);
-  const user = useSessionStore((state) => state.user);
+const NONE: NoteView[] = [];
+const json = (method: string, body: unknown): RequestInit => ({ method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
-  // Get notes from cache (synchronous)
-  const notesData = getCachedNotes(schema);
-  const notes = notesData[configKey] || [];
-  const loading = isLoading(schema);
+/** One config key's Notes, and the changes the panel makes; the author is always the signed-in server owner. */
+export function useNotes({ database, configKey }: UseNotesOptions): UseNotesReturn {
+  const { notes: allNotes, load, replaceKey } = useNotesContext();
+  const notes = allNotes?.[database][configKey] ?? NONE;
 
-  // Subscribe to loading state changes to trigger re-renders
   useEffect(() => {
-    return subscribeToLoading(() => setVersion((v) => v + 1));
-  }, [subscribeToLoading]);
+    load();
+  }, [load]);
 
-  // Fetch notes on mount (will use cache if available)
-  useEffect(() => {
-    getNotes(schema).then(() => {
-      // Trigger re-render after fetch completes
-      setVersion((v) => v + 1);
-    });
-  }, [schema, getNotes]);
+  const change = useCallback(
+    async (url: string, init: RequestInit, failed: string): Promise<boolean> => {
+      try {
+        const response = await fetch(url, init);
+        const result = await response.json();
+        if (response.ok && result.success) {
+          replaceKey(result.data);
+          return true;
+        }
+        toast.error(result.error || failed, { position: "bottom-right" });
+      } catch {
+        toast.error(failed, { position: "bottom-right" });
+      }
+      return false;
+    },
+    [replaceKey]
+  );
 
   const addNote = useCallback(
-    async (note: string): Promise<boolean> => {
-      if (!user) return false;
-      try {
-        const response = await fetch(`/api/notes/${encodeURIComponent(schema)}/add`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            configKey,
-            note,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          // Update cache with server response
-          updateCache(schema, result.data);
-          setVersion((v) => v + 1);
-          return true;
-        } else {
-          toast.error(result.error || "Failed to save note", { position: "bottom-right" });
-          return false;
-        }
-      } catch (error) {
-        console.error("Failed to add note:", error);
-        toast.error("Failed to save note", { position: "bottom-right" });
-        return false;
-      }
-    },
-    [user, schema, configKey, updateCache]
+    (body: string) => change("/api/notes", json("POST", { database, key: configKey, body }), "Failed to save note"),
+    [change, database, configKey]
   );
 
   const editNote = useCallback(
-    async (noteId: string, note: string): Promise<boolean> => {
-      try {
-        const response = await fetch(`/api/notes/${encodeURIComponent(schema)}/edit`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            configKey,
-            noteId,
-            note,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          // Update cache with server response
-          updateCache(schema, result.data);
-          setVersion((v) => v + 1);
-          return true;
-        } else {
-          toast.error(result.error || "Failed to update note", { position: "bottom-right" });
-          return false;
-        }
-      } catch (error) {
-        console.error("Failed to edit note:", error);
-        toast.error("Failed to update note", { position: "bottom-right" });
-        return false;
-      }
-    },
-    [schema, configKey, updateCache]
+    (noteId: number, body: string) => change(`/api/notes/${noteId}`, json("PUT", { body }), "Failed to update note"),
+    [change]
   );
 
   const deleteNote = useCallback(
-    async (noteId: string): Promise<boolean> => {
-      try {
-        const response = await fetch(`/api/notes/${encodeURIComponent(schema)}/delete`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            configKey,
-            noteId,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          // Update cache with server response
-          updateCache(schema, result.data);
-          setVersion((v) => v + 1);
-          return true;
-        } else {
-          toast.error(result.error || "Failed to delete note", { position: "bottom-right" });
-          return false;
-        }
-      } catch (error) {
-        console.error("Failed to delete note:", error);
-        toast.error("Failed to delete note", { position: "bottom-right" });
-        return false;
-      }
-    },
-    [schema, configKey, updateCache]
+    (noteId: number) => change(`/api/notes/${noteId}`, { method: "DELETE" }, "Failed to delete note"),
+    [change]
   );
 
-  return {
-    notes,
-    loading,
-    addNote,
-    editNote,
-    deleteNote,
-    currentUsername: user?.name || "",
-  };
+  return { notes, addNote, editNote, deleteNote };
 }
