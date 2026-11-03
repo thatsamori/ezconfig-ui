@@ -1,5 +1,6 @@
 /**
- * Registering game servers, the poll exchange and connection status, through
+ * Registering game servers, the poll exchange and connection status,
+ * regenerating a key, deleting a game server and the shared-key warning, through
  * the route handlers. One scenario per run (argv[2]), each in its own process
  * with the env set by tests/platform-game-servers.test.ts. Polls are held for
  * a short real time (setPollHoldMs); the clock that connection status reads is
@@ -20,6 +21,7 @@ const { platformStore } = await import('../../src/lib/platform/storage');
 const { setPollHoldMs } = await import('../../src/lib/platform/polls');
 const gameServersRoute = await import('../../src/app/api/game-servers/route');
 const gameServerRoute = await import('../../src/app/api/game-servers/[id]/route');
+const regenerateKeyRoute = await import('../../src/app/api/game-servers/[id]/regenerate-key/route');
 const pollRoute = await import('../../src/app/game-server/poll/route');
 
 const scenario = process.argv[2];
@@ -57,8 +59,23 @@ async function viewOf(session: TestSession, id: number): Promise<GameServerView>
   assert.equal(status, 200);
   return body.data!;
 }
+const params = (id: number | string) => ({ params: Promise.resolve({ id: String(id) }) });
+async function regenerateKey(session: TestSession, id: number | string) {
+  const response = await regenerateKeyRoute.POST(session.request(`/api/game-servers/${id}/regenerate-key`, { method: 'POST' }), params(id));
+  const body = await response.json() as { success: boolean; error?: string; data?: { gameServer: GameServerView; key: string } };
+  if (body.data?.key) keys.add(body.data.key);
+  return { status: response.status, cache: response.headers.get('Cache-Control'), body };
+}
+async function remove(session: TestSession, id: number | string) {
+  const response = await gameServerRoute.DELETE(session.request(`/api/game-servers/${id}`, { method: 'DELETE' }), params(id));
+  return { status: response.status, cache: response.headers.get('Cache-Control'), body: await response.json() as { success: boolean; error?: string } };
+}
+/** The owner's cookie, sent from another site. */
+const crossSite = (session: TestSession, url: string, method: string) =>
+  new Request(new URL(url, env.publicUrl), { method, headers: { Cookie: session.cookie, Origin: 'https://elsewhere.example' } });
+const NOT_THEIRS = { status: 404, cache: 'no-store', body: { success: false, error: 'No such game server' } };
 
-type PollOptions = { authorization?: string | null; body?: string; signal?: AbortSignal };
+type PollOptions = { authorization?: string | null; body?: string | ReadableStream<Uint8Array>; signal?: AbortSignal };
 /** A game server polling: POST with its key as a Bearer token, as the mod sends it. */
 async function poll(key: string, report: unknown, { authorization = `Bearer ${key}`, body = JSON.stringify(report), signal }: PollOptions = {}) {
   const headers = new Headers({ 'Content-Type': 'application/json' });
@@ -68,6 +85,28 @@ async function poll(key: string, report: unknown, { authorization = `Bearer ${ke
   return { status: response.status, cache: response.headers.get('Cache-Control'), body: await response.json() as Record<string, unknown>, ms: performance.now() - started };
 }
 const report = (fields: Record<string, unknown> = {}) => ({ buildStamp: '20261102-153000', instanceId: '8F2C9A41B7D34E0F9C1A2B3C4D5E6F70', ...fields });
+/** A poll whose body is still arriving: its key has been looked up, and the rest of the body comes with `finish()`. */
+function slowPoll(key: string) {
+  const bytes = new TextEncoder().encode(JSON.stringify(report()));
+  let finish = () => {};
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(bytes.subarray(0, 8));
+      finish = () => { controller.enqueue(bytes.subarray(8)); controller.close(); };
+    },
+  });
+  return { answered: poll(key, undefined, { body }), finish: () => finish() };
+}
+
+/** Every row of every table, to check what a delete removed. */
+function everyRow(): Record<string, Record<string, unknown>[]> {
+  const store = platformStore();
+  const tables = store.all<{ name: string }>("SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
+  return Object.fromEntries(tables.map(({ name }) => [name, store.all<Record<string, unknown>>(`SELECT * FROM "${name}" ORDER BY rowid`)]));
+}
+/** The columns of `table` that reference a game server. */
+const gameServerColumns = (table: string) =>
+  platformStore().all<{ table: string; from: string }>('SELECT "table", "from" FROM pragma_foreign_key_list(?)', table).filter(key => key.table === 'game_servers').map(key => key.from);
 const SUCCESS = { success: true, acceptedValues: 140, changedValues: 12, unknownKeys: [{ database: 'ArmingSword', category: 'Strike', key: 'RetiredKey' }] };
 
 /** The bytes of the database and its write-ahead log. */
@@ -91,7 +130,7 @@ const scenarios: Record<string, () => Promise<void>> = {
     assert.match(key, KEY);
     assert.equal(key.length, 51);
     assert.equal(Buffer.from(key.slice('ezc_gsk_'.length), 'base64url').length, 32, '32 random bytes');
-    assert.deepEqual(gameServer, { id: gameServer.id, name: 'Duel EU', keyLast4: key.slice(-4), registeredAt: T0, connection: { state: 'never-connected' }, lastReport: null });
+    assert.deepEqual(gameServer, { id: gameServer.id, name: 'Duel EU', keyLast4: key.slice(-4), registeredAt: T0, connection: { state: 'never-connected' }, sharedKey: false, lastReport: null });
 
     // Unique per owner, ignoring case (and around the name).
     for (const name of ['Duel EU', 'duel eu', '  DUEL eu  ']) {
@@ -292,6 +331,210 @@ const scenarios: Record<string, () => Promise<void>> = {
     assert.deepEqual(await connection(), { state: 'connected' });
     at(hungUpAt + 16 * SECOND);
     assert.deepEqual(await connection(), { state: 'not-connected', lastSeenAt: hungUpAt });
+    assertNoKeyStored();
+  },
+
+  async regenerate() {
+    const [owner, other] = [await signInForTest('Owner A'), await signInForTest('Owner B')];
+    const { gameServer, key: firstKey } = await registered(owner, 'Regenerated');
+    const { id } = gameServer;
+    const connection = async () => (await viewOf(owner, id)).connection;
+    setPollHoldMs(5_000);
+    at(T0);
+    const held = poll(firstKey, report());
+    await Bun.sleep(40);
+    assert.deepEqual(await connection(), { state: 'connected' });
+
+    // Only the owner, from the platform's own pages.
+    assert.deepEqual(await regenerateKey(other, id), NOT_THEIRS);
+    for (const notOne of [9999, 'abc', '0']) assert.deepEqual(await regenerateKey(owner, notOne), NOT_THEIRS);
+    assert.equal((await regenerateKeyRoute.POST(crossSite(owner, `/api/game-servers/${id}/regenerate-key`, 'POST'), params(id))).status, 403);
+    assert.deepEqual(await connection(), { state: 'connected' }, 'nothing refused touched the key');
+
+    const regenerated = await regenerateKey(owner, id);
+    assert.deepEqual([regenerated.status, regenerated.cache], [200, 'no-store']);
+    const { key: secondKey } = regenerated.body.data!;
+    assert.match(secondKey, KEY);
+    assert.notEqual(secondKey, firstKey);
+    // The old key ends at once, with no grace period: its held poll is answered "key-rejected" long before its hold ends.
+    const rejected = await held;
+    assert.deepEqual([rejected.status, rejected.body, rejected.cache], [401, { answer: 'key-rejected' }, 'no-store']);
+    assert(rejected.ms < 1_000, `answered after ${rejected.ms} ms`);
+    // Not connected at once, though a poll ended just now: shown with last seen, and the new key's last 4 characters.
+    const expected: GameServerView = {
+      ...gameServer, keyLast4: secondKey.slice(-4), connection: { state: 'not-connected', lastSeenAt: T0 },
+      lastReport: { buildStamp: '20261102-153000', processed: null },
+    };
+    assert.deepEqual(regenerated.body.data!.gameServer, expected);
+    assert.deepEqual(await viewOf(owner, id), expected);
+    at(T0 + 5 * SECOND);
+    assert.deepEqual(await connection(), { state: 'not-connected', lastSeenAt: T0 }, 'not Connected for the 15 s after its last poll either');
+    const later = await poll(firstKey, report());
+    assert.deepEqual([later.status, later.body], [401, { answer: 'key-rejected' }]);
+    assert(later.ms < 1_000, 'the old key is rejected at once from now on');
+    // The new key is shown once: no later response holds it.
+    assert(!JSON.stringify([await viewOf(owner, id), await list(owner)]).includes(secondKey));
+
+    // A poll that was looked up by its key before the key ended, and whose body was still arriving: rejected, never held.
+    const late = slowPoll(secondKey);
+    const third = await regenerateKey(owner, id);
+    late.finish();
+    const lateAnswer = await late.answered;
+    assert.deepEqual([lateAnswer.status, lateAnswer.body], [401, { answer: 'key-rejected' }]);
+    assert(lateAnswer.ms < 1_000, 'not held');
+    assert.deepEqual(await connection(), { state: 'not-connected', lastSeenAt: T0 });
+    const thirdKey = third.body.data!.key;
+
+    // Connected again once it polls with the newest key, and as usual after that.
+    setPollHoldMs(100);
+    at(T0 + 10 * SECOND);
+    const fresh = poll(thirdKey, report());
+    await Bun.sleep(20);
+    assert.deepEqual(await connection(), { state: 'connected' });
+    assert.deepEqual([(await fresh).status, (await fresh).body], [200, { answer: 'no-change' }]);
+    assert.deepEqual(await connection(), { state: 'connected' });
+    at(T0 + 26 * SECOND);
+    assert.deepEqual(await connection(), { state: 'not-connected', lastSeenAt: T0 + 10 * SECOND });
+
+    // At rest: only the newest key's hash and last 4 characters.
+    assert.deepEqual(platformStore().get('SELECT key_hash, key_last4 FROM game_servers WHERE id = ?', id), {
+      key_hash: createHash('sha256').update(thirdKey).digest('hex'), key_last4: thirdKey.slice(-4),
+    });
+    assertNoKeyStored();
+  },
+
+  async delete() {
+    const [owner, other] = [await signInForTest('Owner A'), await signInForTest('Owner B')];
+    await registered(other, 'Theirs');
+    const kept = await registered(owner, 'Kept');
+    // Registered last, so it has the highest id: SQLite gives that id to the next game server registered.
+    const doomed = await registered(owner, 'Doomed');
+    const { id } = doomed.gameServer;
+    setPollHoldMs(5_000);
+    at(T0);
+    const held = poll(doomed.key, report());
+    const keptHangUp = new AbortController();
+    const keptPoll = poll(kept.key, report(), { signal: keptHangUp.signal });
+    await Bun.sleep(40);
+    const before = everyRow();
+    assert(before.drafts.some(draft => draft.game_server_id === id), 'it has a Draft to delete');
+
+    // Only the owner, from the platform's own pages.
+    assert.deepEqual(await remove(other, id), NOT_THEIRS);
+    for (const notOne of [9999, 'abc', '0']) assert.deepEqual(await remove(owner, notOne), NOT_THEIRS);
+    assert.equal((await gameServerRoute.DELETE(crossSite(owner, `/api/game-servers/${id}`, 'DELETE'), params(id))).status, 403);
+    assert.deepEqual(everyRow(), before, 'nothing refused deleted anything');
+
+    assert.deepEqual(await remove(owner, id), { status: 200, cache: 'no-store', body: { success: true } });
+    // A poll held on its key is answered "key-rejected" at once; its key is rejected from now on.
+    const rejected = await held;
+    assert.deepEqual([rejected.status, rejected.body], [401, { answer: 'key-rejected' }]);
+    assert(rejected.ms < 1_000, `answered after ${rejected.ms} ms`);
+    const later = await poll(doomed.key, report());
+    assert.deepEqual([later.status, later.body], [401, { answer: 'key-rejected' }]);
+    assert.deepEqual(await read(owner, id), { status: 404, body: { success: false, error: 'No such game server' } });
+    assert.deepEqual(await remove(owner, id), NOT_THEIRS, 'deleted once');
+    const listed = await list(owner);
+    assert.deepEqual(listed.map(server => [server.name, server.connection.state]), [['Kept', 'connected']], 'the owner\'s other game server, still held');
+
+    // Its row goes, with every row that references it: its Draft (and its Live configuration, once they exist).
+    // Every other table keeps every row: users, sessions and Invites, and the owner's Rulesets once they exist.
+    const after = everyRow();
+    assert.deepEqual(Object.keys(after), Object.keys(before));
+    for (const [table, rows] of Object.entries(before)) {
+      const columns = table === 'game_servers' ? ['id'] : gameServerColumns(table);
+      assert.deepEqual(after[table], rows.filter(row => columns.every(column => row[column] !== id)), table);
+    }
+
+    // Nothing about it carries over to the next game server given its id, not even a poll that was looked up before the delete.
+    const reused = await registered(owner, 'Reused');
+    assert.equal(reused.gameServer.id, id, 'SQLite gives the deleted id out again');
+    assert.deepEqual((await viewOf(owner, id)).connection, { state: 'never-connected' });
+    const late = slowPoll(reused.key);
+    assert.equal((await remove(owner, id)).status, 200);
+    late.finish();
+    const lateAnswer = await late.answered;
+    assert.deepEqual([lateAnswer.status, lateAnswer.body], [401, { answer: 'key-rejected' }]);
+    const again = await registered(owner, 'Reused again');
+    assert.equal(again.gameServer.id, id);
+    assert.deepEqual(await viewOf(owner, id), { ...again.gameServer, connection: { state: 'never-connected' }, sharedKey: false, lastReport: null });
+
+    keptHangUp.abort();
+    assert.equal((await keptPoll).status, 200, 'the owner\'s other game server was never touched');
+    assertNoKeyStored();
+  },
+
+  async 'shared-key'() {
+    const owner = await signInForTest();
+    const { gameServer, key: firstKey } = await registered(owner, 'Shared');
+    const sharedKey = async () => (await viewOf(owner, gameServer.id)).sharedKey;
+    setPollHoldMs(5_000);
+    let key = firstKey;
+    const answers: Promise<Awaited<ReturnType<typeof poll>>>[] = [];
+    /** A poll from `instanceId`, which supersedes the one held. */
+    const from = async (instanceId: string, time: number) => {
+      at(time);
+      answers.push(poll(key, report({ instanceId })));
+      await Bun.sleep(20);
+    };
+
+    // A restart or map change supersedes once, with a new instance id each time: never the warning, however often.
+    await from('map-1', T0);
+    await from('map-2', T0);
+    assert.equal(await sharedKey(), false, 'a single supersede does not trip it');
+    for (const instanceId of ['map-3', 'map-4', 'map-5']) await from(instanceId, T0 + SECOND);
+    assert.equal(await sharedKey(), false, 'nor do restarts and map changes in a row');
+    for (let repeat = 0; repeat < 3; repeat++) await from('map-5', T0 + 2 * SECOND);
+    assert.equal(await sharedKey(), false, 'nor does an instance superseding its own poll');
+
+    // Two servers on one key: each poll supersedes the other's, and each comes back about 10 s after it was superseded.
+    // Each comeback counts: alpha's at 20 s and bravo's at 30 s.
+    await from('alpha', T0 + 10 * SECOND);
+    await from('bravo', T0 + 15 * SECOND);
+    await from('alpha', T0 + 20 * SECOND);
+    await from('bravo', T0 + 30 * SECOND);
+    assert.equal(await sharedKey(), false, 'twice is not yet');
+    await from('alpha', T0 + 5 * MINUTE + 21 * SECOND);
+    assert.equal(await sharedKey(), false, 'three times, but not within 5 minutes');
+    await from('bravo', T0 + 5 * MINUTE + 25 * SECOND);
+    assert.equal(await sharedKey(), true, 'three times within 5 minutes: 30 s, 5:21 and 5:25');
+    await from('alpha', T0 + 5 * MINUTE + 29 * SECOND);
+    assert.equal(await sharedKey(), true, 'and while they keep at it (logged once)');
+
+    // Time moved forward: it clears once fewer than 3 are within the last 5 minutes (5:25 and 5:29, from 10:21).
+    at(T0 + 10 * MINUTE + 21 * SECOND - 1);
+    assert.equal(await sharedKey(), true);
+    at(T0 + 10 * MINUTE + 21 * SECOND);
+    assert.equal(await sharedKey(), false);
+    assert.equal((await list(owner))[0].sharedKey, false, 'the list shows the same');
+
+    // Starting again trips it again, and is logged again.
+    await from('bravo', T0 + 11 * MINUTE);
+    await from('alpha', T0 + 11 * MINUTE + 10 * SECOND);
+    await from('bravo', T0 + 11 * MINUTE + 20 * SECOND);
+    assert.equal(await sharedKey(), false);
+    await from('alpha', T0 + 11 * MINUTE + 30 * SECOND);
+    assert.equal(await sharedKey(), true);
+
+    // Regenerate key clears it and starts the count again: alpha's held poll is rejected, as is bravo's next on the old key.
+    at(T0 + 11 * MINUTE + 35 * SECOND);
+    const regenerated = await regenerateKey(owner, gameServer.id);
+    assert.equal(regenerated.body.data!.gameServer.sharedKey, false);
+    assert.equal(await sharedKey(), false);
+    assert.deepEqual((await answers.at(-1)!).status, 401);
+    await from('bravo', T0 + 11 * MINUTE + 40 * SECOND);
+    assert.equal((await answers.at(-1)!).status, 401, 'the old key');
+    key = regenerated.body.data!.key;
+    await from('alpha', T0 + 11 * MINUTE + 45 * SECOND);
+    setPollHoldMs(50);
+    await from('bravo', T0 + 11 * MINUTE + 50 * SECOND);
+    assert.equal(await sharedKey(), false, 'bravo was superseded before the key ended, which no longer counts');
+
+    const all = await Promise.all(answers);
+    assert.deepEqual(all.map(answer => [answer.status, answer.body.answer]), [
+      ...Array.from({ length: 18 }, () => [200, 'superseded']),
+      [401, 'key-rejected'], [401, 'key-rejected'], [200, 'superseded'], [200, 'no-change'],
+    ]);
     assertNoKeyStored();
   },
 

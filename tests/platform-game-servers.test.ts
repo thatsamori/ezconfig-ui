@@ -78,6 +78,45 @@ describe('the poll exchange', () => {
   });
 });
 
+const regenerated = (userId: number, gameServerId: number) => ({ level: 'info', event: 'game-server.key-regenerated', userId, gameServerId });
+const ORIGIN_REFUSED = { level: 'warn', event: 'request.origin-refused', message: 'Refused a request that changes data: its Origin is missing or is not the public URL' };
+
+describe('regenerating a key', () => {
+  test('ends the old key at once: a held poll on it is answered "key-rejected", the new key is shown once, and the server is Not connected until it polls with the new key', () => {
+    const result = runScenario('regenerate');
+    expect(result.log).toEqual([registered(1, 1), regenerated(1, 1), regenerated(1, 1), ORIGIN_REFUSED]);
+    expect(result.fixture.secrets).toHaveLength(3);
+    expectNoKeysLogged(result);
+  });
+});
+
+describe('deleting a game server', () => {
+  test('removes its key and every row that references it, answers a held poll "key-rejected", and keeps everything else', () => {
+    const result = runScenario('delete');
+    expect(result.log).toEqual([
+      registered(2, 1), registered(1, 2), registered(1, 3),
+      { level: 'info', event: 'game-server.deleted', userId: 1, gameServerId: 3 },
+      registered(1, 3),
+      { level: 'info', event: 'game-server.deleted', userId: 1, gameServerId: 3 },
+      registered(1, 3),
+      ORIGIN_REFUSED,
+    ]);
+    expectNoKeysLogged(result);
+  });
+});
+
+describe('the shared-key warning', () => {
+  test('trips when superseded instances come back 3 times within 5 minutes, never for restarts or map changes, and clears with time or Regenerate key', () => {
+    const result = runScenario('shared-key');
+    const superseded = result.log.filter(line => line.event === 'poll.superseded');
+    expect(superseded).toHaveLength(19);
+    for (const line of superseded) expect(line).toEqual({ level: 'info', event: 'poll.superseded', gameServerId: 1 });
+    const keyShared = { level: 'warn', event: 'key.shared', gameServerId: 1, message: 'More than one server is using this key' };
+    expect(result.log.filter(line => line.event !== 'poll.superseded')).toEqual([registered(1, 1), regenerated(1, 1), keyShared, keyShared]);
+    expectNoKeysLogged(result);
+  });
+});
+
 describe('connection status', () => {
   test('Never connected, then Connected while held and for 15 s after, then Not connected with last seen', () => {
     const result = runScenario('status');

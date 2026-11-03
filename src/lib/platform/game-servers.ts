@@ -1,21 +1,23 @@
 /**
  * Game servers: registering one with its empty Draft and its Game server key,
  * finding one by its key when it polls, recording what its polls report, and
- * its connection status.
+ * its connection status. Regenerating its key, and deleting it.
  *
  * The key is `ezc_gsk_` and 32 random bytes in base64url (51 characters). It
  * is returned once, to be shown once, and never stored, logged or returned
  * again: the database keeps its SHA-256 hash, which a poll is looked up by,
- * and its last 4 characters, which the page shows from then on.
+ * and its last 4 characters, which the page shows from then on. Regenerating
+ * or deleting ends the key at once, a held poll included.
  *
  * Connection status is computed when asked, never stored:
- * - Connected: a poll is held, or one ended within about 15 s;
+ * - Connected: a poll is held, or one ended within about 15 s (and the key
+ *   has not been regenerated since);
  * - Not connected: shown with last seen;
  * - Never connected: no poll yet.
  */
 import { createHash, randomBytes } from 'node:crypto';
 import type { PollReport, ProcessingResult } from './poll-exchange';
-import { pollActivity } from './polls';
+import { endKey, pollActivity } from './polls';
 import { platformStore } from './storage';
 
 export const GAME_SERVER_KEY_PATTERN = /^ezc_gsk_[A-Za-z0-9_-]{43}$/;
@@ -49,6 +51,8 @@ export interface GameServerView {
   keyLast4: string;
   registeredAt: number;
   connection: ConnectionStatus;
+  /** More than one server is using the key: polls from different instances keep superseding each other. */
+  sharedKey: boolean;
   /** What the latest recorded poll reported; null before the first poll. */
   lastReport: { buildStamp: string | null; processed: { liveConfigurationId: string; result: ProcessingResult } | null } | null;
 }
@@ -64,6 +68,7 @@ const gameServer = (row: Row): GameServer => ({
 });
 
 const keyHash = (key: string) => createHash('sha256').update(key).digest('hex');
+const newKey = () => `ezc_gsk_${randomBytes(32).toString('base64url')}`;
 
 export type NameCheck = { ok: true; name: string; nameKey: string } | { ok: false; error: string };
 
@@ -84,7 +89,7 @@ export function registerGameServer(ownerId: number, { name, nameKey }: { name: s
   return store.transaction((): Registration => {
     const taken = store.get<{ name: string }>('SELECT name FROM game_servers WHERE owner_id = ? AND name_key = ?', ownerId, nameKey);
     if (taken) return { ok: false, takenBy: taken.name };
-    const key = `ezc_gsk_${randomBytes(32).toString('base64url')}`;
+    const key = newKey();
     const row = store.get<Row>(
       `INSERT INTO game_servers (owner_id, name, name_key, key_hash, key_last4, registered_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING ${COLUMNS}`,
       ownerId, name, nameKey, keyHash(key), key.slice(-4), now,
@@ -103,6 +108,37 @@ export function listGameServers(ownerId: number): GameServer[] {
 export function findOwnedGameServer(ownerId: number, id: number): GameServer | undefined {
   const row = platformStore().get<Row>(`SELECT ${COLUMNS} FROM game_servers WHERE id = ? AND owner_id = ?`, id, ownerId);
   return row && gameServer(row);
+}
+
+/**
+ * Replaces one of the owner's game servers' key, with no grace period: the old
+ * key is rejected from now on, a poll held on it is answered "key rejected",
+ * and the game server is Not connected until it polls with the new key. The
+ * key returned is the only copy there will ever be. Undefined for a game
+ * server that is not the owner's.
+ */
+export function regenerateGameServerKey(ownerId: number, id: number): { gameServer: GameServer; key: string } | undefined {
+  const key = newKey();
+  const row = platformStore().get<Row>(
+    `UPDATE game_servers SET key_hash = ?, key_last4 = ? WHERE id = ? AND owner_id = ? RETURNING ${COLUMNS}`,
+    keyHash(key), key.slice(-4), id, ownerId,
+  );
+  if (!row) return undefined;
+  endKey(id);
+  return { gameServer: gameServer(row), key };
+}
+
+/**
+ * Deletes one of the owner's game servers with its key, its Draft and, once
+ * they exist, its Live configuration: every row that references the game
+ * server goes with it (ON DELETE CASCADE). The owner's Rulesets belong to the
+ * owner, not to a game server, and stay. A poll held on its key is answered
+ * "key rejected". False for a game server that is not the owner's.
+ */
+export function deleteGameServer(ownerId: number, id: number): boolean {
+  const deleted = platformStore().run('DELETE FROM game_servers WHERE id = ? AND owner_id = ?', id, ownerId) > 0;
+  if (deleted) endKey(id, { deleted: true });
+  return deleted;
 }
 
 /** The game server a poll's key belongs to, if any. */
@@ -129,11 +165,11 @@ export function recordPoll(server: GameServer, report: PollReport, now = Date.no
 }
 
 export function connectionStatus(server: GameServer, now = Date.now()): ConnectionStatus {
-  const activity = pollActivity(server.id);
+  const activity = pollActivity(server.id, now);
   if (activity.held) return { state: 'connected' };
   const lastSeenAt = Math.max(server.lastPollAt ?? -Infinity, activity.lastEndedAt ?? -Infinity);
   if (lastSeenAt === -Infinity) return { state: 'never-connected' };
-  return now - lastSeenAt <= CONNECTED_WITHIN_MS ? { state: 'connected' } : { state: 'not-connected', lastSeenAt };
+  return now - lastSeenAt <= CONNECTED_WITHIN_MS && !activity.keyEnded ? { state: 'connected' } : { state: 'not-connected', lastSeenAt };
 }
 
 export function gameServerView(server: GameServer, now = Date.now()): GameServerView {
@@ -143,6 +179,7 @@ export function gameServerView(server: GameServer, now = Date.now()): GameServer
     keyLast4: server.keyLast4,
     registeredAt: server.registeredAt,
     connection: connectionStatus(server, now),
+    sharedKey: pollActivity(server.id, now).sharedKey,
     lastReport: server.lastPollAt === null ? null : {
       buildStamp: server.reportedBuildStamp,
       processed: server.reportedLiveConfigurationId === null || server.reportedResult === null ? null
