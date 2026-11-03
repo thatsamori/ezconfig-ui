@@ -19,7 +19,7 @@ test('walking speed is an independent explicit Movement value with an honest gam
   expect(validateEntries({ MaxWalkSpeed: false }, 'Character', 'Movement').valid).toBe(false);
 });
 
-test('walking speed survives real store/save/review/selected apply and reset with zero and negative values', () => {
+test('walking speed survives the editor, Apply and reset with zero and negative values', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/movement-walk-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });
