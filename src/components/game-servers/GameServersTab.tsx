@@ -254,15 +254,15 @@ function ApplyDialog({ server, review, onReview, onClose, onApplied }: {
         <DialogTitle>Apply to {server.name}?</DialogTitle>
         <DialogDescription>The whole Draft becomes the Live configuration, and the game server gets it within a few seconds.</DialogDescription>
       </DialogHeader>
-      <div className="review-body">
-        {notice && <p className="review-notice" role="alert">{notice}</p>}
-        {review.errors.length > 0 && <div className="review-errors" role="alert"><strong>Fix these values in the Draft before you Apply</strong>
-          <ul>{review.errors.map(error => <li key={`${error.database}/${error.category}/${error.key}`}><span className="review-key">{place(error)} · <code>{error.key}</code></span><span>{error.error}</span></li>)}</ul>
+      <div className="apply-body">
+        {notice && <p className="apply-notice" role="alert">{notice}</p>}
+        {review.errors.length > 0 && <div className="apply-errors" role="alert"><strong>Fix these values in the Draft before you Apply</strong>
+          <ul>{review.errors.map(error => <li key={`${error.database}/${error.category}/${error.key}`}><span className="apply-key">{place(error)} · <code>{error.key}</code></span><span>{error.error}</span></li>)}</ul>
         </div>}
-        {first && <div className="review-warning"><TriangleAlert size={16} /><p><strong>First Apply to this game server.</strong> Every EZConfig value it has now is replaced, and anything not in the Draft returns to game default.</p></div>}
+        {first && <div className="apply-warning"><TriangleAlert size={16} /><p><strong>First Apply to this game server.</strong> Every EZConfig value it has now is replaced, and anything not in the Draft returns to game default.</p></div>}
         {first ? review.added.length ? <ReviewList title={`The Draft sets ${review.added.length} value${review.added.length === 1 ? '' : 's'}`} entries={review.added} />
-          : <p className="review-none">The Draft sets no values: every EZConfig value returns to game default.</p>
-          : unchanged ? <p className="review-none">No changes; the server will be sent this configuration again</p> : <>
+          : <p className="apply-none">The Draft sets no values: every EZConfig value returns to game default.</p>
+          : unchanged ? <p className="apply-none">No changes; the server will be sent this configuration again</p> : <>
             {review.added.length > 0 && <ReviewList title={`Added (${review.added.length})`} entries={review.added} />}
             {review.changed.length > 0 && <ReviewList title={`Changed (${review.changed.length})`} entries={review.changed} />}
             {review.reset.length > 0 && <ReviewList title={`Reset to game default (${review.reset.length})`} entries={review.reset} />}
@@ -281,9 +281,9 @@ const place = ({ database, category }: { database: string; category?: string }) 
 const shown = (value: unknown) => typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value);
 
 function ReviewList({ title, entries }: { title: string; entries: ReviewEntry[] }) {
-  return <section className="review-list"><h4>{title}</h4><ul>{entries.map(entry => <li key={`${entry.database}/${entry.category}/${entry.key}`}>
-    <span className="review-key">{place(entry)} · <code>{entry.key}</code></span>
-    <span className="review-value">{'live' in entry && <><span className="review-before">{shown(entry.live)}</span> → </>}{'draft' in entry ? shown(entry.draft) : 'game default'}</span>
+  return <section className="apply-changes"><h4>{title}</h4><ul>{entries.map(entry => <li key={`${entry.database}/${entry.category}/${entry.key}`}>
+    <span className="apply-key">{place(entry)} · <code>{entry.key}</code></span>
+    <span className="apply-value">{'live' in entry && <><span className="apply-before">{shown(entry.live)}</span> → </>}{'draft' in entry ? shown(entry.draft) : 'game default'}</span>
   </li>)}</ul></section>;
 }
 
