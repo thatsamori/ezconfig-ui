@@ -9,6 +9,9 @@
  * - A body that breaks the contract gets 400 "bad-request".
  * - Otherwise the poll's report is recorded and the poll is held (50 s) until
  *   it is answered "no-change", or "superseded" by a newer poll.
+ * - A poll whose build stamp is not the Supported build when its hold ends
+ *   (or none is set) is answered "not-supported-build" instead of
+ *   "no-change": such a game server is sent nothing.
  *
  * It sits outside `src/app/api/`, whose handlers all require a session: game
  * servers authenticate by key, and send no cookie or Origin. Routine polls are
@@ -18,6 +21,7 @@ import { findGameServerByKey, recordPoll } from '@/lib/platform/game-servers';
 import { log } from '@/lib/platform/log';
 import { readBearerKey, readPollReport } from '@/lib/platform/poll-exchange';
 import { countRejectedKey, holdPoll, type PollAnswer } from '@/lib/platform/polls';
+import { isSupportedBuild, logReportedBuild } from '@/lib/platform/supported-build';
 
 const answer = (body: PollAnswer | { answer: 'bad-request'; error: string } | { answer: 'error' }, status = 200) =>
   Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
@@ -37,8 +41,10 @@ export async function POST(request: Request) {
       log.warn('poll.bad-request', read.error, { gameServerId });
       return answer({ answer: 'bad-request', error: read.error }, 400);
     }
+    logReportedBuild(server, read.report.buildStamp);
     recordPoll(server, read.report);
-    return answer(await holdPoll(server.id, read.report.instanceId, request.signal));
+    const held = await holdPoll(server.id, read.report.instanceId, request.signal);
+    return answer(held.answer === 'no-change' && !isSupportedBuild(read.report.buildStamp) ? { answer: 'not-supported-build' } : held);
   } catch (error) {
     log.error('poll.failed', error, gameServerId === undefined ? {} : { gameServerId });
     return answer({ answer: 'error' }, 500);

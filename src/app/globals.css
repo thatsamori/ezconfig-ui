@@ -465,4 +465,10 @@ body { -webkit-font-smoothing: antialiased; }
 .setup-checklist .key-warning { color: #e0a83c; font-weight: 500; }
 .server-facts { display: grid; grid-template-columns: max-content 1fr; gap: 10px 28px; font-size: 13px; }
 .server-facts dt { color: #9a9ba1; }
+.needs-updating { margin-bottom: 24px; padding: 14px 18px; background: rgba(224,168,60,.08); border: 1px solid rgba(224,168,60,.35); border-radius: 12px; max-width: 720px; }
+.needs-updating h2 { color: #e0a83c; font-size: 14px; font-weight: 600; }
+.needs-updating p { color: #d4d4d8; font-size: 13px; line-height: 1.55; margin-top: 4px; }
+.needs-updating-tag { color: #e0a83c; font-size: 12px; white-space: nowrap; }
+.supported-build-line { color: #d4d4d8; font-size: 14px; margin-bottom: 20px; }
+.supported-build-page code { font-family: var(--font-mono); font-size: 12.5px; background: #26272b; border-radius: 5px; padding: 1px 5px; }
 @media (max-width: 560px) { .ini-copy { flex-direction: column; align-items: stretch; } .server-row { flex-wrap: wrap; } }
