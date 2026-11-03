@@ -156,3 +156,10 @@ and sent whole; a typical document is a few KB, every key about 100 KB.
   numbered migrations applied at startup, each in a transaction, with the
   version in `PRAGMA user_version` and a `VACUUM INTO` copy taken first.
   Litestream streams the file to a Lightsail bucket.
+- 2026-11-02, from
+  [What does the owner see of earlier Live configurations?](14-earlier-live-configurations.md)
+  (ruled out of scope): earlier Live configurations are not kept. A game
+  server holds at most one Live configuration, and Apply replaces it in one
+  transaction with a new random id. This replaces "Every Live configuration
+  is kept" and the about 2 GB a year estimate; deleting a Ruleset clears the
+  origins of Drafts and each server's one Live configuration.

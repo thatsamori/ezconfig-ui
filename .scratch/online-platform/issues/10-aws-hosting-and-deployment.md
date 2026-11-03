@@ -251,3 +251,8 @@ backup status.
   [Does the HTTP node work on Linux, and can the mod read Game.ini?](12-prove-linux-http-and-game-ini.md):
   the local-testing override must be quoted,
   `PlatformUrl="http://127.0.0.1:…"`. Unquoted, the read stops at `//`.
+- 2026-11-02, from
+  [What does the owner see of earlier Live configurations?](14-earlier-live-configurations.md)
+  (ruled out of scope): earlier Live configurations are not kept, so the
+  about 2 GB a year of them no longer applies. Each game server holds at most
+  one.

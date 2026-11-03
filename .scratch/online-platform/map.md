@@ -100,9 +100,9 @@ ready to slice into implementation tickets. This map builds nothing.
   confirms it. The URL is built in and overridable in Game.ini.
 - [Where does each entity get stored?](issues/07-entity-storage.md):
   one SQLite file for everything, no Redis or DynamoDB. Each configuration is
-  one JSON document of overrides. Every Live configuration is kept, with a
-  random id, and a game server has none until its first Apply. The Supported
-  build is a stored setting.
+  one JSON document of overrides. A game server holds one Live configuration,
+  replaced under a new random id by each Apply, and none until its first
+  Apply. The Supported build is a stored setting.
 - [What happens between a live change and the server confirming it?](issues/08-live-change-to-confirmed.md):
   a Live configuration is Pending, then Confirmed or Failed, computed from the
   server's last report. Apply needs the server Connected on the Supported
@@ -165,3 +165,6 @@ ready to slice into implementation tickets. This map builds nothing.
 - Self-service account deletion: the platform operator deletes a server owner
   on request, ruled out while resolving
   [How are owners, servers and secrets trusted?](issues/09-trust-owners-servers-secrets.md).
+- Apply history (keeping earlier Live configurations, listing them, rolling
+  back to one): not needed for V1 and can come later. Ruled out as
+  [What does the owner see of earlier Live configurations?](issues/14-earlier-live-configurations.md).

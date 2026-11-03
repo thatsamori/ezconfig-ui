@@ -50,5 +50,8 @@ for how long, and who can read it:
   status is never stored. The mod writes its delivery message to chat and
   the server log.
 - [Where does each entity get stored?](07-entity-storage.md): one SQLite
-  file. Every Live configuration is already kept with its applied time.
+  file. Each game server holds only its current Live configuration, with its
+  applied time; earlier ones are not kept, since Apply history was ruled out
+  of scope by
+  [What does the owner see of earlier Live configurations?](14-earlier-live-configurations.md).
 - Out of scope (map): alerts outside the platform about game server states.

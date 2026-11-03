@@ -1,6 +1,6 @@
 # 14: What does the owner see of earlier Live configurations?
 
-Status: open
+Status: resolved; out of scope for V1
 Type: grilling
 Created: 2026-11-02
 Blocked by: 08
@@ -40,3 +40,38 @@ anything:
 - From [How is V1 hosted and deployed on AWS?](10-aws-hosting-and-deployment.md):
   hosting does not limit keeping every Live configuration in V1. The disk is
   60 GB, and the Lightsail backup bucket can move to a larger plan.
+
+## Answer
+
+Ruled out of scope 2026-11-02 by the owner while grilling: V1 has no Apply
+history. Earlier Live configurations are neither stored nor shown, and
+nothing rolls back from them. It can come later if it proves useful. Listed
+in the map's Out of scope, not its Decisions so far.
+
+**What it changes.** This revises
+[Where does each entity get stored?](07-entity-storage.md), which kept every
+Live configuration and never pruned them:
+- A game server holds at most one Live configuration: values, origin,
+  applied time and a random id. Apply replaces it in one transaction and the
+  previous one is deleted.
+- Each Apply still makes a new random id: a restore from backup must not
+  repeat one, and a no-change Apply (the re-send after Failed) must look new
+  to the game server.
+- States are unchanged. Pending, Confirmed and Failed were already computed
+  for the current Live configuration only, and a reported id the platform no
+  longer holds already counts as differing.
+- Deleting a Ruleset clears the origin of Drafts and of each game server's
+  one Live configuration.
+- No glossary change: a Live configuration is already the one last applied.
+
+**Accepted.** Rolling back means loading a Ruleset version. Draft edits that
+went live without being saved as a version are gone once the next Apply
+replaces them. Litestream's backups hold earlier copies of the file for
+their retention window; that is disaster recovery, not rollback.
+
+**Handed on.**
+- [Where does each entity get stored?](07-entity-storage.md) and
+  [How is V1 hosted and deployed on AWS?](10-aws-hosting-and-deployment.md)
+  (resolved): noted on both.
+- [What does the platform record, and who can read it?](15-platform-records-and-logs.md):
+  its context no longer counts on stored Live configurations.
