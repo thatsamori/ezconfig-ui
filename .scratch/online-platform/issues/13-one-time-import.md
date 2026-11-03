@@ -39,3 +39,7 @@ The owner's self-hosted data gets a one-time import (map Notes). Decide:
   the app there); this checkout has only `Databases/Character`.
 - Only the owner's data is imported; other owners' self-hosted data is out of
   scope.
+- From [How are owners, servers and secrets trusted?](09-trust-owners-servers-secrets.md):
+  imported Note bodies pass the same sanitizer as saved ones. A Note with no
+  author already shows "a former server owner", as after a server owner is
+  deleted.

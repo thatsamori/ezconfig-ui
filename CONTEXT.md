@@ -7,6 +7,23 @@ feature, command batch) are defined in the mod's `CONTEXT.md`
 
 ## Language
 
+### People
+
+**Server owner**:
+A person signed in to the platform with their Discord account. Owns the game
+servers and Rulesets they create; nobody else edits them.
+_Avoid_: user, customer, account, admin
+
+**Platform operator**:
+A server owner named in the instance's own settings as the person who runs it.
+Not a role granted from inside the platform.
+_Avoid_: admin, moderator, superuser
+
+**Invite**:
+A single-use link the platform operator makes so that one new Discord account
+can become a server owner.
+_Avoid_: invite code, allowlist, referral
+
 ### Game servers
 
 **Game server**:

@@ -45,3 +45,8 @@ holds long-lived connections to game servers. Confirm or revise the
   push to browsers). Apply is accepted only while the game server is
   Connected, so the instance must answer that from its held polls at request
   time.
+- From [How are owners, servers and secrets trusted?](09-trust-owners-servers-secrets.md):
+  instance settings and secrets kept outside the repo: `OPERATOR_DISCORD_IDS`,
+  and the Discord application's client id, client secret and redirect URL.
+  The session cookie is `Secure`, so the platform is served over HTTPS only. A
+  Content-Security-Policy backs up the sanitizing of Note HTML.

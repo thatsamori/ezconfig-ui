@@ -109,11 +109,18 @@ ready to slice into implementation tickets. This map builds nothing.
   build, and a no-change Apply re-sends. An interrupted delivery or a build
   change gets the whole configuration again. Every Draft write and Apply
   carries the revision it saw, and a stale one is rejected.
+- [How are owners, servers and secrets trusted?](issues/09-trust-owners-servers-secrets.md):
+  single-use Invites from a platform operator named in the instance's
+  settings. Discord sign-in asks only for `identify`; sessions are hashed and
+  kept server-side behind a cookie. Holding the Game server key in Game.ini's
+  `[EZConfigPlatform]` section proves control; it is shown once and stored
+  hashed. The operator manages Invites and server owners, deletes Notes and
+  sets the Supported build. Note HTML is sanitized on save.
 
 ## Not yet specified
 
-- Logs: what the platform records about polls, deliveries and errors, and who
-  can read them.
+- Logs: what the platform records about polls, deliveries, errors and
+  platform operator actions, and who can read them.
 
 ## Out of scope
 
@@ -134,3 +141,6 @@ ready to slice into implementation tickets. This map builds nothing.
 - Alerts outside the platform (Discord DM, email) about game server states:
   the platform's pages and the in-game delivery message cover V1, ruled out
   while resolving [What happens between a live change and the server confirming it?](issues/08-live-change-to-confirmed.md).
+- Self-service account deletion: the platform operator deletes a server owner
+  on request, ruled out while resolving
+  [How are owners, servers and secrets trusted?](issues/09-trust-owners-servers-secrets.md).

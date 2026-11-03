@@ -40,6 +40,9 @@ On the Linux and the Windows dedicated server:
   - a URL with port, path and query: the exact string, unquoted and quoted
     (record whether quotes are stripped);
   - an empty value: `IsValid=true`, `""`.
+- `GetCustomConfigVar_String("EZConfigPlatform", "GameServerKey")` reads a
+  value shaped like an issued Game server key (`ezc_gsk_` then 43 base64url
+  characters, `-` and `_` included) back as the exact string.
 - The section survives Mordhau's rewrite of Game.ini on a clean shutdown and is
   read again after a restart.
 - Optional: `modifyinivar game EZConfigPlatform PlatformUrl <new> string` over
@@ -54,3 +57,6 @@ On the Linux and the Windows dedicated server:
   read, its proof cases, and why not a config variable or the command line.
 - Guard before the node: a non-empty URL, POST only, one request in flight per
   node, a watchdog longer than 180 s.
+- From [How are owners, servers and secrets trusted?](09-trust-owners-servers-secrets.md):
+  the Game server key sits in the same section as `GameServerKey`, read before
+  every poll like `PlatformUrl`.

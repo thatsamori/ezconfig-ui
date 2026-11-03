@@ -203,3 +203,12 @@ one throwaway probe on the owner's Linux box and in the Windows kit sandbox.
   result and its build stamp with the id, sends the result on every poll (not
   only until reported), and reports no id when its own build stamp differs
   from the saved one. These join the mod work above.
+- 2026-11-02, from
+  [How are owners, servers and secrets trusted?](09-trust-owners-servers-secrets.md):
+  adds to the poll exchange. The mod reads `[EZConfigPlatform] GameServerKey`
+  before every poll and sends it as the Bearer token. With no key it does not
+  poll (one log line per map, the value read again every 60 s). After `401`
+  "key rejected" it logs once and retries every 60 s. Every poll carries an
+  instance id the mod picks when it starts on a map; a superseded poll is
+  answered "superseded" and the mod waits about 10 s. These join the mod work
+  above.
