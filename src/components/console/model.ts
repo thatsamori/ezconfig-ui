@@ -1,6 +1,6 @@
 import { CategoryName, WeaponConfigGroupName } from '@/lib/config/weaponConfigSchema';
 import { constrainedFloatTextError } from '@/lib/config/numericConstraints';
-import type { ConfigEntry, DefaultValue } from '@/lib/config/types';
+import { DataType, type ConfigEntry, type DefaultValue } from '@/lib/config/types';
 import type { ConfigState, ConfigValue } from '@/lib/store/configStore';
 export const weapons = Object.values(CategoryName).sort((a, b) => a.localeCompare(b));
 export const attackGroups = Object.values(WeaponConfigGroupName);
@@ -31,6 +31,18 @@ export function newValueOutcome(text: string, baseline: DefaultValue | undefined
   if (!text.trim() || (!deliberate && value === baseline)) return 'close';
   if (newValueError(text, entry)) return 'refused';
   return Number.isFinite(value) ? value : 'close';
+}
+/**
+ * What one click on a default stores, for the kinds with no new value to open. A
+ * Bool can change only one way, so it takes the opposite of its default, or `true`
+ * with no single default. The others start from the default, to edit from there.
+ */
+export function valueFromDefault(baseline: DefaultValue | undefined, entry: ConfigEntry): ConfigValue {
+  if (entry.dataType === DataType.Bool) return baseline !== true;
+  if (baseline !== undefined) return structuredClone(baseline);
+  if (entry.dataType === DataType.FloatArray) return [];
+  if (entry.dataType === DataType.String) return entry.choices?.[0] ?? '';
+  return entry.dataType === DataType.Vector ? { x: 0, y: 0, z: 0 } : { x: 0, y: 0 };
 }
 /**
  * The wheel over a focused number input steps its value instead of scrolling.

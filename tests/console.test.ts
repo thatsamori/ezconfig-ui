@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import { countOverrides, holdNumberForWheel, newValueError, newValueOutcome, sweepValue, toggleAttackGroup } from '../src/components/console/model';
+import { countOverrides, holdNumberForWheel, newValueError, newValueOutcome, sweepValue, toggleAttackGroup, valueFromDefault } from '../src/components/console/model';
 import { parrySections } from '../src/components/console/parry-sections';
 import { CHARACTER_CONFIG_OPTIONS } from '../src/lib/config/characterConfigSchema';
+import { WEAPON_CONFIG_OPTIONS, WeaponConfigGroupName } from '../src/lib/config/weaponConfigSchema';
 import { resolveDefault } from '../src/lib/config/defaults';
 import { DataType, type ConfigEntry } from '../src/lib/config/types';
 describe('attack columns', () => {
@@ -10,6 +11,64 @@ describe('attack columns', () => {
     expect(toggleAttackGroup(['General'], 'Stab')).toEqual(['Stab']);
     expect(toggleAttackGroup(['Stab'], 'Strike')).toEqual(['Strike', 'Stab']);
     expect(toggleAttackGroup(['Strike'], 'Strike')).toEqual(['Strike']);
+  });
+});
+describe('one click on a default (online-platform#52)', () => {
+  const characterEntries = Object.values(CHARACTER_CONFIG_OPTIONS).flat();
+  const character = (configKey: string) => characterEntries.find(entry => entry.configKey === configKey)!;
+  const weapon = (configKey: string) => Object.values(WEAPON_CONFIG_OPTIONS).flat().find(entry => entry.configKey === configKey)!;
+  const clicked = (entry: ConfigEntry, database?: string, category?: string) => valueFromDefault(resolveDefault(entry, database, category).defaultValue, entry);
+  test('a Bool takes the opposite of its default', () => {
+    expect(clicked(character('CustomFOV'))).toBe(true);
+    expect(clicked(character('AllowDrop'))).toBe(false);
+    expect(clicked(weapon('NoFlinch'), 'ArmingSword', 'Strike')).toBe(true);
+    expect(clicked(weapon('CanMissCombo'), 'ArmingSword', 'Strike')).toBe(false);
+    expect(clicked(weapon('CanBlock'), 'ArmingSword', 'General')).toBe(false);
+  });
+  test('every Bool with one default ends up different from it, so the override is a change', () => {
+    const bools = characterEntries.filter(entry => entry.dataType === DataType.Bool);
+    expect(bools.length).toBeGreaterThan(0);
+    for (const entry of bools) expect(clicked(entry), entry.configKey).toBe(!resolveDefault(entry).defaultValue);
+    for (const [general, entries] of [[true, WEAPON_CONFIG_OPTIONS.General], [false, WEAPON_CONFIG_OPTIONS.Attack]] as const) {
+      for (const entry of entries.filter(entry => entry.dataType === DataType.Bool)) {
+        for (const group of general ? ['General'] : Object.values(WeaponConfigGroupName).filter(group => group !== 'General')) {
+          const baseline = resolveDefault(entry, 'ArmingSword', group).defaultValue;
+          if (baseline !== undefined) expect(clicked(entry, 'ArmingSword', group), `${entry.configKey} ${group}`).toBe(!baseline);
+        }
+      }
+    }
+  });
+  test('the All weapons sheet names no weapon: the same rule, with `true` where the default varies', () => {
+    expect(resolveDefault(weapon('NoFlinch')).defaultValue).toBe(false);
+    expect(clicked(weapon('NoFlinch'))).toBe(true);
+    expect(resolveDefault(weapon('CanMissCombo')).defaultValue).toBe(true);
+    expect(clicked(weapon('CanMissCombo'))).toBe(false);
+    expect(resolveDefault(weapon('CanCombo')).defaultValue).toBeUndefined();
+    expect(clicked(weapon('CanCombo'))).toBe(true);
+    expect(resolveDefault(weapon('ForcesRearingFromFront')).defaultValue).toBeUndefined();
+    expect(clicked(weapon('ForcesRearingFromFront'))).toBe(true);
+  });
+  test('a Bool with no default sets true', () => {
+    expect(valueFromDefault(undefined, character('CustomFOV'))).toBe(true);
+  });
+  test('string choices, vectors and arrays start from a copy of the default', () => {
+    const vector = { x: 1, y: 2, z: 3 };
+    const seeded = valueFromDefault(vector, character('HighBlockColliderRelativeOffsetLocation'));
+    expect(seeded).toEqual(vector);
+    expect(seeded).not.toBe(vector);
+    const array = [50, 45];
+    const seededArray = valueFromDefault(array, weapon('Damage'));
+    expect(seededArray).toEqual(array);
+    expect(seededArray).not.toBe(array);
+    expect(valueFromDefault({ x: 3, y: 4 }, weapon('Turncap'))).toEqual({ x: 3, y: 4 });
+    expect(valueFromDefault('Other', { ...weapon('Damage'), dataType: DataType.String, choices: ['Default', 'Other'] })).toBe('Other');
+  });
+  test('and with no default, as they did', () => {
+    expect(valueFromDefault(undefined, weapon('Damage'))).toEqual([]);
+    expect(valueFromDefault(undefined, character('HighBlockColliderRelativeOffsetLocation'))).toEqual({ x: 0, y: 0, z: 0 });
+    expect(valueFromDefault(undefined, weapon('Turncap'))).toEqual({ x: 0, y: 0 });
+    expect(valueFromDefault(undefined, { ...weapon('Damage'), dataType: DataType.String, choices: ['Default', 'Other'] })).toBe('Default');
+    expect(valueFromDefault(undefined, { ...weapon('Damage'), dataType: DataType.String, choices: undefined })).toBe('');
   });
 });
 describe('the wheel over a number input (online-platform#50)', () => {

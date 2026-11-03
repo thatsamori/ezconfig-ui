@@ -7,7 +7,7 @@ import { DataType, type ConfigEntry } from '@/lib/config/types';
 import { holdRefused, type ConfigValue, type RefusedValue } from '@/lib/store/configStore';
 import { useDebouncedCallback } from '@/lib/hooks';
 import { SaveIndicator } from '@/components/config/SaveIndicator';
-import { isOverride, newValueError, newValueOutcome } from './model';
+import { isOverride, newValueError, newValueOutcome, valueFromDefault } from './model';
 import { defaultLabel, defaultDetails, resolveDefault } from '@/lib/config/defaults';
 import { constrainedFloatTextError } from '@/lib/config/numericConstraints';
 const fieldError = (message?: string) => message && <small className="field-error" role="alert">{message}</small>;
@@ -113,11 +113,7 @@ export function ValueEditor({
       if (entry.dataType === DataType.Float) {
         setDraft(typeof baseline === 'number' ? String(baseline) : '');
         setEditing(true);
-      } else if (baseline !== undefined) onChange(structuredClone(baseline) as ConfigValue);
-      else if (entry.dataType === DataType.Bool) onChange(true);
-      else if (entry.dataType === DataType.FloatArray) onChange([]);
-      else if (entry.dataType === DataType.String) onChange(entry.choices?.[0] ?? '');
-      else onChange(entry.dataType === DataType.Vector ? { x: 0, y: 0, z: 0 } : { x: 0, y: 0 });
+      } else onChange(valueFromDefault(baseline, entry));
     }}>{baselineLabel}</button>{fieldError(error)}</>;
   }
   const number = (n: number, change: (n: number) => void, name = label, mark?: string) => <NumberField error={mark} value={n} onChange={change} label={name} field={field} disabled={disabled} debounceMs={debounceMs} minimum={entry.dataType === DataType.Float ? entry.minimum : undefined} maximum={entry.dataType === DataType.Float ? entry.maximum : undefined} integer={entry.dataType === DataType.Float ? entry.integer : undefined} />;
