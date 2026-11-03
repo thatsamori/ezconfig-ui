@@ -17,6 +17,7 @@ the summary. The restore check and the restore runbook are
 | The app: `next start` on Bun (`bun --bun node_modules/next/dist/bin/next start`) on 127.0.0.1:3000, one process, restarted whenever it exits | `ezconfig-platform.service`, running `/srv/ezconfig-platform/current` | `deploy/ezconfig-platform.service` |
 | Releases, the newest 3 | `/srv/ezconfig-platform/releases/<UTC time>-<commit>` | `deploy/release.sh` |
 | The database (`DATABASE_PATH`), migrated at startup | `/var/lib/ezconfig-platform/platform.db` | `src/lib/platform/migrations/` |
+| The restore check's status file, beside the database (below) | `/var/lib/ezconfig-platform/platform.db.restore-check.json` | `src/lib/platform/restore-check.ts` |
 | The app's settings | `/etc/ezconfig-platform/platform.env`, root 0600 | `.env.example` |
 | Caddy: certificate, HTTP to HTTPS, HSTS, proxy, refuses `/internal/*` | `/etc/caddy/Caddyfile`; hostnames and email in `/etc/ezconfig-platform/caddy.env`, root 0600 | `deploy/Caddyfile`, `deploy/caddy.service.conf` |
 | Litestream: streams the database to the bucket, calls the heartbeat every 75 s | `litestream.service`; config with the bucket key in `/etc/litestream.yml`, root 0600 | `deploy/litestream.service`, `deploy/litestream.yml.example` |
@@ -76,6 +77,67 @@ A release that fails before the switch is removed. Rolling back means deploying
 an older commit. A restart drops held polls, so game servers are Not connected
 for about 10 to 20 s. The SSH host defaults to the `ezconfig-platform` alias;
 `DEPLOY_SSH_HOST` overrides it.
+
+### The release commit
+
+The operator's Status page shows the commit the app runs, with no setting
+for it. Each release folder is a git checkout of its commit with a detached
+HEAD (release.sh checks that `git rev-parse HEAD` is the commit), and the
+service runs in that folder. So the app reads the full commit id from
+`.git/HEAD` in its working directory (`readReleaseCommit` in
+`src/lib/platform/status.ts`). Anywhere else, such as a checkout on a branch,
+the page shows it as unknown. Keep releases as checkouts at their commit, or
+this goes with them.
+
+## The operator's Status page
+
+The Status tab, for the platform operator only, is computed when it loads
+(`GET /api/operator/status`, `src/lib/platform/status.ts`):
+
+- game servers registered, Connected now, and Connected by the build stamp
+  they reported, with the Supported build marked. It names no game server or
+  owner;
+- the release commit, running since, and the warnings and errors logged since
+  start with the newest 20;
+- "Backup: last confirmed 40 s ago", from Litestream's heartbeat. It warns
+  after 5 minutes without one, or 5 minutes after start with none yet;
+- the last restore check from its status file (below). It warns when the
+  check failed, is more than 8 days old, has never run, or the file cannot be
+  read.
+
+The health and the heartbeat are kept in process memory, so a restart clears
+them.
+
+### The restore check's status file
+
+The weekly restore check (`online-platform#39`) records its result in a file
+beside the database, never in the database itself: `DATABASE_PATH` plus
+`.restore-check.json`, so `/var/lib/ezconfig-platform/platform.db.restore-check.json`
+on the instance. The app reads it whenever the Status page loads
+(`src/lib/platform/restore-check.ts`); it never writes it.
+
+It is one JSON object:
+
+```json
+{"checkedAt":"2026-11-08T04:00:12Z","result":"passed","reason":"Restored to 04:00:05; integrity_check ok"}
+```
+
+| Field | |
+|---|---|
+| `checkedAt` | When the check finished: ISO 8601 with `Z` or an offset, such as `date -u +%Y-%m-%dT%H:%M:%SZ` prints. |
+| `result` | `"passed"` or `"failed"`. |
+| `reason` | Optional text the page shows under the result: why it failed, or a note on a pass. The page shows at most 500 characters. Never put a secret here, such as the bucket key. |
+
+Any other field is ignored. Write the whole file after every run, pass or
+fail: write a temp file in the same folder, then rename it over this one, so
+the app never reads half a file. The app's user (`ezconfig`) must be able to
+read it. On the page:
+
+- no file reads as never checked, with a warning;
+- `failed` warns, however recent;
+- `passed` warns once `checkedAt` is more than 8 days old;
+- a file that is not this shape reads as unreadable, with a warning, and
+  never as passed.
 
 ## Checks
 

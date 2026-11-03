@@ -27,7 +27,8 @@ export interface TestSession {
   close(): void;
 }
 
-export async function signInForTest(name = 'Test owner'): Promise<TestSession> {
+/** `discordId` signs in that account, for example one in OPERATOR_DISCORD_IDS; by default a made-up one. */
+export async function signInForTest(name = 'Test owner', discordId?: string): Promise<TestSession> {
   const { env } = await import('../../src/lib/env');
   if (!env.databasePath) throw new Error('DATABASE_PATH is not set: point it at a temp file before signing in for a test');
   const { closePlatformStore, migratePlatformDatabase, PLATFORM_MIGRATIONS_DIRECTORY, readPlatformMigrations } = await import('../../src/lib/platform/storage');
@@ -36,7 +37,7 @@ export async function signInForTest(name = 'Test owner'): Promise<TestSession> {
   const { SESSION_COOKIE } = await import('../../src/lib/platform/auth');
   migratePlatformDatabase(env.databasePath, readPlatformMigrations(join(repo, PLATFORM_MIGRATIONS_DIRECTORY)));
   // A made-up Discord id per call, so tests sharing one database never meet.
-  const user = recordSignIn({ discordId: `9${Date.now()}${randomInt(1_000_000)}`.slice(0, 19), username: name, avatar: null }, Date.now());
+  const user = recordSignIn({ discordId: discordId ?? `9${Date.now()}${randomInt(1_000_000)}`.slice(0, 19), username: name, avatar: null }, Date.now());
   const cookie = `${SESSION_COOKIE}=${startSession(user.id)}`;
   const origin = new URL(env.publicUrl).origin;
   return {

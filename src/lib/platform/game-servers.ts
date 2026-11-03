@@ -14,11 +14,14 @@
  *   has not been regenerated since);
  * - Not connected: shown with last seen;
  * - Never connected: no poll yet.
+ * Alongside it, the view says when EZConfig needs updating: the latest poll
+ * reported a build that is not the Supported build (supported-build.ts).
  */
 import { createHash, randomBytes } from 'node:crypto';
 import type { PollReport, ProcessingResult } from './poll-exchange';
 import { endKey, pollActivity } from './polls';
 import { platformStore } from './storage';
+import { isSupportedBuild, readSupportedBuild } from './supported-build';
 
 export const GAME_SERVER_KEY_PATTERN = /^ezc_gsk_[A-Za-z0-9_-]{43}$/;
 export const CONNECTED_WITHIN_MS = 15_000;
@@ -55,6 +58,12 @@ export interface GameServerView {
   sharedKey: boolean;
   /** What the latest recorded poll reported; null before the first poll. */
   lastReport: { buildStamp: string | null; processed: { liveConfigurationId: string; result: ProcessingResult } | null } | null;
+  /**
+   * "EZConfig needs updating": the latest poll reported a build stamp (null:
+   * none) that is not the Supported build (null: none is set), so nothing is
+   * sent. Null before the first poll and while it runs the Supported build.
+   */
+  needsUpdating: { running: string | null; supported: string | null } | null;
 }
 
 type Row = {
@@ -164,7 +173,7 @@ export function recordPoll(server: GameServer, report: PollReport, now = Date.no
   );
 }
 
-export function connectionStatus(server: GameServer, now = Date.now()): ConnectionStatus {
+export function connectionStatus(server: Pick<GameServer, 'id' | 'lastPollAt'>, now = Date.now()): ConnectionStatus {
   const activity = pollActivity(server.id, now);
   if (activity.held) return { state: 'connected' };
   const lastSeenAt = Math.max(server.lastPollAt ?? -Infinity, activity.lastEndedAt ?? -Infinity);
@@ -172,7 +181,19 @@ export function connectionStatus(server: GameServer, now = Date.now()): Connecti
   return now - lastSeenAt <= CONNECTED_WITHIN_MS && !activity.keyEnded ? { state: 'connected' } : { state: 'not-connected', lastSeenAt };
 }
 
-export function gameServerView(server: GameServer, now = Date.now()): GameServerView {
+/**
+ * For the platform operator's status page: how many game servers are
+ * registered and Connected, and the build stamp each Connected one reported
+ * last (null: none). Names no game server or owner.
+ */
+export function countGameServers(now = Date.now()): { registered: number; connectedBuildStamps: (string | null)[] } {
+  const rows = platformStore().all<{ id: number; last_poll_at: number | null; reported_build_stamp: string | null }>('SELECT id, last_poll_at, reported_build_stamp FROM game_servers');
+  const connected = rows.filter(row => connectionStatus({ id: row.id, lastPollAt: row.last_poll_at }, now).state === 'connected');
+  return { registered: rows.length, connectedBuildStamps: connected.map(row => row.reported_build_stamp) };
+}
+
+export function gameServerView(server: GameServer, now = Date.now(), supportedBuild = readSupportedBuild()?.stamp ?? null): GameServerView {
+  const outdated = server.lastPollAt !== null && !isSupportedBuild(server.reportedBuildStamp, supportedBuild);
   return {
     id: server.id,
     name: server.name,
@@ -185,5 +206,6 @@ export function gameServerView(server: GameServer, now = Date.now()): GameServer
       processed: server.reportedLiveConfigurationId === null || server.reportedResult === null ? null
         : { liveConfigurationId: server.reportedLiveConfigurationId, result: JSON.parse(server.reportedResult) as ProcessingResult },
     },
+    needsUpdating: outdated ? { running: server.reportedBuildStamp, supported: supportedBuild } : null,
   };
 }

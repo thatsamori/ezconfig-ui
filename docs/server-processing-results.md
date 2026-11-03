@@ -42,7 +42,8 @@ the library's forwarded socket errors without an uncaught EventEmitter error.
 The adapter's 1 MiB frame bound is a receiver safeguard; the game's actual
 packet size and long-result behavior still need native transport measurement.
 
-Full and selected apply now use `executeAcknowledgedBatch`, which prepares a
+The self-hosted full and selected Apply routes, removed in online-platform#30,
+used `executeAcknowledgedBatch`; automatic sync uses `executeAcknowledgedBatchAt`. Each prepares a
 fresh connection's receiver, requests the native `listen custom` subscription, then
 requires a matching compatible batch admission before any wipe or data command.
 Generic `rcon.send()` output cannot establish processing success. An older or

@@ -1,24 +1,23 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Bookmark, Sword, Search, Check, X, MessageCircle, UserPlus, Server } from 'lucide-react';
+import { Bookmark, Sword, Search, Check, X, MessageCircle, UserPlus, Server, PackageCheck, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 import { AccountMenu, AuthGate } from '@/components/auth';
 import { Logo } from '@/components/Logo';
-import { InvitesPage } from '@/components/operator';
+import { InvitesPage, StatusPage, SupportedBuildPage } from '@/components/operator';
 import { PresetsTab } from '@/components/presets';
 import { GameServersTab } from '@/components/game-servers';
 import { SavePresetDialog } from '@/components/presets/SavePresetDialog';
-import { SelectiveApplyDialog } from '@/components/SelectiveApplyDialog';
 import { NotesDialog } from '@/components/notes';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
-import { useConfigStore, flushConfigWrites, type ConfigState } from '@/lib/store/configStore';
+import { useConfigStore, flushConfigWrites, fieldName, type ConfigState } from '@/lib/store/configStore';
 import { useSessionStore } from '@/lib/store';
 import { WEAPON_CONFIG_OPTIONS } from '@/lib/config/weaponConfigSchema';
 import { CHARACTER_CONFIG_OPTIONS, CharacterConfigGroupName } from '@/lib/config/characterConfigSchema';
 import { supportsWeapon, type ConfigEntry } from '@/lib/config/types';
 import { useNotes } from '@/lib/hooks';
-import { useConfigPolling } from '@/lib/hooks/useConfigPolling';
 import { ValueEditor } from './ValueEditor';
 import { SweepPanel } from './SweepPanel';
 import { GlobalSearch } from './GlobalSearch';
@@ -68,6 +67,7 @@ function KeyRow({
   });
   const setValue = useConfigStore(state => state.setValue);
   const removeValue = useConfigStore(state => state.removeValue);
+  const fieldErrors = useConfigStore(state => state.fieldErrors);
   const categories = database === 'Character' ? values.character : values.weapons[database];
   const rowValues = groups.map(group => categories?.[group]?.[entry.configKey]);
   const overridden = rowValues.some(isOverride);
@@ -76,14 +76,30 @@ function KeyRow({
   return <>
     <div role="row" tabIndex={-1} data-config-key={entry.configKey} className={`config-grid config-row${overridden ? ' has-override' : ''}${muted ? ' feature-muted' : ''}${highlighted ? ' search-destination' : ''}`} title={muted ? 'Feature parameter: stored and sent, but only read while the feature toggle is on.' : undefined}>
       <div role="cell" className="key-cell"><div className="key-label"><span title={entry.documentation || entry.configKey}>{entry.label ?? entry.configKey}</span>{entry.isFeatureToggle && <span className="feature-badge">feature</span>}<button className={`notes-button${notes.length ? ' has-notes' : ''}`} title={notes.length ? `${notes.length} notes` : 'Add a note'} aria-label={`Notes for ${entry.configKey}`} onClick={() => setNotesOpen(true)}><MessageCircle size={12} />{notes.length || ''}</button></div>{muted && <small>needs {entry.gatedBy}</small>}</div>
-      {groups.map((group, index) => <div role="cell" key={group} data-config-database={database} data-config-category={group} data-config-key={entry.configKey}><ValueEditor entry={entry} database={database} category={group} value={rowValues[index]} label={`${database} ${group} ${entry.label ?? entry.configKey}`} onChange={value => setValue(database, group, entry.configKey, value)} onReset={() => removeValue(database, group, entry.configKey)} /></div>)}
+      {groups.map((group, index) => <div role="cell" key={group} data-config-database={database} data-config-category={group} data-config-key={entry.configKey}><ValueEditor entry={entry} database={database} category={group} value={rowValues[index]} label={`${database} ${group} ${entry.label ?? entry.configKey}`} onChange={value => setValue(database, group, entry.configKey, value)} onReset={() => removeValue(database, group, entry.configKey)} />{fieldErrors[fieldName(database, group, entry.configKey)] && <small className="field-error" role="alert">{fieldErrors[fieldName(database, group, entry.configKey)]}</small>}</div>)}
       <div role="cell" className="row-actions">{groups.length > 1 && isOverride(first) && <button className="set-all" title={`Write ${showValue(first)} to ${groups.join(', ')}`} onClick={() => groups.forEach(group => setValue(database, group, entry.configKey, structuredClone(first)))}>Set all {groups.length}</button>}{database !== 'Character' && !entry.supportedWeapons && <button className="sweep-link" onClick={() => onSweep(entry)}>All weapons →</button>}</div>
     </div>
     {notesOpen && <NotesDialog open={notesOpen} onOpenChange={setNotesOpen} configKey={entry.configKey} context={database === 'Character' ? `Character · ${groups[0]}` : database} notes={notes} onAddNote={addNote} onEditNote={editNote} onDeleteNote={deleteNote} currentUsername={currentUsername} />}
   </>;
 }
+/** The status of the open Draft's saves, with what the owner can do about a failed or stale one. */
+function SaveStatus({ onReload }: { onReload: () => void }) {
+  const draft = useConfigStore(state => state.draft);
+  const saveState = useConfigStore(state => state.saveState);
+  const saveError = useConfigStore(state => state.saveError);
+  const retrySave = useConfigStore(state => state.retrySave);
+  if (!draft) return null;
+  const them = draft.dropped === 1 ? 'it' : 'them';
+  const hidden = draft.dropped ? ` · ${draft.dropped} stored value${draft.dropped === 1 ? ' is' : 's are'} not shown: this build has no key or weapon for ${them}. Saves keep ${them}.` : '';
+  return <p className="config-sync-status" role="status">{saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? draft.savedAt ? <>Saved <time dateTime={new Date(draft.savedAt).toISOString()} title={new Date(draft.savedAt).toLocaleString()}>{new Date(draft.savedAt).toLocaleTimeString()}</time></> : 'No saves yet' : <span className="save-problem">{saveError}</span>}{saveState === 'failed' && <button className="text-button" onClick={retrySave}>Retry</button>}{saveState === 'stale' && <button className="text-button" onClick={onReload}>Reload the Draft</button>}{hidden}</p>;
+}
 function ConsoleContent() {
-  const [tab, setTab] = useState('character');
+  const [tab, setTab] = useState('servers');
+  // The game server whose Draft the editor has open, and the game server page to show when going back to it.
+  const [editing, setEditing] = useState<{ id: number; name: string } | null>(null);
+  const [serverPage, setServerPage] = useState<number | undefined>();
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [weapon, setWeapon] = useState<string>('ArmingSword');
   const [charGroup, setCharGroup] = useState(characterGroups[0]);
   const [groups, setGroups] = useState<string[]>(['Strike']);
@@ -92,16 +108,16 @@ function ConsoleContent() {
   const contentRef = useRef<HTMLElement>(null);
   const [onlyOverrides, setOnlyOverrides] = useState(false);
   const [sweep, setSweep] = useState<ConfigEntry | null>(null);
-  const [reviewOpen, setReviewOpen] = useState(false);
   const [presetOpen, setPresetOpen] = useState(false);
   const values = useConfigStore(state => state.values);
+  const draft = useConfigStore(state => state.draft);
+  const loading = useConfigStore(state => state.loading);
+  const loadError = useConfigStore(state => state.loadError);
+  const stale = useConfigStore(state => state.saveState === 'stale');
+  const ready = !!draft && !loading && !stale;
   const operator = useSessionStore(state => state.user?.operator ?? false);
-  const [reload, setReload] = useState(0);
-  const sync = useConfigPolling(reload);
-  const loading = sync.loading && !sync.error;
-  const loadError = sync.loading ? sync.error : '';
   const isCharacter = tab === 'character';
-  const configScreen = tab === 'weapons' || isCharacter;
+  const configScreen = (tab === 'weapons' || isCharacter) && editing !== null;
   const database = isCharacter ? 'Character' : weapon;
   const visibleGroups = isCharacter ? [charGroup] : groups;
   const title = isCharacter ? charGroup : weapon;
@@ -123,6 +139,31 @@ function ConsoleContent() {
     setTab(next);
     setQuery('');
     setSearchDestination(null);
+    setServerPage(undefined);
+  };
+  const editDraft = (server: { id: number; name: string }) => {
+    setEditing(server);
+    void useConfigStore.getState().openDraft(server.id);
+    selectTab('character');
+  };
+  const reopenDraft = () => {
+    if (editing) void useConfigStore.getState().openDraft(editing.id);
+  };
+  const showServerPage = () => {
+    selectTab('servers');
+    setServerPage(editing?.id);
+  };
+  const resetDraft = async () => {
+    setResetting(true);
+    try {
+      await useConfigStore.getState().resetToGameDefaults();
+      toast.success('Draft reset to game defaults');
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setResetting(false);
+      setResetOpen(false);
+    }
   };
   const navigateSearch = (destination: SearchDestination) => {
     selectTab(destination.tab);
@@ -151,7 +192,7 @@ function ConsoleContent() {
     const categories = isCharacter ? {
       [charGroup]: store.values.character[charGroup]
     } : store.values.weapons[weapon];
-    for (const [group, entries] of Object.entries(categories ?? {})) for (const key of Object.keys(entries ?? {})) store.removeValue(database, group, key);
+    store.setValues(Object.entries(categories ?? {}).flatMap(([category, entries]) => Object.keys(entries ?? {}).map(key => ({ database, category, key, value: null }))));
     try {
       await flushConfigWrites();
       toast.success(`${title} back to game defaults`);
@@ -180,22 +221,33 @@ function ConsoleContent() {
         id: 'invites',
         label: 'Invites',
         icon: <UserPlus />
+      }, {
+        id: 'supported-build',
+        label: 'Supported build',
+        icon: <PackageCheck />
+      }, {
+        id: 'status',
+        label: 'Status',
+        icon: <Activity />
       }] : [])].map(item => <button key={item.id} title={item.label} aria-label={item.label} aria-current={tab === item.id ? 'page' : undefined} className={tab === item.id ? 'active' : ''} onClick={() => selectTab(item.id)}>{item.icon}</button>)}<AccountMenu /></nav>
     {configScreen ? <>
       <aside className="config-sidebar"><div className="sidebar-header"><div className="sidebar-title"><h2>{isCharacter ? 'Groups' : 'Weapons'}</h2><span>{isCharacter ? `${countGroups(values.character)} overrides` : `${weaponCount} with overrides`}</span></div><SearchField value={query} onChange={setQuery} placeholder="Filter" />{!isCharacter && <label className="override-filter"><Switch checked={onlyOverrides} onCheckedChange={setOnlyOverrides} /><span>Only with overrides</span></label>}</div><div className="sidebar-list">{items.map(name => <button key={name} className={name === title ? 'selected' : ''} aria-current={name === title ? 'true' : undefined} onClick={() => isCharacter ? setCharGroup(name as CharacterConfigGroupName) : setWeapon(name)}><span>{name}</span>{count(name) > 0 && <b>{count(name)}</b>}</button>)}{!items.length && <p className="empty-state">{onlyOverrides && !isCharacter ? 'No weapons with overrides match' : 'No matches'}</p>}</div></aside>
-      <section className="config-content" ref={contentRef}><header className="config-header"><div className="content-heading"><div><p className="crumb">{isCharacter ? 'Character' : 'Weapons'}</p><h1>{title}</h1></div><div className="header-actions">{globalSearch}<button className="outline-button" disabled={loading || !!loadError} onClick={resetScope}>Reset {isCharacter ? 'group' : 'weapon'}</button></div></div>{isCharacter ? <p className="character-hint">Server-wide values. Rows marked feature are toggles; the parameters under them are stored and sent regardless, but the mod only reads them while the toggle is on.</p> : <div className="attack-toolbar"><div className="attack-chips">{attackGroups.map(group => {
+      <section className="config-content" ref={contentRef}><header className="config-header"><div className="content-heading"><div><p className="crumb"><button className="crumb-link" onClick={showServerPage}>{editing?.name}</button> · Draft · {isCharacter ? 'Character' : 'Weapons'}</p><h1>{title}</h1></div><div className="header-actions">{globalSearch}<button className="outline-button" disabled={!ready} onClick={resetScope}>Reset {isCharacter ? 'group' : 'weapon'}</button></div></div>{isCharacter ? <p className="character-hint">Server-wide values. Rows marked feature are toggles; the parameters under them are stored and sent regardless, but the mod only reads them while the toggle is on.</p> : <div className="attack-toolbar"><div className="attack-chips">{attackGroups.map(group => {
                 const n = countEntries(values.weapons[weapon]?.[group]);
                 return <button key={group} className={groups.includes(group) ? 'selected' : ''} aria-pressed={groups.includes(group)} onClick={() => setGroups(toggleAttackGroup(groups, group))}>{group !== 'General' && <span className="chip-checkbox">{groups.includes(group) && <Check size={9} />}</span>}{group}{n > 0 && <b>{n}</b>}</button>;
-              })}</div><span>{groups[0] === 'General' ? 'General has its own keys' : `${groups.length} of 4 attack types shown`}</span></div>}<p className="config-sync-status" role="status">{sync.error || (sync.loading ? 'Connecting live updates…' : <>{'Live updates · '}{sync.savedAt ? <>Last saved <time dateTime={sync.savedAt} title={new Date(sync.savedAt).toLocaleString()}>{new Date(sync.savedAt).toLocaleTimeString()}</time></> : 'No saves yet'}</>)}</p></header>
-      <div className="config-scroll">{loading ? <p className="empty-state">Loading saved overrides…</p> : loadError ? <div className="empty-state" role="alert">{loadError} <button className="outline-button" onClick={() => {
-              setReload(n => n + 1);
-            }}>Retry</button></div> : <div className="config-table" role="table" aria-label={`${title} configuration`} style={{
+              })}</div><span>{groups[0] === 'General' ? 'General has its own keys' : `${groups.length} of 4 attack types shown`}</span></div>}<SaveStatus onReload={reopenDraft} /></header>
+      <div className="config-scroll">{loading ? <p className="empty-state">Loading the Draft…</p> : loadError || !draft ? <div className="empty-state" role="alert">{loadError || 'The Draft is not open.'} <button className="outline-button" onClick={reopenDraft}>Retry</button></div> : <div className="config-table" role="table" aria-label={`${title} configuration`} style={{
             '--columns': visibleGroups.length
           } as React.CSSProperties}><div className="config-table-inner"><div className="config-grid table-heading" role="row"><span role="columnheader">Config key</span>{visibleGroups.map(group => <span role="columnheader" key={group}>{isCharacter ? 'Value' : group}{visibleGroups.length > 1 && <button className="icon-button" aria-label={`Hide ${group}`} onClick={() => setGroups(toggleAttackGroup(groups, group))}><X size={12} /></button>}</span>)}<span role="columnheader" className="sr-only">Actions</span></div>{rowSections.map(section => <div role="rowgroup" key={section.title}>{section.title && <div role="row" className="config-section-heading"><div role="cell" aria-colspan={visibleGroups.length + 2}><h2>{section.title}</h2></div></div>}{section.entries.map(entry => <KeyRow key={`${database}/${visibleGroups.join('/')}/${entry.configKey}`} entry={entry} database={database} groups={visibleGroups} values={values} onSweep={setSweep} highlighted={searchDestination?.configKey === entry.configKey && searchDestination.tab === tab && searchDestination.group === visibleGroups[0] && (isCharacter || searchDestination.weapon === weapon)} />)}</div>)}{rows.length === 0 && <p className="empty-state">No keys in this group</p>}</div></div>}</div>
-      <footer className="floating-bar"><span className={`status-dot${total ? ' changed' : ''}`} /><div className="bar-copy"><strong>{total ? `${total} unapplied changes` : 'Everything at game default'}</strong>{total > 0 && <span>across {weaponCount ? `${weaponCount} weapon${weaponCount === 1 ? '' : 's'}` : ''}{countGroups(values.character) ? `${weaponCount ? ' and ' : ''}character` : ''}</span>}</div><button className="outline-button" disabled={loading || !!loadError} onClick={() => setPresetOpen(true)}>Save as preset</button><button className="primary-button" disabled={loading || !!loadError} onClick={() => setReviewOpen(true)}>Review &amp; apply</button></footer></section>
-    </> : <section className="standalone-page" ref={contentRef}><div className="header-actions standalone-search">{globalSearch}</div>{tab === 'presets' ? <PresetsTab /> : tab === 'servers' ? <GameServersTab /> : tab === 'invites' && operator ? <InvitesPage /> : null}</section>}
+      <footer className="floating-bar"><span className={`status-dot${total ? ' changed' : ''}`} /><div className="bar-copy"><strong>{total ? `${total} override${total === 1 ? '' : 's'} in the Draft` : 'Everything at game default'}</strong>{total > 0 && <span>across {weaponCount ? `${weaponCount} weapon${weaponCount === 1 ? '' : 's'}` : ''}{countGroups(values.character) ? `${weaponCount ? ' and ' : ''}character` : ''}</span>}</div><button className="outline-button" disabled={!ready} onClick={() => setPresetOpen(true)}>Save as preset</button><button className="outline-button" disabled={!ready || resetting} onClick={() => setResetOpen(true)}>Reset to game defaults</button></footer></section>
+    </> : <section className="standalone-page" ref={contentRef}><div className="header-actions standalone-search">{globalSearch}</div>{tab === 'presets' ? <PresetsTab /> : tab === 'servers' ? <GameServersTab initialOpenId={serverPage} onEditDraft={editDraft} /> : tab === 'invites' && operator ? <InvitesPage /> : tab === 'supported-build' && operator ? <SupportedBuildPage /> : tab === 'status' && operator ? <StatusPage /> : tab === 'character' || tab === 'weapons' ? <div className="game-servers-page"><div className="standalone-heading"><div><h1>{isCharacter ? 'Character' : 'Weapons'}</h1><p className="page-description">The editor works on one game server&apos;s Draft. Open a game server and choose Edit Draft.</p></div></div><button className="primary-button" onClick={() => selectTab('servers')}>Game servers</button></div> : null}</section>}
     {sweep && <SweepPanel entry={sweep} weapon={weapon} groups={groups} onClose={() => setSweep(null)} />}
-    {reviewOpen && <SelectiveApplyDialog open={reviewOpen} onOpenChange={setReviewOpen} onApplyComplete={() => {}} />}
+    {editing && <AlertDialog open={resetOpen} onOpenChange={open => {
+      if (!resetting) setResetOpen(open);
+    }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Reset {editing.name}&apos;s Draft to game defaults?</AlertDialogTitle><AlertDialogDescription>Removes every value from the Draft{draft?.dropped ? `, including the ${draft.dropped} not shown` : ''}. Nothing reaches the game server until you Apply.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={resetting}>Cancel</AlertDialogCancel><AlertDialogAction disabled={resetting} onClick={event => {
+        event.preventDefault();
+        void resetDraft();
+      }}>{resetting ? 'Resetting…' : 'Reset to game defaults'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}
     {presetOpen && <SavePresetDialog open={presetOpen} onOpenChange={setPresetOpen} />}
   </main>;
 }

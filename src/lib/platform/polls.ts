@@ -27,7 +27,8 @@ import { log } from './log';
 export type PollAnswer =
   | { answer: 'no-change' }
   | { answer: 'superseded' }
-  | { answer: 'key-rejected' };
+  | { answer: 'key-rejected' }
+  | { answer: 'not-supported-build' };
 
 export const POLL_HOLD_MS = 50_000;
 const HOUR_MS = 3_600_000;

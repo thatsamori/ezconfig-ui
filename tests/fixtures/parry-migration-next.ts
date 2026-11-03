@@ -33,16 +33,16 @@ try {
   child = start();
   const badStdout = new Response(child.stdout).text(), badStderr = new Response(child.stderr).text();
   await Bun.sleep(2000);
-  const badResponse = await fetch(`http://127.0.0.1:${port}/api/databases/overrides`, { headers: signedIn, signal: AbortSignal.timeout(3000) }).catch(() => undefined);
-  assert.equal(badResponse?.status, 500, 'failed instrumentation blocks configuration reads');
-  const badWrite = await fetch(`http://127.0.0.1:${port}/api/config/Character/Combat`, { method: 'PATCH', headers: { ...signedIn, 'Content-Type': 'application/json' }, body: '{"entries":{"CanJumpKick":true}}' });
-  assert.equal(badWrite.status, 500, 'failed instrumentation blocks configuration writes');
+  const badResponse = await fetch(`http://127.0.0.1:${port}/api/game-servers`, { headers: signedIn, signal: AbortSignal.timeout(3000) }).catch(() => undefined);
+  assert.equal(badResponse?.status, 500, 'failed instrumentation blocks reads');
+  const badWrite = await fetch(`http://127.0.0.1:${port}/api/game-servers`, { method: 'POST', headers: { ...signedIn, 'Content-Type': 'application/json' }, body: '{"name":"Blocked"}' });
+  assert.equal(badWrite.status, 500, 'failed instrumentation blocks writes');
   assert.equal(await readFile(join(character, 'Combat.json'), 'utf8'), '{');
   if (child.exitCode === null) { child.kill(); await child.exited; }
   await badStdout;
   const err = await badStderr;
   assert(err.includes('startup blocked') && err.includes('invalid JSON'), err);
-  console.info('PASS: actual Next malformed startup blocks config reads/writes with HTTP 500 and preserves original data (Next itself remains running)');
+  console.info('PASS: actual Next malformed startup blocks reads/writes with HTTP 500 and preserves original data (Next itself remains running)');
 
   await writeFile(join(character, 'Combat.json'), JSON.stringify({ LowBlockColliderRelativeOffsetScale: { x: 0, y: -1, z: 2 }, CanJumpKick: false }));
   child = start();
@@ -50,16 +50,16 @@ try {
   const end = Date.now() + 15000;
   let response: Response | undefined;
   while (Date.now() < end) {
-    response = await fetch(`http://127.0.0.1:${port}/api/databases/overrides`, { headers: signedIn }).catch(() => undefined);
+    response = await fetch(`http://127.0.0.1:${port}/api/game-servers`, { headers: signedIn }).catch(() => undefined);
     if (response?.status === 200) break;
     if (child.exitCode !== null) throw new Error(`Next startup exited: ${await stderr}`);
     await Bun.sleep(50);
   }
   assert.equal(response?.status, 200);
-  const values = (await response!.json()).values;
-  assert.deepEqual(values.character.Parry.LowBlockColliderRelativeOffsetScale, { x: 0, y: -1, z: 2 });
-  assert.deepEqual(values.character.Combat, { CanJumpKick: false });
-  console.info(`PASS: first actual Next config response has canonical Parry values; isolated browser URL http://127.0.0.1:${port}`);
+  // The self-hosted files, which automatic sync delivers until online-platform#41, are migrated before the first response.
+  assert.deepEqual(JSON.parse(await readFile(join(character, 'Parry.json'), 'utf8')).LowBlockColliderRelativeOffsetScale, { x: 0, y: -1, z: 2 });
+  assert.deepEqual(JSON.parse(await readFile(join(character, 'Combat.json'), 'utf8')), { CanJumpKick: false });
+  console.info(`PASS: storage holds canonical Parry values before the first actual Next response; isolated browser URL http://127.0.0.1:${port}`);
   if (process.argv.includes('--keep-open')) {
     console.info(`Isolated UI fixture session (sign-in itself needs a Discord application): set the cookie ${session.cookie} for 127.0.0.1:${port}. Stop this process after browser verification.`);
     await new Promise<void>(resolve => {

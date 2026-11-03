@@ -6,6 +6,9 @@
  * a short real time (setPollHoldMs); the clock that connection status reads is
  * moved with setSystemTime.
  *
+ * These polls run the Supported build, set before any scenario starts;
+ * tests/fixtures/platform-supported-build.ts covers any other build.
+ *
  * Asserts as it goes, then prints one `{"fixture": …}` line with the Game
  * server keys it handled, so the test can check that no log line holds one.
  */
@@ -33,6 +36,8 @@ const handedOver = process.env.EZ_FIXTURE_HANDOVER ? JSON.parse(process.env.EZ_F
 /** The next whole hour (or the first run's, after a restart): the clock connection status reads, ahead of the session the test signed in with. */
 const T0 = handedOver?.t0 ?? Math.ceil(Date.now() / HOUR) * HOUR;
 const at = (time: number) => setSystemTime(new Date(time));
+// The stamp report() sends; a restart's second run finds it already set.
+platformStore().run("INSERT OR IGNORE INTO supported_build (id, stamp, set_at) VALUES (1, '20261102-153000', 0)");
 
 async function register(session: TestSession, name: unknown) {
   const response = await gameServersRoute.POST(session.request('/api/game-servers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }));
@@ -130,7 +135,7 @@ const scenarios: Record<string, () => Promise<void>> = {
     assert.match(key, KEY);
     assert.equal(key.length, 51);
     assert.equal(Buffer.from(key.slice('ezc_gsk_'.length), 'base64url').length, 32, '32 random bytes');
-    assert.deepEqual(gameServer, { id: gameServer.id, name: 'Duel EU', keyLast4: key.slice(-4), registeredAt: T0, connection: { state: 'never-connected' }, sharedKey: false, lastReport: null });
+    assert.deepEqual(gameServer, { id: gameServer.id, name: 'Duel EU', keyLast4: key.slice(-4), registeredAt: T0, connection: { state: 'never-connected' }, sharedKey: false, lastReport: null, needsUpdating: null });
 
     // Unique per owner, ignoring case (and around the name).
     for (const name of ['Duel EU', 'duel eu', '  DUEL eu  ']) {

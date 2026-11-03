@@ -57,8 +57,10 @@ describe('the poll exchange', () => {
 
   test('a poll is held, then answered "no-change"; its report is recorded as reported; a body that breaks the contract gets 400', () => {
     const result = runScenario('hold');
-    const [first, ...refused] = result.log;
+    const [first, noStamp, ...refused] = result.log;
     expect(first).toEqual(registered(1, 1));
+    // The one poll reporting no build stamp: not the Supported build.
+    expect(noStamp).toEqual({ level: 'info', event: 'poll.not-supported-build', gameServerId: 1 });
     // Routine polls are never logged: only the 16 bad bodies, each with its reason.
     expect(refused).toHaveLength(16);
     for (const line of refused) expect(Object.keys(line).sort()).toEqual(['event', 'gameServerId', 'level', 'message']);
@@ -126,7 +128,7 @@ describe('connection status', () => {
 
   test('after a restart, last seen comes from the last poll written, which an unchanged poll writes at most every 5 minutes', () => withPlatformDatabase((run, root) => {
     const before = scenario(run, root, 'before-restart');
-    expect(before.log).toEqual([registered(1, 1)]);
+    expect(before.log).toEqual([registered(1, 1), { level: 'info', event: 'poll.not-supported-build', gameServerId: 1, buildStamp: '20261103-090000' }]);
     expectNoKeysLogged(before);
     const after = scenario(run, root, 'after-restart', { EZ_FIXTURE_HANDOVER: JSON.stringify(before.fixture.handover) });
     expect(after.log).toEqual([]);

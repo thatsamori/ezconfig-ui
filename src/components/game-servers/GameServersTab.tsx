@@ -20,19 +20,21 @@ GameServerKey=${gameServerKey}`;
 
 /**
  * Game servers: the owner's list with registering, and a game server's page
- * with its connection status and, until it first connects, the setup
+ * with its connection status, EZConfig needs updating when it runs another
+ * build than the Supported build, and, until it first connects, the setup
  * checklist; Regenerate key, Delete and the shared-key warning. The Game
  * server key is shown on the page that registering or regenerating leaves
- * open, and gone once the owner leaves it.
+ * open, and gone once the owner leaves it. Edit Draft opens the game server's
+ * Draft in the editor; `initialOpenId` opens on a game server's page.
  */
-export function GameServersTab() {
-  const [openId, setOpenId] = useState<number | null>(null);
+export function GameServersTab({ initialOpenId, onEditDraft }: { initialOpenId?: number; onEditDraft?: (server: { id: number; name: string }) => void } = {}) {
+  const [openId, setOpenId] = useState<number | null>(initialOpenId ?? null);
   const [shown, setShown] = useState<{ id: number; gameServerKey: string } | null>(null);
   if (openId === null) return <ServerList onOpen={setOpenId} onRegistered={(id, gameServerKey) => {
     setShown({ id, gameServerKey });
     setOpenId(id);
   }} />;
-  return <ServerPage id={openId} gameServerKey={shown?.id === openId ? shown.gameServerKey : undefined} onKey={gameServerKey => setShown({ id: openId, gameServerKey })} onBack={() => {
+  return <ServerPage id={openId} gameServerKey={shown?.id === openId ? shown.gameServerKey : undefined} onKey={gameServerKey => setShown({ id: openId, gameServerKey })} onEditDraft={onEditDraft} onBack={() => {
     setShown(null);
     setOpenId(null);
   }} />;
@@ -78,7 +80,7 @@ function ServerList({ onOpen, onRegistered }: { onOpen: (id: number) => void; on
     {servers === undefined ? <p className="empty-state" role={error ? 'alert' : undefined}>{error || 'Loading game servers…'}</p>
       : servers.length === 0 ? <p className="empty-state">No game servers yet. Register one to get its key.</p>
       : <ul className="server-list">{servers.map(server => <li key={server.id}>
-        <button className="server-row" onClick={() => onOpen(server.id)}><span className="preset-icon"><Server size={15} /></span><strong>{server.name}</strong><ConnectionBadge connection={server.connection} /></button>
+        <button className="server-row" onClick={() => onOpen(server.id)}><span className="preset-icon"><Server size={15} /></span><strong>{server.name}</strong>{server.needsUpdating && <span className="needs-updating-tag">{server.needsUpdating.supported ? 'EZConfig needs updating' : 'No Supported build yet'}</span>}<ConnectionBadge connection={server.connection} /></button>
       </li>)}</ul>}
     {servers !== undefined && error && <p className="refresh-error" role="status">{error}</p>}
   </div>;
@@ -97,7 +99,9 @@ async function send<T>(url: string, method: string): Promise<{ data?: T } | unde
   return undefined;
 }
 
-function ServerPage({ id, gameServerKey, onKey, onBack }: { id: number; gameServerKey?: string; onKey: (gameServerKey: string) => void; onBack: () => void }) {
+function ServerPage({ id, gameServerKey, onKey, onBack, onEditDraft }: {
+  id: number; gameServerKey?: string; onKey: (gameServerKey: string) => void; onBack: () => void; onEditDraft?: (server: { id: number; name: string }) => void;
+}) {
   const { data: server, error, refresh } = useRefreshingJson<GameServerView>(`/api/game-servers/${id}`);
   const [confirming, setConfirming] = useState<'regenerate-key' | 'delete' | null>(null);
   const confirmRegenerateKey = () => setConfirming('regenerate-key');
@@ -117,10 +121,12 @@ function ServerPage({ id, gameServerKey, onKey, onBack }: { id: number; gameServ
     <button className="outline-button back-button" onClick={onBack}><ArrowLeft size={14} />All game servers</button>
     {!server ? <p className="empty-state" role={error ? 'alert' : undefined}>{error || 'Loading the game server…'}</p> : <>
       <div className="standalone-heading"><div><p className="crumb">Game server</p><h1>{server.name}</h1></div><ConnectionBadge connection={server.connection} /></div>
+      {server.needsUpdating && <NeedsUpdating build={server.needsUpdating} />}
       {server.sharedKey && <div className="shared-key-warning" role="alert"><TriangleAlert size={16} /><div>
         <strong>More than one server is using this key</strong>
         <p>Polls from different game servers with this key keep replacing each other. Each game server needs its own key: register the other server separately, then <RegenerateKeyButton onClick={confirmRegenerateKey} /> here and put the new key in this server&apos;s Game.ini only.</p>
       </div></div>}
+      {onEditDraft && <section className="draft-entry"><div><h3>Draft</h3><p>Edit Character and Weapon config here. The Draft saves as you edit; nothing reaches the game server until you Apply.</p></div><button className="primary-button" onClick={() => onEditDraft({ id: server.id, name: server.name })}>Edit Draft</button></section>}
       {server.connection.state === 'never-connected' || gameServerKey ? <SetupChecklist server={server} gameServerKey={gameServerKey} onRegenerateKey={confirmRegenerateKey} /> : <dl className="server-facts">
         <dt>Reported build</dt><dd>{server.lastReport?.buildStamp ? <code>{server.lastReport.buildStamp}</code> : 'None reported'}</dd>
         <dt>Game server key</dt><dd>Ending in <code>{server.keyLast4}</code> · <RegenerateKeyButton onClick={confirmRegenerateKey} /></dd>
@@ -148,6 +154,20 @@ function Confirm({ open, onClose, onConfirm, title, action, children }: { open: 
       <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={onConfirm}>{action}</AlertDialogAction></AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>;
+}
+
+/** The game server runs a build that is not the Supported build, so the platform sends it nothing. */
+function NeedsUpdating({ build }: { build: NonNullable<GameServerView['needsUpdating']> }) {
+  const running = build.running ? <code>{build.running}</code> : 'a build with no build stamp';
+  return <section className="needs-updating" aria-label="Build">
+    {build.supported ? <>
+      <h2>EZConfig needs updating</h2>
+      <p>The game server runs {running}; the Supported build is <code>{build.supported}</code>. The platform sends configuration only to the Supported build, so this server gets nothing until it restarts onto it. Restart the game server to load the latest EZConfig.</p>
+    </> : <>
+      <h2>No Supported build yet</h2>
+      <p>The game server runs {running}. The platform sends nothing to any game server until the platform operator sets the Supported build.</p>
+    </>}
+  </section>;
 }
 
 function SetupChecklist({ server, gameServerKey, onRegenerateKey }: { server: GameServerView; gameServerKey?: string; onRegenerateKey: () => void }) {
