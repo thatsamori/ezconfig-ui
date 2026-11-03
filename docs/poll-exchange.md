@@ -1,7 +1,8 @@
 # Poll exchange: the platform–mod contract
 
-Status: the platform side is built (online-platform#26, and the Supported
-build in #27). The mod builds its poll loop against this page
+Status: the platform side is built (online-platform#26, the Supported build
+in #27, and Regenerate key, Delete and the shared-key warning in #28). The mod
+builds its poll loop against this page
 ([#29](../.scratch/online-platform/issues/29-mod-polls-the-platform.md)).
 The field names, answers and status codes are a published contract, like the
 Game.ini names: change them only together with the mod, and record the change
@@ -84,7 +85,7 @@ Every response is a JSON object whose `answer` the mod switches on, with
 | `200` | `no-change` | The hold (50 s) ended with nothing to deliver, and `buildStamp` is the Supported build. | none | polls again at once |
 | `200` | `not-supported-build` | The hold (50 s) ended, and `buildStamp` is not the Supported build: another stamp, `""`, or no Supported build is set. Nothing is ever delivered to it. | none | polls again at once |
 | `200` | `superseded` | A newer poll with the same key arrived while this one was held. | none | waits about 10 s, then polls |
-| `401` | `key-rejected` | The `Authorization` header is missing or not `Bearer <key>`, or the key is unknown: never registered, regenerated, or its game server deleted. | none | logs once, then retries every 60 s |
+| `401` | `key-rejected` | The `Authorization` header is missing or not `Bearer <key>`, or the key is unknown: never registered, regenerated, or its game server deleted. Also a held poll, at once, when Regenerate key or Delete ends its key. | none | logs once, then retries every 60 s |
 | `400` | `bad-request` | The key is known but the body breaks this contract. | `error`: which field and why | treats it as a failure: logs `error`, waits about 10 s |
 | `500` | `error` | The platform failed. | none | treats it as a failure: waits about 10 s |
 
@@ -137,6 +138,16 @@ not JSON, or an `answer` the mod does not know.
 - Held polls are keyed by game server. The newest poll supersedes the held
   one, whichever instance sent it. Two game servers sharing one key supersede
   each other on every poll.
+- The shared-key warning: a supersede counts when the instance that sends it
+  was itself superseded, by a different instance, within the last 5 minutes.
+  Three that count within 5 minutes warn "More than one server is using this
+  key" on the server page. Two servers on one key trip it within about 30 s.
+  A restart or map change brings a new `instanceId` that was never superseded,
+  so it never counts, however often it happens. Regenerate key starts the
+  count again. The count is kept in memory with the held polls.
+- Regenerate key and Delete end the key at once. A poll held on it is answered
+  `401` `key-rejected`, and so is a poll whose body was still arriving when
+  the key ended.
 - A poll whose game server hangs up while it is held ends at once.
 - A platform restart drops every held poll. Each game server gets a failure
   and polls again about 10 s later.
@@ -146,11 +157,14 @@ not JSON, or an `answer` the mod does not know.
 - **Connected**: a poll is held, or one ended within about 15 s. A mod that
   polls again at once after `no-change`, or about 10 s after `superseded`,
   stays Connected.
-- **Not connected**, with last seen: no poll for more than about 15 s.
+- **Not connected**, with last seen: no poll for more than about 15 s. Also
+  straight after Regenerate key, until a poll with the new key is held.
 - **Never connected**: no poll yet.
 - **EZConfig needs updating**, beside the connection status: the last
   reported `buildStamp` is not the Supported build. The page shows both
   stamps. While no Supported build is set, it says so instead.
+- **More than one server is using this key**, with a pointer to Regenerate
+  key, while the shared-key warning above is tripped.
 - The last build stamp and the last `processed` id and result, as reported.
 
 ## Recorded and logged
@@ -162,6 +176,8 @@ not JSON, or an `answer` the mod does not know.
   exact time is kept in memory.
 - Routine polls are never logged. The platform logs:
   - `poll.superseded` (info, with `gameServerId`);
+  - `key.shared` (warning, with `gameServerId`), once each time the shared-key
+    warning trips;
   - `poll.bad-request` (warning, with `gameServerId` and the `error`);
   - `poll.not-supported-build` (info, with `gameServerId` and the
     `buildStamp` when it has the `YYYYMMDD-HHMMSS` form), when a game

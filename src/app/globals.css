@@ -503,3 +503,13 @@ body { -webkit-font-smoothing: antialiased; }
 .draft-entry h3 { font-size: 14px; font-weight: 600; }
 .draft-entry p { color: #9a9ba1; font-size: 13px; line-height: 1.55; margin-top: 2px; }
 @media (max-width: 560px) { .draft-entry { flex-direction: column; align-items: stretch; } }
+/* Regenerate key, Delete and the shared-key warning on a game server's page */
+.link-button { color: #5fcf8c; font: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.link-button:hover { color: #74d99c; }
+.shared-key-warning { display: flex; align-items: flex-start; gap: 12px; max-width: 720px; margin-bottom: 24px; padding: 14px 16px; border: 1px solid rgba(224,168,60,.3); border-radius: 12px; background: rgba(224,168,60,.07); color: #e0a83c; }
+.shared-key-warning > svg { flex-shrink: 0; margin-top: 2px; }
+.shared-key-warning strong { font-size: 13.5px; font-weight: 600; }
+.shared-key-warning p { color: #d4d4d8; font-size: 13px; line-height: 1.55; margin-top: 4px; }
+.server-danger { margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.06); }
+.outline-button.danger-button { color: #e5484d; }
+.outline-button.danger-button:hover { background: rgba(229,72,77,.08); }

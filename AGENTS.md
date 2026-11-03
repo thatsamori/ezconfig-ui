@@ -44,7 +44,8 @@ are the contract between this app and the mod.
   (codes stored as hashes only) and `src/app/api/operator/invites/`. `retention.ts`
   is the daily sweep of expired sessions and old Invites, started by the startup hook.
   Game servers: `game-servers.ts` (registering, keys kept only as SHA-256 hashes,
-  connection status), `polls.ts` (the one in-process registry of held polls) and
+  Regenerate key and Delete, connection status), `polls.ts` (the one in-process
+  registry of held polls, with the shared-key count) and
   `poll-exchange.ts` (reads a poll against `docs/poll-exchange.md`). The poll
   endpoint, `src/app/game-server/poll/`, sits outside `src/app/api/`: game
   servers send their key, not a session. `supported-build.ts` is the one

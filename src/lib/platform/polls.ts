@@ -9,8 +9,14 @@
  * - The newest poll from a game server supersedes the one held for it, which
  *   is answered "superseded". Superseding is logged; routine polls never are.
  * - `answerHeldPoll` answers a held poll early: an Apply wakes it with the new
- *   Live configuration, and Regenerate key or Delete answers it "key rejected".
+ *   Live configuration. `endKey` answers it "key rejected" when Regenerate key
+ *   or Delete ends the key.
  * - A poll whose game server hangs up while it is held ends at once.
+ * - The shared-key warning: when instances that were superseded come back and
+ *   supersede in turn 3 times within 5 minutes, more than one server is using
+ *   the key. Only a superseded instance coming back counts, so a restart or a
+ *   map change (a new instance id each time, the old one never seen again)
+ *   never trips it, however often.
  *
  * Polls with a missing or unknown key are counted here too, and logged as one
  * count per clock hour.
@@ -26,6 +32,10 @@ export type PollAnswer =
 
 export const POLL_HOLD_MS = 50_000;
 const HOUR_MS = 3_600_000;
+export const SHARED_KEY_SUPERSEDES = 3;
+export const SHARED_KEY_WINDOW_MS = 5 * 60_000;
+/** How many superseded instance ids a game server remembers; two or three servers sharing a key need only a few. */
+const SUPERSEDED_IDS_KEPT = 8;
 
 interface HeldPoll {
   instanceId: string;
@@ -36,6 +46,12 @@ interface Entry {
   held?: HeldPoll;
   /** When the last poll that is no longer held ended (answered, or its game server hung up). */
   lastEndedAt?: number;
+  /** The key ended (Regenerate key) and no poll has been held since: Not connected, whenever the last poll ended. */
+  keyEnded?: boolean;
+  /** When each instance id that another one superseded was superseded, oldest first. */
+  superseded?: Map<string, number>;
+  /** When the newest supersedes by a returning instance happened, oldest first; at most SHARED_KEY_SUPERSEDES. */
+  sharedKeySupersedes?: number[];
 }
 
 interface Registry {
@@ -63,9 +79,12 @@ export function holdPoll(gameServerId: number, instanceId: string, hangUp?: Abor
   const entry = registry.entries.get(gameServerId) ?? {};
   registry.entries.set(gameServerId, entry);
   if (entry.held) {
+    const previous = entry.held.instanceId;
     entry.held.settle({ answer: 'superseded' });
     log.info('poll.superseded', { gameServerId });
+    if (previous !== instanceId) countSupersede(gameServerId, entry, previous, instanceId, Date.now());
   }
+  entry.keyEnded = false;
   return new Promise(resolve => {
     let settled = false;
     const held: HeldPoll = {
@@ -96,10 +115,57 @@ export function answerHeldPoll(gameServerId: number, answer: PollAnswer): boolea
   return held !== undefined;
 }
 
-/** What connection status is computed from: whether a poll is held now, and when the last one ended. */
-export function pollActivity(gameServerId: number): { held: boolean; lastEndedAt?: number } {
+/**
+ * Ends a game server's key, at once (Regenerate key, or Delete): a held poll
+ * is answered "key rejected", and the shared-key count starts again. After a
+ * regenerate it shows Not connected until a poll with the new key is held. A
+ * deleted game server is forgotten, since SQLite may give its id to the next
+ * one registered.
+ */
+export function endKey(gameServerId: number, { deleted = false } = {}): void {
+  const entry = registry.entries.get(gameServerId) ?? {};
+  entry.held?.settle({ answer: 'key-rejected' });
+  if (deleted) {
+    registry.entries.delete(gameServerId);
+    return;
+  }
+  entry.keyEnded = true;
+  entry.superseded = undefined;
+  entry.sharedKeySupersedes = undefined;
+  registry.entries.set(gameServerId, entry);
+}
+
+/**
+ * What a game server's page is computed from: whether a poll is held now, when
+ * the last one ended, whether its key ended since, and whether more than one
+ * server is using its key.
+ */
+export function pollActivity(gameServerId: number, now = Date.now()): { held: boolean; lastEndedAt?: number; keyEnded: boolean; sharedKey: boolean } {
   const entry = registry.entries.get(gameServerId);
-  return { held: entry?.held !== undefined, lastEndedAt: entry?.lastEndedAt };
+  return { held: entry?.held !== undefined, lastEndedAt: entry?.lastEndedAt, keyEnded: entry?.keyEnded === true, sharedKey: entry !== undefined && keyShared(entry, now) };
+}
+
+const keyShared = ({ sharedKeySupersedes: times = [] }: Entry, now: number) =>
+  times.length >= SHARED_KEY_SUPERSEDES && times[0] > now - SHARED_KEY_WINDOW_MS;
+
+/**
+ * A poll from one instance superseded another's. It counts towards the
+ * shared-key warning when the newcomer was itself superseded within the
+ * window: instances knocking each other out, as two servers on one key do
+ * about every 10 s. The warning is logged when it trips.
+ */
+function countSupersede(gameServerId: number, entry: Entry, previous: string, newcomer: string, now: number): void {
+  const superseded = entry.superseded ??= new Map();
+  const returning = (superseded.get(newcomer) ?? -Infinity) > now - SHARED_KEY_WINDOW_MS;
+  superseded.delete(previous);
+  superseded.set(previous, now);
+  if (superseded.size > SUPERSEDED_IDS_KEPT) superseded.delete(superseded.keys().next().value!);
+  if (!returning) return;
+  const wasShared = keyShared(entry, now);
+  const times = entry.sharedKeySupersedes ??= [];
+  times.push(now);
+  times.splice(0, times.length - SHARED_KEY_SUPERSEDES);
+  if (!wasShared && keyShared(entry, now)) log.warn('key.shared', 'More than one server is using this key', { gameServerId });
 }
 
 /**
