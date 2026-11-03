@@ -1,9 +1,12 @@
 # Poll exchange: the platform–mod contract
 
 Status: the platform side is built (online-platform#26, the Supported build
-in #27, Regenerate key, Delete and the shared-key warning in #28, and Apply's
-delivery in #32). The mod builds its poll loop against this page
-([#29](../.scratch/online-platform/issues/29-mod-polls-the-platform.md)).
+in #27, Regenerate key, Delete and the shared-key warning in #28, Apply's
+delivery in #32, and Confirmed, Failed and the re-delivery rules in #33). The
+mod builds its poll loop against this page
+([#29](../.scratch/online-platform/issues/29-mod-polls-the-platform.md)), and
+processes and reports deliveries against it
+([#34](../.scratch/online-platform/issues/34-mod-processes-live-configuration.md)).
 The field names, answers and status codes are a published contract, like the
 Game.ini names: change them only together with the mod, and record the change
 here and in the mod's ADR for the poll loop.
@@ -123,7 +126,7 @@ A game server is sent its whole Live configuration, never part of one:
 - One result covers the whole delivery, reported as `processed` on every later
   poll.
 
-When it is sent:
+When it is sent (the re-delivery rules):
 
 - Only to a poll whose `buildStamp` is the Supported build. Any other build is
   sent nothing, whatever it reports.
@@ -135,6 +138,11 @@ When it is sent:
   that already processed it gets nothing more after a restart or map change.
   A poll answered at once is never held, but it supersedes the held poll like
   any newer poll.
+- Never again, on its own, to a poll reporting the Live configuration's id,
+  whatever its `result`: a Failed configuration is not resent automatically,
+  since it would fail at the same command. An Apply sends it again, even one
+  with no changes: it makes a new id. So does a build change, since the mod
+  then reports no `processed`.
 - From a held poll, when an Apply makes a new Live configuration: Apply wakes
   the poll as soon as its transaction commits, so a Connected game server
   gets it within about one round trip. Whether the poll's build is the
@@ -150,6 +158,38 @@ When it is sent:
 Anything else is a failure, and the mod waits about 10 s: no response, a
 timeout, a status not listed here (a proxy's `502` or `504`), a body that is
 not JSON, or an `answer` the mod does not know.
+
+## Reporting: Confirmed, Failed and Pending
+
+The owner sees the Live configuration as Pending, Confirmed or Failed. The
+platform computes it from the game server's last reported `processed` when
+asked, and never stores it:
+
+- **Confirmed**: `processed.liveConfigurationId` is the Live configuration's
+  and `result.success` is true. Keys in `result.unknownKeys` show as a warning
+  that names them; the configuration is still Confirmed.
+- **Failed**: `processed.liveConfigurationId` is the Live configuration's and
+  `result.success` is false. The page names `failure.category` (and
+  `failure.database` when it is a weapon class, or the wipe when both are
+  `""`), shows `failure.error`, and says the game server runs only the
+  categories before it.
+- **Pending**: anything else, including an id the platform does not know,
+  an earlier Apply's id, or no `processed`.
+- None before the first Apply.
+
+So the mod reports what it has finished:
+
+- `processed` names a Live configuration only once processing it has ended,
+  in success or at a failed command. A delivery cut off before then leaves
+  the previous `processed` (or none), and the next poll gets it again.
+- It sends the same `processed` on every poll until it processes another
+  delivery, across restarts and map changes, so a lost reporting poll loses
+  nothing.
+- It sends no `processed` when its build stamp differs from the one it saved
+  with that id: the new build gets the whole configuration again.
+
+The first poll that reports a given id and result sets when it became
+Confirmed or Failed; repeating it changes nothing.
 
 ## Holding and superseding
 
@@ -193,6 +233,11 @@ not JSON, or an `answer` the mod does not know.
   stamps. While no Supported build is set, it says so instead.
 - **More than one server is using this key**, with a pointer to Regenerate
   key, while the shared-key warning above is tripped.
+- The Live configuration's state, as its own indicator beside the connection
+  status, on the server list and the server page, so "Failed, and now Not
+  connected" shows both: Pending with how long since the Apply, Confirmed with
+  when, or Failed with when; none before the first Apply. The server page adds
+  the ignored keys and the Failed detail.
 - The last build stamp and the last `processed` id and result, as reported.
 
 ## Recorded and logged
@@ -201,7 +246,9 @@ not JSON, or an `answer` the mod does not know.
   the server page. It never appears in a log line.
 - Each poll records its time, build stamp and `processed`. An unchanged report
   writes its time to the database at most every 5 minutes. Between writes the
-  exact time is kept in memory.
+  exact time is kept in memory. A `processed` id or result that differs from
+  the last one recorded also records its own time: when it became Confirmed or
+  Failed.
 - Routine polls are never logged. The platform logs:
   - `poll.superseded` (info, with `gameServerId`);
   - `key.shared` (warning, with `gameServerId`), once each time the shared-key
@@ -216,6 +263,15 @@ not JSON, or an `answer` the mod does not know.
     `liveConfigurationId`), for each delivery, at once or from a held poll.
     The Apply that made it is logged as `live-configuration.applied`, with the
     server owner's `userId` as well. Neither logs any value.
+  - each reported result once, when a poll reports a `processed` id or result
+    that differs from the last one recorded, with `gameServerId` and the
+    reported `liveConfigurationId`, known or not, when it has the form the
+    platform makes (a UUID):
+    `live-configuration.processed` (info) for a success,
+    `live-configuration.keys-ignored` (warning, with how many) for a success
+    with `unknownKeys`, and `live-configuration.failed` (warning) for a
+    failure. No key name, category or `failure.error` is logged. A poll
+    reporting no `processed` logs nothing.
 
 ## Trying it by hand
 
@@ -237,5 +293,10 @@ To see a delivery, edit the Draft, run the command again, and choose Review
 and Apply on the server page while it is held: it answers at once with
 `live-configuration`. Run it again with
 `"processed":{"liveConfigurationId":"<that id>","result":{"success":true,"acceptedValues":1,"changedValues":1,"unknownKeys":[]}}`
-in the body and it is held; without `processed`, it gets the Live
-configuration again at once.
+in the body and it is held, and the page shows Confirmed; without `processed`,
+it gets the Live configuration again at once, and the page shows Pending.
+With
+`"result":{"success":false,"acceptedValues":0,"changedValues":0,"unknownKeys":[],"failure":{"database":"Character","category":"Movement","error":"COULD NOT PARSE DATA TYPE FOR KEY: MaxWalkSpeed"}}`
+it is held too, and the page shows Failed at Movement with that error.
+Review and Apply with no changes then answers the held poll with the same
+configuration under a new id, and the page shows Pending again.

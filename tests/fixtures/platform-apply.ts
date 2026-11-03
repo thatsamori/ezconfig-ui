@@ -157,7 +157,7 @@ const scenarios: Record<string, () => Promise<void>> = {
     // No changes: nothing listed, and the review is of the new Live configuration.
     assert.deepEqual(await review(owner, id), { revision: 2, liveConfigurationId, added: [], changed: [], reset: [], errors: [] });
     const view = await viewOf(owner, id);
-    assert.deepEqual([view.liveConfiguration, view.unappliedChanges], [{ id: liveConfigurationId, appliedAt: liveRows(id)[0].applied_at }, false]);
+    assert.deepEqual([view.liveConfiguration, view.unappliedChanges], [{ id: liveConfigurationId, appliedAt: liveRows(id)[0].applied_at, state: 'pending' }, false]);
 
     // Added, changed and reset to game default, against the Live configuration. A pin, set equal to its game default, is still a change.
     const walkDefault = lookupDefault('Character', 'Movement', 'MaxWalkSpeed').defaultValue as number;

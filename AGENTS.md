@@ -56,8 +56,9 @@ are the contract between this app and the mod.
   whole saves) behind `src/app/api/game-servers/[id]/draft/` and its `reset/`.
   The document's shape and placement are in `src/lib/config/valuesDocument.ts`.
   Its encoder, `src/lib/config/encodeValues.ts`, builds the wipe-then-category batch.
-  Live configurations: `live-configurations.ts` (the review, Apply, delivery
-  and Discard changes) behind `src/app/api/game-servers/[id]/apply/` and
+  Live configurations: `live-configurations.ts` (the review, Apply, delivery,
+  Discard changes, and the Pending, Confirmed or Failed state computed from
+  the last report) behind `src/app/api/game-servers/[id]/apply/` and
   `.../draft/discard/`; the poll route delivers from it.
   Notes: `notes.ts` (per database and key name, author from the session, and
   the body sanitizer, sanitize-html with an allowlist) behind `src/app/api/notes/`.

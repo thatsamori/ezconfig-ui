@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
-import { ArrowLeft, Check, Copy, Server, Trash2, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, Check, CircleX, Copy, Server, Trash2, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { relativeTime } from '@/components/console/model';
 import {
@@ -29,8 +29,9 @@ GameServerKey=${gameServerKey}`;
  * server key is shown on the page that registering or regenerating leaves
  * open, and gone once the owner leaves it. Edit Draft opens the game server's
  * Draft in the editor; `initialOpenId` opens on a game server's page. The
- * page shows the Live configuration and Unapplied changes, and Applies the
- * Draft after a review, or discards its changes.
+ * list and the page show the Live configuration's state (Pending, Confirmed
+ * or Failed) apart from the connection status; the page also shows Unapplied
+ * changes, and Applies the Draft after a review, or discards its changes.
  */
 export function GameServersTab({ initialOpenId, onEditDraft }: { initialOpenId?: number; onEditDraft?: (server: { id: number; name: string }) => void } = {}) {
   const [openId, setOpenId] = useState<number | null>(initialOpenId ?? null);
@@ -48,10 +49,22 @@ export function GameServersTab({ initialOpenId, onEditDraft }: { initialOpenId?:
 function ConnectionBadge({ connection }: { connection: ConnectionStatus }) {
   return <span className={`connection ${connection.state}`}><span className={`status-dot ${connection.state === 'connected' ? 'changed' : connection.state}`} />
     <span>{connection.state === 'connected' ? 'Connected' : connection.state === 'never-connected' ? 'Never connected' : <>
-      Not connected · last seen <time dateTime={new Date(connection.lastSeenAt).toISOString()} title={new Date(connection.lastSeenAt).toLocaleString()}>{relativeTime(connection.lastSeenAt)}</time>
+      Not connected · last seen <Ago time={connection.lastSeenAt} />
     </>}</span>
   </span>;
 }
+
+type LiveConfigurationView = NonNullable<GameServerView['liveConfiguration']>;
+const LIVE_STATE: Record<LiveConfigurationView['state'], string> = { pending: 'Pending', confirmed: 'Confirmed', failed: 'Failed' };
+
+/** The Live configuration's state, its own indicator beside the connection status: Failed stays shown when the game server is Not connected. */
+function LiveConfigurationBadge({ live }: { live: LiveConfigurationView }) {
+  return <span className={`live-badge ${live.state}`} title={`Live configuration: ${LIVE_STATE[live.state]}`}>
+    <span className={`status-dot ${live.state}`} /><span><span className="sr-only">Live configuration </span>{LIVE_STATE[live.state]}</span>
+  </span>;
+}
+
+const Ago = ({ time }: { time: number }) => <time dateTime={new Date(time).toISOString()} title={new Date(time).toLocaleString()}>{relativeTime(time)}</time>;
 
 function ServerList({ onOpen, onRegistered }: { onOpen: (id: number) => void; onRegistered: (id: number, gameServerKey: string) => void }) {
   const { data: servers, error } = useRefreshingJson<GameServerView[]>('/api/game-servers');
@@ -85,7 +98,7 @@ function ServerList({ onOpen, onRegistered }: { onOpen: (id: number) => void; on
     {servers === undefined ? <p className="empty-state" role={error ? 'alert' : undefined}>{error || 'Loading game servers…'}</p>
       : servers.length === 0 ? <p className="empty-state">No game servers yet. Register one to get its key.</p>
       : <ul className="server-list">{servers.map(server => <li key={server.id}>
-        <button className="server-row" onClick={() => onOpen(server.id)}><span className="preset-icon"><Server size={15} /></span><strong>{server.name}</strong>{server.needsUpdating && <span className="needs-updating-tag">{server.needsUpdating.supported ? 'EZConfig needs updating' : 'No Supported build yet'}</span>}<ConnectionBadge connection={server.connection} /></button>
+        <button className="server-row" onClick={() => onOpen(server.id)}><span className="preset-icon"><Server size={15} /></span><strong>{server.name}</strong>{server.needsUpdating && <span className="needs-updating-tag">{server.needsUpdating.supported ? 'EZConfig needs updating' : 'No Supported build yet'}</span>}{server.liveConfiguration && <LiveConfigurationBadge live={server.liveConfiguration} />}<ConnectionBadge connection={server.connection} /></button>
       </li>)}</ul>}
     {servers !== undefined && error && <p className="refresh-error" role="status">{error}</p>}
   </div>;
@@ -125,7 +138,7 @@ function ServerPage({ id, gameServerKey, onKey, onBack, onEditDraft }: {
   return <div className="game-servers-page">
     <button className="outline-button back-button" onClick={onBack}><ArrowLeft size={14} />All game servers</button>
     {!server ? <p className="empty-state" role={error ? 'alert' : undefined}>{error || 'Loading the game server…'}</p> : <>
-      <div className="standalone-heading"><div><p className="crumb">Game server</p><h1>{server.name}</h1></div><ConnectionBadge connection={server.connection} /></div>
+      <div className="standalone-heading"><div><p className="crumb">Game server</p><h1>{server.name}</h1></div>{server.liveConfiguration && <LiveConfigurationBadge live={server.liveConfiguration} />}<ConnectionBadge connection={server.connection} /></div>
       {server.needsUpdating && <NeedsUpdating build={server.needsUpdating} />}
       {server.sharedKey && <div className="shared-key-warning" role="alert"><TriangleAlert size={16} /><div>
         <strong>More than one server is using this key</strong>
@@ -161,8 +174,8 @@ async function loadReview(id: number): Promise<ApplyReview | undefined> {
 }
 
 /**
- * The Draft beside the Live configuration: none yet, or Pending since it was
- * applied; Unapplied changes; Edit Draft, Discard changes and Apply. Apply
+ * The Draft beside the Live configuration: none yet, or its state; Unapplied
+ * changes; Edit Draft, Discard changes and Apply. Apply
  * opens the review first, and is disabled, saying why, unless the game server
  * is Connected and on the Supported build.
  */
@@ -195,9 +208,7 @@ function DraftSection({ server, onEditDraft, onChanged }: { server: GameServerVi
     <div className="draft-copy">
       <h3>Draft{server.unappliedChanges && <span className="unapplied-tag">Unapplied changes</span>}</h3>
       <p>Edit Character and Weapon config here. The Draft saves as you edit; nothing reaches the game server until you Apply.</p>
-      <p className="live-state">Live configuration: {live ? <>
-        <strong>Pending</strong> · applied <time dateTime={new Date(live.appliedAt).toISOString()} title={new Date(live.appliedAt).toLocaleString()}>{relativeTime(live.appliedAt)}</time>. The game server has not reported processing it yet.
-      </> : <><strong>none yet</strong>. The game server runs its own saved EZConfig values until the first Apply.</>}</p>
+      {live ? <LiveConfigurationState live={live} /> : <p className="live-state">Live configuration: <strong>none yet</strong>. The game server runs its own saved EZConfig values until the first Apply.</p>}
     </div>
     <div className="draft-actions">
       {onEditDraft && <button className="outline-button" onClick={() => onEditDraft({ id: server.id, name: server.name })}>Edit Draft</button>}
@@ -209,6 +220,36 @@ function DraftSection({ server, onEditDraft, onChanged }: { server: GameServerVi
       {changes ? `The Draft's ${changes} unapplied change${changes === 1 ? '' : 's'} are lost, and it` : 'The Draft'} goes back to the Live configuration applied {live ? relativeTime(live.appliedAt) : ''}. This can&apos;t be undone.
     </Confirm>
   </section>;
+}
+
+/**
+ * What the game server reported of the Live configuration: Pending for as
+ * long as it has been applied; Confirmed, with when, and a warning naming any
+ * keys its build ignored; or Failed, with where processing stopped, the mod's
+ * error, and what the server runs now.
+ */
+function LiveConfigurationState({ live }: { live: LiveConfigurationView }) {
+  const applied = <>applied <Ago time={live.appliedAt} /></>;
+  if (live.state === 'pending') return <p className="live-state">Live configuration: <strong>Pending</strong> · {applied}. The game server has not reported processing it yet.</p>;
+  if (live.state === 'confirmed') return <>
+    <p className="live-state">Live configuration: <strong className="confirmed">Confirmed</strong> <Ago time={live.reportedAt} /> · {applied}. The game server reported processing it.</p>
+    {live.ignoredKeys.length > 0 && <div className="live-ignored" role="status"><TriangleAlert size={16} /><div>
+      <strong>The game server ignored {live.ignoredKeys.length === 1 ? '1 key' : `${live.ignoredKeys.length} keys`} its EZConfig build does not know</strong>
+      <ul>{live.ignoredKeys.map(ignored => <li key={`${ignored.database}/${ignored.category}/${ignored.key}`}>{place(ignored)} · <code>{ignored.key}</code></li>)}</ul>
+      <p>Those values are not on the game server. The rest of the configuration is.</p>
+    </div></div>}
+  </>;
+  const { database, category, error } = live.failure;
+  const wipe = !database && !category;
+  return <>
+    <p className="live-state">Live configuration: <strong className="failed">Failed</strong> <Ago time={live.reportedAt} /> · {applied}.</p>
+    <div className="live-failed" role="alert"><CircleX size={16} /><div>
+      <strong>Processing stopped at {wipe ? 'the wipe, before any category' : place({ database, category })}</strong>
+      {error && <p className="live-error">{error}</p>}
+      <p>{wipe ? 'The game server runs none of this Live configuration: it still has the values it had before. It is not sent again on its own: Apply sends it again, with or without changes.'
+        : 'The game server runs only the categories before it; the rest of this Live configuration did not reach it. It is not sent again on its own: fix the value in the Draft and Apply, or Apply with no changes to send it again.'}</p>
+    </div></div>
+  </>;
 }
 
 /**
