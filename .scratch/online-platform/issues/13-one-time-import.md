@@ -43,3 +43,7 @@ The owner's self-hosted data gets a one-time import (map Notes). Decide:
   imported Note bodies pass the same sanitizer as saved ones. A Note with no
   author already shows "a former server owner", as after a server owner is
   deleted.
+- From [How is V1 hosted and deployed on AWS?](10-aws-hosting-and-deployment.md):
+  the platform is one Lightsail box running the app on Bun, with the
+  database at `DATABASE_PATH`. An import script would run there, with the
+  old folders copied over from the VPS.

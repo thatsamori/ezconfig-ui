@@ -35,6 +35,8 @@ nothing the platform uses. Decided in
   `DATABASE_PATH`, with no service to run.
 - Tests run on Bun, which cannot load `node:sqlite` (Bun 1.3.14), while the
   app runs on Node 22: the build needs a thin adapter over `bun:sqlite` and
-  `node:sqlite`, or runs the app on Bun.
+  `node:sqlite`, or runs the app on Bun. Settled in
+  [How is V1 hosted and deployed on AWS?](../../.scratch/online-platform/issues/10-aws-hosting-and-deployment.md):
+  the app runs on Bun, and `bun:sqlite` is the one driver.
 - More than one instance would mean moving to a database server first. The
   in-memory registry of held polls already ties the platform to one process.

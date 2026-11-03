@@ -116,11 +116,18 @@ ready to slice into implementation tickets. This map builds nothing.
   `[EZConfigPlatform]` section proves control; it is shown once and stored
   hashed. The operator manages Invites and server owners, deletes Notes and
   sets the Supported build. Note HTML is sanitized on save.
+- [How is V1 hosted and deployed on AWS?](issues/10-aws-hosting-and-deployment.md):
+  one Lightsail $12 box in us-east-2 on the Paid plan, about $15 a month, so
+  the $25 ceiling holds. Caddy with Let's Encrypt sits in front of Next.js on
+  Bun, run as one process that holds each poll for 50 s. Litestream streams
+  the SQLite file to a Lightsail bucket, and a weekly restore checks it. The
+  owner deploys a commit by script, migrations run at startup, and there is
+  no staging.
 
 ## Not yet specified
 
-- Logs: what the platform records about polls, deliveries, errors and
-  platform operator actions, and who can read them.
+<!-- nothing at present: the Logs fog graduated into
+[What does the platform record, and who can read it?](issues/15-platform-records-and-logs.md) -->
 
 ## Out of scope
 

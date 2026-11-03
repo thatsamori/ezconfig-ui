@@ -37,3 +37,6 @@ anything:
   reported id and result, so only the current Live configuration has a state;
   an outcome for earlier ones needs more storage. A no-change Apply makes a
   Live configuration identical to the one before it (the owner's re-send).
+- From [How is V1 hosted and deployed on AWS?](10-aws-hosting-and-deployment.md):
+  hosting does not limit keeping every Live configuration in V1. The disk is
+  60 GB, and the Lightsail backup bucket can move to a larger plan.

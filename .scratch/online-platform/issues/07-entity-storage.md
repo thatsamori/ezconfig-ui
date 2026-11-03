@@ -146,3 +146,13 @@ and sent whole; a typical document is a few KB, every key about 100 KB.
   backing up and restoring one SQLite file; how schema changes run on deploy;
   Node or Bun as the app's runtime (the SQLite driver follows); the Supported
   build is settled as a stored setting.
+
+## Comments
+
+- 2026-11-02, from
+  [How is V1 hosted and deployed on AWS?](10-aws-hosting-and-deployment.md):
+  the app runs on Bun in production, so `bun:sqlite` is the one driver, with
+  all database access in one module. Schema changes are forward-only
+  numbered migrations applied at startup, each in a transaction, with the
+  version in `PRAGMA user_version` and a `VACUUM INTO` copy taken first.
+  Litestream streams the file to a Lightsail bucket.

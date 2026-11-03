@@ -212,3 +212,9 @@ one throwaway probe on the owner's Linux box and in the Windows kit sandbox.
   instance id the mod picks when it starts on a map; a superseded poll is
   answered "superseded" and the mod waits about 10 s. These join the mod work
   above.
+- 2026-11-02, from
+  [How is V1 hosted and deployed on AWS?](10-aws-hosting-and-deployment.md):
+  the platform holds each poll for up to 50 s, then answers "no change".
+  Held polls live in one in-process registry, and Apply wakes the game
+  server's held poll after its transaction commits. A platform restart drops
+  held polls, so a game server is Not connected for about 10 to 20 s.
