@@ -125,7 +125,7 @@ export function DraftBar({ server: { id, name }, overrides, onShowServer }: { se
       <DropdownMenu>
         <DropdownMenuTrigger asChild><button type="button" className="outline-button bar-menu-button" disabled={!ready} aria-label="Save or load the Draft" title="Save or load the Draft"><Ellipsis size={16} /></button></DropdownMenuTrigger>
         <DropdownMenuContent align="end" side="top" className="draft-menu" onCloseAutoFocus={() => {
-          // The chosen item's dialog opens once the menu has given focus back to ⋯: the dialog then takes focus, and returns it there.
+          // The chosen item's dialog opens once the menu has given focus back to ⋯, so the menu does not take it from the dialog.
           const action = chosen.current;
           chosen.current = null;
           if (action) setTimeout(() => void choose(action));
