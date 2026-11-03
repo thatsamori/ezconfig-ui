@@ -67,3 +67,7 @@ live game server and the live instance are the owner's.
 - Still to do: setting the Supported build waits for the mod build, which needs
   the built-in platform URL set and then publishing. The rest of the release
   order and the cutover are still to do.
+- After the deploy, the owner signed in at modhau.com and checked the Invites
+  page, the operator and owner pages from #27, and the Status page. All were
+  correct. These were the first browser checks of those pages signed in with
+  Discord.
