@@ -25,6 +25,8 @@ const { setPollHoldMs } = await import('../../src/lib/platform/polls');
 const gameServersRoute = await import('../../src/app/api/game-servers/route');
 const gameServerRoute = await import('../../src/app/api/game-servers/[id]/route');
 const regenerateKeyRoute = await import('../../src/app/api/game-servers/[id]/regenerate-key/route');
+const draftRoute = await import('../../src/app/api/game-servers/[id]/draft/route');
+const { readPlatformStatus } = await import('../../src/lib/platform/status');
 const pollRoute = await import('../../src/app/game-server/poll/route');
 
 const scenario = process.argv[2];
@@ -79,6 +81,20 @@ async function remove(session: TestSession, id: number | string) {
 const crossSite = (session: TestSession, url: string, method: string) =>
   new Request(new URL(url, env.publicUrl), { method, headers: { Cookie: session.cookie, Origin: 'https://elsewhere.example' } });
 const NOT_THEIRS = { status: 404, cache: 'no-store', body: { success: false, error: 'No such game server' } };
+/** The game server's Draft in the editor: GET, or PUT a whole document over `revision`. */
+async function draft(session: TestSession, id: number, save?: { revision: number; document: unknown }) {
+  const url = `/api/game-servers/${id}/draft`;
+  const response = save === undefined ? await draftRoute.GET(session.request(url), params(id))
+    : await draftRoute.PUT(session.request(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(save) }), params(id));
+  return { status: response.status, body: await response.json() as { success: boolean; error?: string; data?: { values: unknown; revision: number } } };
+}
+const DRAFT = { Character: { MaxWalkSpeed: 450 }, Weapon: { ArmingSword: { Strike: { Windup: 0.5 } } } };
+/** The game server counts on the platform operator's Status page. */
+const statusCounts = () => {
+  const { registered, connected, connectedByBuild } = readPlatformStatus().gameServers;
+  return { registered, connected, connectedByBuild };
+};
+const onSupportedBuild = (count: number) => [{ buildStamp: '20261102-153000', count, supported: true }];
 
 type PollOptions = { authorization?: string | null; body?: string | ReadableStream<Uint8Array>; signal?: AbortSignal };
 /** A game server polling: POST with its key as a Bearer token, as the mod sends it. */
@@ -349,6 +365,9 @@ const scenarios: Record<string, () => Promise<void>> = {
     const held = poll(firstKey, report());
     await Bun.sleep(40);
     assert.deepEqual(await connection(), { state: 'connected' });
+    assert.equal((await draft(owner, id, { revision: 0, document: DRAFT })).status, 200);
+    const drafted = (await draft(owner, id)).body.data;
+    assert.deepEqual(statusCounts(), { registered: 1, connected: 1, connectedByBuild: onSupportedBuild(1) });
 
     // Only the owner, from the platform's own pages.
     assert.deepEqual(await regenerateKey(other, id), NOT_THEIRS);
@@ -372,6 +391,9 @@ const scenarios: Record<string, () => Promise<void>> = {
     };
     assert.deepEqual(regenerated.body.data!.gameServer, expected);
     assert.deepEqual(await viewOf(owner, id), expected);
+    // The Status page counts it registered and not Connected at once; its Draft is as the owner left it.
+    assert.deepEqual(statusCounts(), { registered: 1, connected: 0, connectedByBuild: onSupportedBuild(0) });
+    assert.deepEqual((await draft(owner, id)).body.data, drafted);
     at(T0 + 5 * SECOND);
     assert.deepEqual(await connection(), { state: 'not-connected', lastSeenAt: T0 }, 'not Connected for the 15 s after its last poll either');
     const later = await poll(firstKey, report());
@@ -396,6 +418,7 @@ const scenarios: Record<string, () => Promise<void>> = {
     const fresh = poll(thirdKey, report());
     await Bun.sleep(20);
     assert.deepEqual(await connection(), { state: 'connected' });
+    assert.deepEqual(statusCounts(), { registered: 1, connected: 1, connectedByBuild: onSupportedBuild(1) });
     assert.deepEqual([(await fresh).status, (await fresh).body], [200, { answer: 'no-change' }]);
     assert.deepEqual(await connection(), { state: 'connected' });
     at(T0 + 26 * SECOND);
@@ -421,8 +444,10 @@ const scenarios: Record<string, () => Promise<void>> = {
     const keptHangUp = new AbortController();
     const keptPoll = poll(kept.key, report(), { signal: keptHangUp.signal });
     await Bun.sleep(40);
+    assert.equal((await draft(owner, id, { revision: 0, document: DRAFT })).status, 200);
+    assert.deepEqual(statusCounts(), { registered: 3, connected: 2, connectedByBuild: onSupportedBuild(2) });
     const before = everyRow();
-    assert(before.drafts.some(draft => draft.game_server_id === id), 'it has a Draft to delete');
+    assert(before.drafts.some(row => row.game_server_id === id && row.revision === 1), 'it has a saved Draft to delete');
 
     // Only the owner, from the platform's own pages.
     assert.deepEqual(await remove(other, id), NOT_THEIRS);
@@ -441,6 +466,10 @@ const scenarios: Record<string, () => Promise<void>> = {
     assert.deepEqual(await remove(owner, id), NOT_THEIRS, 'deleted once');
     const listed = await list(owner);
     assert.deepEqual(listed.map(server => [server.name, server.connection.state]), [['Kept', 'connected']], 'the owner\'s other game server, still held');
+    // The Status page counts it neither registered nor Connected; its Draft is gone, and an editor still open on it saves nothing.
+    assert.deepEqual(statusCounts(), { registered: 2, connected: 1, connectedByBuild: onSupportedBuild(1) });
+    assert.deepEqual(await draft(owner, id), { status: 404, body: { success: false, error: 'No such game server' } });
+    assert.deepEqual(await draft(owner, id, { revision: 1, document: DRAFT }), { status: 404, body: { success: false, error: 'No such game server' } });
 
     // Its row goes, with every row that references it: its Draft (and its Live configuration, once they exist).
     // Every other table keeps every row: users, sessions and Invites, and the owner's Rulesets once they exist.
