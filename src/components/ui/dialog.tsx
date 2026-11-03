@@ -82,10 +82,12 @@ function DialogContent({
 }
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
+  // The padding keeps the header's text clear of DialogContent's close button
+  // (on both sides while centred), and a long unbroken name wraps inside it.
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
+      className={cn("flex flex-col gap-2 px-4 text-center wrap-anywhere sm:pl-0 sm:text-left", className)}
       {...props}
     />
   )

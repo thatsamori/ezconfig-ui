@@ -85,7 +85,7 @@ await featureReview('movement-combined', async ({ set, reset, saved, apply }) =>
     const artifactDirectory = resolve('.scratch/movement-ui');
     await mkdir(artifactDirectory, { recursive: true });
     await writeFile(join(artifactDirectory, 'ticket06-captured-rcon.json'), JSON.stringify({
-      source: 'Feature review harness: editor -> temporary persistence -> Apply everything after a wipe -> captured RCON transport',
+      source: "Feature review harness: editor -> Draft -> Apply (whole configuration after a wipe) -> the batch delivered to the game server's held poll",
       movementValues: gameplayValues,
       recoveryValues: { WorldRecoveryTime: .65 },
       commands: gameplay,
