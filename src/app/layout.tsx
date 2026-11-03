@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Toaster } from "sonner";
 import { Providers } from "./Providers";
 import "./globals.css";
@@ -8,11 +9,13 @@ export const metadata: Metadata = {
   description: "Game configuration management",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Every page renders per request, so Next.js can put the request's CSP nonce on its scripts (src/proxy.ts).
+  await connection();
   return (
     <html lang="en" className="dark">
       <head>

@@ -40,6 +40,11 @@ are the contract between this app and the mod.
   one module tests replace), `sign-in.ts`, `users.ts`, `sessions.ts` and `auth.ts`,
   whose `requireSession` every route handler outside `src/app/api/auth/` calls
   first (Origin check on requests that change data, then the session cookie).
+- `src/proxy.ts` - the Content-Security-Policy, with a fresh nonce per request, on
+  every page. Inline script runs only with the nonce, so a new page or component
+  adds no inline `<script>` or `on*` handler; the root layout renders per request
+  so Next.js can put the nonce on its scripts. A new external source is a
+  policy change.
 - `src/lib/database/`, `src/app/api/` - persistence and API routes.
 - `string-schemas/` - generated `characterConfigSchema.txt`/`weaponConfigSchema.txt`.
 - `tests/` (`*.test.ts`), `tests/fixtures/` (standalone child fixtures) and
