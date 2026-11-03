@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
+import { PLATFORM_MIGRATIONS_DIRECTORY } from '../src/lib/platform/storage';
 import { runPlatformFixture } from './helpers/platform-database';
 
 const repo = resolve(import.meta.dir, '..');
@@ -32,32 +33,29 @@ function start(root: string, cwd: string, database: string | null = join(root, '
 }
 /** A release directory carrying exactly these migrations, as a deploy would. */
 async function release(root: string, name: string, migrations: Record<string, string>) {
-  const directory = join(root, name, 'src', 'lib', 'platform', 'migrations');
+  const directory = join(root, name, PLATFORM_MIGRATIONS_DIRECTORY);
   await mkdir(directory, { recursive: true });
   for (const [file, sql] of Object.entries(migrations)) await writeFile(join(directory, file), sql);
   return join(root, name);
 }
-function inspect(path: string) {
+/** Reads the file at rest, read-only, so copies stay byte-for-byte as written. */
+function rows(path: string, sql: string) {
   const database = new Database(path, { readonly: true });
-  try {
-    const version = (database.query('PRAGMA user_version').get() as { user_version: number }).user_version;
-    const tables = (database.query("SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name").all() as { name: string }[]).map(row => row.name);
-    return { version, tables };
-  } finally { database.close(); }
+  try { return database.query(sql).all() as Record<string, unknown>[]; }
+  finally { database.close(); }
 }
+const inspect = (path: string) => ({
+  version: rows(path, 'PRAGMA user_version')[0].user_version,
+  tables: rows(path, "SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name").map(row => row.name),
+});
+const steps = (path: string) => rows(path, 'SELECT step FROM log ORDER BY rowid').map(row => row.step);
+const copies = async (root: string) => (await readdir(root)).filter(name => name.startsWith('platform.db.v')).sort();
 
-test("a fresh database gets every one of the repo's migrations before automatic sync registers, with no copy", async () => fixture(async root => {
-  const latest = (await readdir(join(repo, 'src', 'lib', 'platform', 'migrations'))).filter(name => name.endsWith('.sql')).length;
+test("a fresh database gets every one of the repo's migrations before automatic sync registers", async () => fixture(async root => {
+  const latest = (await readdir(join(repo, PLATFORM_MIGRATIONS_DIRECTORY))).filter(name => name.endsWith('.sql')).length;
   expect(start(root, repo)).toEqual({ events: [`sync after version ${latest}`], logged: [expect.stringContaining('[EZConfig platform storage]')] });
   expect(inspect(join(root, 'platform.db')).version).toBe(latest);
-  expect((await readdir(root)).filter(name => name.endsWith('.bak'))).toEqual([]);
 }));
-
-const log = (path: string) => {
-  const database = new Database(path, { readonly: true });
-  try { return (database.query('SELECT step FROM log ORDER BY rowid').all() as { step: number }[]).map(row => row.step); }
-  finally { database.close(); }
-};
 
 test('pending migrations apply in order, each in its own transaction; a failed one rolls back and blocks startup and sync until a fixed release', async () => fixture(async root => {
   const first = {
@@ -72,12 +70,31 @@ test('pending migrations apply in order, each in its own transaction; a failed o
   expect(outcome.blocked).toContain('no such table: missing');
   expect(outcome.logged).toEqual([expect.stringContaining('[EZConfig platform storage] startup blocked')]);
   expect(inspect(join(root, 'platform.db'))).toEqual({ version: 2, tables: ['log'] });
-  expect(log(join(root, 'platform.db'))).toEqual([1, 2]);
+  expect(steps(join(root, 'platform.db'))).toEqual([1, 2]);
 
   const fixed = await release(root, 'fixed', { ...first, '0003-half-done.sql': 'CREATE TABLE half (id INTEGER);\nINSERT INTO log VALUES (3);', '0004-fourth.sql': 'INSERT INTO log VALUES (4);' });
   expect(start(root, fixed).events).toEqual(['sync after version 4']);
   expect(inspect(join(root, 'platform.db'))).toEqual({ version: 4, tables: ['half', 'log'] });
-  expect(log(join(root, 'platform.db'))).toEqual([1, 2, 3, 4]);
+  expect(steps(join(root, 'platform.db'))).toEqual([1, 2, 3, 4]);
+}));
+
+test('migrations follow the table-rebuild procedure: a rebuilt parent keeps its children, and a broken reference rolls back', async () => fixture(async root => {
+  const migrations: Record<string, string> = {
+    '0001-parent-child.sql': `CREATE TABLE parent (id INTEGER PRIMARY KEY, name TEXT);
+      CREATE TABLE child (id INTEGER PRIMARY KEY, parent INTEGER NOT NULL REFERENCES parent (id) ON DELETE CASCADE);
+      INSERT INTO parent VALUES (1, 'kept'); INSERT INTO child VALUES (10, 1);`,
+    '0002-rebuild-parent.sql': `CREATE TABLE parent_new (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
+      INSERT INTO parent_new SELECT id, name FROM parent; DROP TABLE parent; ALTER TABLE parent_new RENAME TO parent;`,
+  };
+  expect(start(root, await release(root, 'rebuild', migrations)).events).toEqual(['sync after version 2']);
+  expect(rows(join(root, 'platform.db'), 'SELECT child.id, parent.name FROM child JOIN parent ON parent.id = child.parent')).toEqual([{ id: 10, name: 'kept' }]);
+
+  migrations['0003-dangling.sql'] = 'INSERT INTO child VALUES (11, 99);';
+  const outcome = start(root, await release(root, 'dangling', migrations));
+  expect(outcome.events).toEqual([]);
+  expect(outcome.blocked).toContain('0003-dangling failed and was rolled back');
+  expect(outcome.blocked).toContain('1 foreign key violation');
+  expect(rows(join(root, 'platform.db'), 'SELECT id FROM child')).toEqual([{ id: 10 }]);
 }));
 
 test('a database newer than this release is refused before anything is written, and sync never registers', async () => fixture(async root => {
@@ -89,36 +106,36 @@ test('a database newer than this release is refused before anything is written, 
   expect(outcome.blocked).toContain('is at version 2, newer than this release (1)');
   expect(outcome.logged).toEqual([expect.stringContaining('[EZConfig platform storage] startup blocked')]);
   expect(inspect(join(root, 'platform.db'))).toEqual({ version: 2, tables: ['log'] });
-  expect(log(join(root, 'platform.db'))).toEqual([2]);
+  expect(steps(join(root, 'platform.db'))).toEqual([2]);
   expect((await readdir(root)).filter(name => !before.includes(name))).toEqual(['older']);
 }));
 
 const DAY = 86_400_000;
 const copyName = (version: number, time: number) => `platform.db.v${version}.${new Date(time).toISOString().replace(/:/g, '-')}.bak`;
-const copies = async (root: string) => (await readdir(root)).filter(name => name.startsWith('platform.db.v')).sort();
 
 test('a migrating start first writes a VACUUM INTO copy beside the database named by version, keeping the last 3 and none older than 14 days', async () => fixture(async root => {
   const migrations: Record<string, string> = { '0001-create-log.sql': 'CREATE TABLE log (step INTEGER NOT NULL);\nINSERT INTO log VALUES (1);' };
   expect(start(root, await release(root, 'r1', migrations)).events).toEqual(['sync after version 1']);
-  expect(await copies(root), 'a new database has nothing to keep').toEqual([]);
+  const [first] = await copies(root);
+  expect(first).toMatch(/^platform\.db\.v0\.\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{3}Z\.bak$/);
+  expect(inspect(join(root, first))).toEqual({ version: 0, tables: [] });
 
-  const now = Date.now(), stale = copyName(1, now - 15 * DAY), recent = copyName(1, now - DAY);
+  const stale = copyName(1, Date.now() - 15 * DAY);
   const unrelated = ['platform.db.v1.notes.bak', 'other.db.v1.2026-11-01T00-00-00.000Z.bak'];
-  for (const name of [stale, recent, ...unrelated]) await writeFile(join(root, name), 'planted');
+  for (const name of [stale, ...unrelated]) await writeFile(join(root, name), 'planted');
   migrations['0002-second.sql'] = 'INSERT INTO log VALUES (2);';
   expect(start(root, await release(root, 'r2', migrations)).events).toEqual(['sync after version 2']);
-  const [second] = (await copies(root)).filter(name => ![stale, recent, ...unrelated].includes(name));
-  expect(second).toMatch(/^platform\.db\.v1\.\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{3}Z\.bak$/);
+  const [second] = (await copies(root)).filter(name => name.startsWith('platform.db.v1.') && name !== stale && name !== unrelated[0]);
   expect(inspect(join(root, second))).toEqual({ version: 1, tables: ['log'] });
-  expect(log(join(root, second))).toEqual([1]);
-  expect(await copies(root), 'older than 14 days goes even within the last 3').toEqual([recent, second, unrelated[0]].sort());
+  expect(steps(join(root, second))).toEqual([1]);
+  expect(await copies(root), 'older than 14 days goes even within the last 3').toEqual([first, second, unrelated[0]].sort());
 
-  for (const days of [2, 3]) await writeFile(join(root, copyName(1, now - days * DAY)), 'planted');
+  for (const days of [1, 2]) await writeFile(join(root, copyName(1, Date.now() - days * DAY)), 'planted');
   migrations['0003-third.sql'] = 'INSERT INTO log VALUES (3);';
   expect(start(root, await release(root, 'r3', migrations)).events).toEqual(['sync after version 3']);
   const [third] = (await copies(root)).filter(name => name.startsWith('platform.db.v2.'));
-  expect(log(join(root, third))).toEqual([1, 2]);
-  expect(await copies(root), 'only the last 3').toEqual([third, second, recent, unrelated[0]].sort());
+  expect(steps(join(root, third))).toEqual([1, 2]);
+  expect(await copies(root), 'only the last 3').toEqual([first, second, third, unrelated[0]].sort());
   expect(await readdir(root)).toContain(unrelated[1]);
 }));
 

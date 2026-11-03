@@ -8,10 +8,11 @@ import { basename, dirname, join, resolve } from 'node:path';
 export type PlatformMigration = { version: number; name: string; sql: string };
 export type PlatformMigrationResult = { path: string; from: number; to: number; applied: string[]; copy: string | null };
 
+/** Relative to the working directory, which `next start` and the tests run from. */
+export const PLATFORM_MIGRATIONS_DIRECTORY = join('src', 'lib', 'platform', 'migrations');
 const MIGRATION_FILE = /^(\d{4})-[a-z0-9-]+\.sql$/;
 
-/** Read from the working directory, which `next start` and the tests run from. */
-export function readPlatformMigrations(directory = resolve('src/lib/platform/migrations')): PlatformMigration[] {
+export function readPlatformMigrations(directory = resolve(PLATFORM_MIGRATIONS_DIRECTORY)): PlatformMigration[] {
   return readdirSync(directory).filter(file => file.endsWith('.sql')).sort().map((file, index) => {
     if (Number(MIGRATION_FILE.exec(file)?.[1]) !== index + 1) throw new Error(`Platform migrations in ${directory} must be named 0001-name.sql, 0002-name.sql, ... with no gaps; found ${file} at position ${index + 1}`);
     return { version: index + 1, name: file.slice(0, -'.sql'.length), sql: readFileSync(join(directory, file), 'utf8') };
@@ -30,8 +31,8 @@ export function openPlatformDatabase(path: string): Database {
   } catch (error) { database.close(); throw error; }
 }
 
-const version = (database: Database) => (database.query('PRAGMA user_version').get() as { user_version: number }).user_version;
-const COPIES_KEPT = 3, COPY_MAX_AGE = 14 * 86_400_000;
+const userVersion = (database: Database) => (database.query('PRAGMA user_version').get() as { user_version: number }).user_version;
+const COPIES_KEPT = 3, COPY_MAX_AGE_MS = 14 * 86_400_000;
 
 /** Beside the database, named by the version it holds; keeps the last 3 copies, none older than 14 days. */
 function copyBeforeMigrating(database: Database, path: string, from: number): string {
@@ -44,7 +45,7 @@ function copyBeforeMigrating(database: Database, path: string, from: number): st
       return stamp ? [{ name, time: Date.parse(`${stamp[1]}:${stamp[2]}:${stamp[3]}`) }] : [];
     })
     .sort((a, b) => b.time - a.time)
-    .forEach((old, index) => { if (index >= COPIES_KEPT || now.getTime() - old.time > COPY_MAX_AGE) rmSync(join(directory, old.name)); });
+    .forEach((old, index) => { if (index >= COPIES_KEPT || now.getTime() - old.time > COPY_MAX_AGE_MS) rmSync(join(directory, old.name)); });
   return copy;
 }
 
@@ -53,20 +54,24 @@ export function migratePlatformDatabase(path: string, migrations = readPlatformM
   mkdirSync(dirname(resolve(path)), { recursive: true });
   const database = openPlatformDatabase(path);
   try {
-    const from = version(database), pending = migrations.slice(from);
+    const from = userVersion(database), pending = migrations.slice(from);
     if (from > migrations.length) throw new Error(`Platform database ${path} is at version ${from}, newer than this release (${migrations.length}); refusing to run older code against it. Deploy a release that has its migrations, or restore a copy taken before migrating.`);
-    const empty = from === 0 && !database.query('SELECT 1 FROM sqlite_schema').get();
-    const copy = pending.length && !empty ? copyBeforeMigrating(database, path, from) : null;
+    const copy = pending.length ? copyBeforeMigrating(database, path, from) : null;
+    // SQLite's table-rebuild procedure: foreign keys off for this connection only,
+    // checked in full before each migration commits.
+    database.exec('PRAGMA foreign_keys = OFF');
     for (const migration of pending) {
       try {
         database.transaction(() => {
           database.exec(migration.sql);
+          const violations = database.query('PRAGMA foreign_key_check').all().length;
+          if (violations) throw new Error(`it leaves ${violations} foreign key violation(s)`);
           database.exec(`PRAGMA user_version = ${migration.version}`);
         }).immediate();
       } catch (error) {
-        throw new Error(`Platform migration ${migration.name} failed and was rolled back; ${path} stays at version ${version(database)}${copy ? ` (copy before migrating: ${copy})` : ''}: ${error instanceof Error ? error.message : 'Unknown error'}`, { cause: error });
+        throw new Error(`Platform migration ${migration.name} failed and was rolled back; ${path} stays at version ${userVersion(database)}${copy ? ` (copy before migrating: ${copy})` : ''}: ${error instanceof Error ? error.message : 'Unknown error'}`, { cause: error });
       }
     }
-    return { path, from, to: version(database), applied: pending.map(migration => migration.name), copy };
+    return { path, from, to: userVersion(database), applied: pending.map(migration => migration.name), copy };
   } finally { database.close(); }
 }
