@@ -34,7 +34,7 @@ are the contract between this app and the mod.
 - `src/lib/rcon/` - RCON service, acknowledged batch protocol, automatic sync.
 - `src/lib/migrations/`, `src/lib/server-startup.ts`, `src/instrumentation.ts` -
   startup hook: platform migrations, then the parry-geometry storage migration.
-- `src/lib/platform/` - platform storage: `storage.ts` is the only module that
+- `src/lib/platform/` - platform storage: `storage.ts` is the only app module that
   opens the SQLite database; `migrations/` holds its numbered SQL migrations.
 - `src/lib/database/`, `src/app/api/` - persistence and API routes.
 - `string-schemas/` - generated `characterConfigSchema.txt`/`weaponConfigSchema.txt`.
@@ -64,10 +64,9 @@ of the old one, coordinated with the mod.
 ## Adding a platform migration
 - Add the next `NNNN-name.sql` to `src/lib/platform/migrations/`. Shipped
   migrations stay as they are: a change is a new migration.
-- Startup runs each file in its own transaction and sets `user_version` inside
-  it, so a file holds no `BEGIN`/`COMMIT`. `PRAGMA foreign_keys = OFF` has no
-  effect there: rebuilding a table that others reference needs a runner change
-  first, since dropping it fires their foreign key actions.
+- Startup runs each file in its own transaction, sets `user_version` inside it
+  and runs `PRAGMA foreign_key_check` before it commits, with foreign keys off
+  (SQLite's table-rebuild procedure). A file holds no `BEGIN`/`COMMIT`.
 - Startup migrates only when `DATABASE_PATH` is set, and then needs Bun
   (`bun --bun next start`).
 
@@ -79,8 +78,9 @@ of the old one, coordinated with the mod.
 
 ## Data and secrets
 `Databases/`, `Presets/User/`, `Notes/`, `users.json`, `.env*` (except
-`.env.example`) are gitignored user data, as is the platform database at
-`DATABASE_PATH` with its `.bak` copies. Never print, commit or overwrite them.
+`.env.example`) are gitignored user data. So is the platform database at
+`DATABASE_PATH` with its `.bak` copies (ignored only as `./platform.db*`).
+Never print, commit or overwrite them.
 Locations come from `DATABASES_PATH`, `PRESETS_PATH`, `NOTES_PATH` and
 `USERS_PATH` (defaults `./Databases`, `./Presets`, `./Notes`, `./users.json`;
 see `src/lib/env.ts`).
