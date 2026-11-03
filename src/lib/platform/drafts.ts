@@ -1,0 +1,93 @@
+/**
+ * Drafts (online-platform#30): a game server's auto-saved working
+ * configuration, one values document (src/lib/config/valuesDocument.ts) in
+ * the `drafts` row its registration made, with a revision every write raises.
+ *
+ * - A save sends the whole document with the revision it was based on. Every
+ *   value is checked against the current schema, camera policy included, and
+ *   a value it refuses refuses the save: nothing is written.
+ * - Values the schema has no place for (a retired key or weapon class) are
+ *   kept as stored. The editor never shows them, so a save never removes them.
+ * - A value equal to its game default is kept as an override; a key the
+ *   editor resets is simply not in the document.
+ * - A write on a stale revision is refused with the current Draft; the tab's
+ *   handling of that is #31.
+ * - Reset to game defaults empties the document. It will also clear the
+ *   Draft's origin once Rulesets (#35) give it one.
+ */
+import { addField, documentErrors, documentFields, placeValues, type EditorValues, type FieldError, type ValuesDocument } from '@/lib/config/valuesDocument';
+import { findOwnedGameServer } from './game-servers';
+import { platformStore } from './storage';
+
+export interface Draft {
+  gameServerId: number;
+  document: ValuesDocument;
+  revision: number;
+  savedAt: number | null;
+}
+
+/** What the editor loads: the values placed under their keys' current categories, and how many stored values it cannot show. */
+export interface DraftView {
+  values: EditorValues;
+  dropped: number;
+  revision: number;
+  savedAt: number | null;
+}
+
+export type DraftWrite =
+  | { ok: true; draft: Draft }
+  | { ok: false; reason: 'invalid'; errors: FieldError[] }
+  | { ok: false; reason: 'stale'; draft: Draft };
+
+type Row = { game_server_id: number; overrides: string; revision: number; saved_at: number | null };
+const COLUMNS = 'game_server_id, overrides, revision, saved_at';
+const draft = (row: Row): Draft => ({ gameServerId: row.game_server_id, document: JSON.parse(row.overrides), revision: row.revision, savedAt: row.saved_at });
+
+/** A revision as a request sends it. */
+export const readRevision = (value: unknown): number | undefined => Number.isSafeInteger(value) && (value as number) >= 0 ? value as number : undefined;
+
+export function readDraft(gameServerId: number): Draft | undefined {
+  const row = platformStore().get<Row>(`SELECT ${COLUMNS} FROM drafts WHERE game_server_id = ?`, gameServerId);
+  return row && draft(row);
+}
+
+/** The Draft of one of the owner's game servers, by the id a route was given; another owner's reads as missing. */
+export function findOwnedDraft(ownerId: number, id: string): Draft | undefined {
+  const server = /^[1-9]\d{0,15}$/.test(id) ? findOwnedGameServer(ownerId, Number(id)) : undefined;
+  return server && readDraft(server.id);
+}
+
+export function draftView({ document, revision, savedAt }: Draft): DraftView {
+  return { ...placeValues(document), revision, savedAt };
+}
+
+/** Writes `next(current)` if the Draft is still at `baseRevision`; undefined when the game server has no Draft. */
+function write(gameServerId: number, baseRevision: number, next: (current: Draft) => ValuesDocument, now: number): DraftWrite | undefined {
+  const store = platformStore();
+  return store.transaction((): DraftWrite | undefined => {
+    const current = readDraft(gameServerId);
+    if (!current) return undefined;
+    if (current.revision !== baseRevision) return { ok: false, reason: 'stale', draft: current };
+    const row = store.get<Row>(
+      `UPDATE drafts SET overrides = ?, revision = revision + 1, saved_at = ? WHERE game_server_id = ? RETURNING ${COLUMNS}`,
+      JSON.stringify(next(current)), now, gameServerId,
+    )!;
+    return { ok: true, draft: draft(row) };
+  });
+}
+
+/** Auto-save: the whole document, checked value by value; the stored values the schema has no place for are kept. */
+export function saveDraft(gameServerId: number, baseRevision: number, document: ValuesDocument, now = Date.now()): DraftWrite | undefined {
+  const errors = documentErrors(document);
+  if (errors.length) return { ok: false, reason: 'invalid', errors };
+  return write(gameServerId, baseRevision, current => {
+    const saved = structuredClone(document);
+    for (const field of documentFields(current.document)) if (!field.category) addField(saved, field.path, field.value);
+    return saved;
+  }, now);
+}
+
+/** Reset to game defaults: an empty document. */
+export function resetDraft(gameServerId: number, baseRevision: number, now = Date.now()): DraftWrite | undefined {
+  return write(gameServerId, baseRevision, () => ({}), now);
+}
