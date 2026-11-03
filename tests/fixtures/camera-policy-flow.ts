@@ -1,6 +1,9 @@
 /** Real store/routes/presets/startup/RCON sender against a local TCP fixture.
  * The fixture acknowledges known-good cases; native parser/camera proof is
  * intentionally separate and uses the retained command capture.
+ * The editor and Apply part is camera-policy-review.ts, on the feature review
+ * harness. This keeps the routes' refusal of hand-made input, presets (until
+ * Rulesets replaces them) and automatic startup sync.
  */
 import assert from 'node:assert/strict';
 import { createServer, type Socket } from 'node:net';
@@ -72,7 +75,6 @@ try {
   const { POST: importPreset } = await import('../../src/app/api/presets/import/route');
   const { loadUserPresetData } = await import('../../src/lib/presets/service');
   const { useConfigStore, flushConfigWrites } = await import('../../src/lib/store/configStore');
-  const { reviewRows, selectedReviewCommands } = await import('../../src/components/console/model');
   let writes = 0;
   globalThis.fetch = (async (url: string, init: RequestInit) => {
     writes++;
@@ -80,35 +82,22 @@ try {
     return save(new Request('http://localhost' + url, init) as never, { params: Promise.resolve({ path: url.slice('/api/config/'.length).split('/') }) });
   }) as unknown as typeof fetch;
   const store = useConfigStore.getState();
-  async function applySaved(stage: string, expected: Record<string, unknown>, selected?: string[]) {
+  async function applySaved(stage: string, expected: Record<string, unknown>) {
     name = stage; await flushConfigWrites();
     const saved = await read(request({}) as never, params); assert.equal(saved.status, 200);
     assert.deepEqual((await saved.json()).data, expected);
     const response = await preview(); assert.equal(response.status, 200);
-    const rows = reviewRows((await response.json()).commands).filter(row => !selected || selected.includes(row.key));
-    const commands = selectedReviewCommands(rows, new Set(rows.map(row => row.id)));
-    const result = await apply(request({ commands, wipeDatabase: !selected })); assert.equal(result.status, 200);
+    const { commands } = await response.json();
+    const result = await apply(request({})); assert.equal(result.status, 200);
     assert.equal((await result.json()).success, true);
-    assert.deepEqual(captures.at(-1)!.commands, [...(!selected ? ['string ezconfig WipeDatabases'] : []), ...commands]);
+    assert.deepEqual(captures.at(-1)!.commands, ['string ezconfig WipeDatabases', ...commands]);
   }
 
-  store.setValue('Character', 'Camera', 'CustomFOVMax', 179);
-  await applySaved('maximum-only-off', { CustomFOVMax: 179 });
-  store.setValue('Character', 'Camera', 'CustomFOV', true);
-  await applySaved('enable-with-maximum', { CustomFOVMax: 179, CustomFOV: true });
-  for (const value of [101, 120, 179]) {
-    store.setValue('Character', 'Camera', 'CustomFOVMax', value);
-    await applySaved('selected-maximum-' + value, { CustomFOVMax: value, CustomFOV: true }, ['CustomFOVMax']);
-  }
-  const before = writes;
-  for (const value of [100, 180, 120.0000001, 179.0000001, 100.9999999, NaN, Infinity, -Infinity, '120', true]) store.setValue('Character', 'Camera', 'CustomFOVMax', value as never);
-  store.setValue('Character', 'Camera', 'CustomFOV', 'garbage' as never);
-  await flushConfigWrites(); assert.equal(writes, before); assert.equal(store.getValue('Character', 'Camera', 'CustomFOVMax'), 179);
-  for (const value of [100, 180, 120.0000001, 179.0000001, 100.9999999, '120', true, {}, null]) {
-    const rejected = await save(request({ entries: { CustomFOV: false, CustomFOVMax: value } }) as never, params);
-    assert.equal(rejected.status, 400, JSON.stringify(value));
-    assert.deepEqual((await (await read(request({}) as never, params)).json()).data, { CustomFOVMax: 179, CustomFOV: true });
-  }
+  store.setValue('Character', 'Camera', 'CustomFOVMax', 179); store.setValue('Character', 'Camera', 'CustomFOV', false);
+  await flushConfigWrites();
+  // A whole-category write refuses a null maximum, which the editor's per-key saves treat as Reset.
+  assert.equal((await save(request({ entries: { CustomFOV: true, CustomFOVMax: null } }) as never, params)).status, 400);
+  assert.deepEqual((await (await read(request({}) as never, params)).json()).data, { CustomFOVMax: 179, CustomFOV: false });
   for (const raw of ['120.0000001', '120.00000000000000000000001', '179.0000001', '100.9999999', '1.201e2', 'Infinity', ' 120', '120 ', '\t120', '120\n']) {
     const count = captures.length;
     const invalid = await apply(request({ commands: [`string ezconfig Character Camera ${JSON.stringify({ CustomFOV: 'False', CustomFOVMax: raw })}`], wipeDatabase: true }));
@@ -129,8 +118,6 @@ try {
     assert.deepEqual(captures.at(-1)!.commands, [command]);
   }
 
-  store.setValue('Character', 'Camera', 'CustomFOV', false);
-  await applySaved('disabled-retains-maximum', { CustomFOVMax: 179, CustomFOV: false });
   assert.equal((await savePreset(request({ name: 'camera', title: 'Camera', description: 'Fixture' }) as never)).status, 200);
   const preset = await loadUserPresetData('camera'); assert.deepEqual(preset.character.Camera, { CustomFOVMax: 179, CustomFOV: false });
   const writesBeforePreset = writes;
@@ -152,12 +139,6 @@ try {
   assert.equal((await importPreset(new Request('http://localhost/api/presets/import', { method: 'POST', body: validForm }) as never)).status, 200);
   await store.loadPreset(await loadUserPresetData('imported-camera'));
   await applySaved('imported-preset-semantic-integer', { CustomFOV: true, CustomFOVMax: 120 });
-  store.removeValue('Character', 'Camera', 'CustomFOVMax');
-  await applySaved('maximum-removal-default120', { CustomFOV: true });
-  store.setValue('Character', 'Camera', 'CustomFOV', true);
-  await applySaved('toggle-only-default120', { CustomFOV: true });
-  store.removeValue('Character', 'Camera', 'CustomFOV');
-  await applySaved('toggle-removal-defaultfalse', {});
 
   store.setValue('Character', 'Camera', 'CustomFOV', true); store.setValue('Character', 'Camera', 'CustomFOVMax', 135); await flushConfigWrites();
   const { registerServerStartup } = await import('../../src/lib/server-startup');
@@ -174,21 +155,18 @@ try {
   assert.deepEqual(captures.at(-1)!.commands, captures[count].commands);
   await stopSync(); stopSync = undefined;
 
+  // Automatic sync's strict build refuses damaged storage and leaves it as it was; Apply's refusal is in camera-policy-review.
   const cameraPath = join(process.env.DATABASES_PATH!, 'Character', 'Camera.json');
   const { buildRconCommands } = await import('../../src/lib/database/apply');
   for (const damaged of [{ CustomFOV: true, CustomFOVMax: 120.5 }, { CustomFOV: 'garbage', CustomFOVMax: 120 }]) {
     await writeFile(cameraPath, JSON.stringify(damaged));
-    const beforeCorrupt = captures.length;
-    assert.equal((await apply(request({ wipeDatabase: true }))).status, 500); assert.equal(captures.length, beforeCorrupt);
     await assert.rejects(buildRconCommands({ strictStorage: true }), /Invalid saved configuration/);
     assert.deepEqual(JSON.parse(await readFile(cameraPath, 'utf8')), damaged);
   }
-  name = 'wipe'; assert.equal((await apply(request({ commands: [], wipeDatabase: true }))).status, 200);
-  assert.deepEqual(captures.at(-1)!.commands, ['string ezconfig WipeDatabases']);
   if (process.env.EZ_CAMERA_CAPTURE_PATH) await writeFile(process.env.EZ_CAMERA_CAPTURE_PATH, JSON.stringify({
-    boundary: 'Actual store, API routes, presets, review, acknowledged RCON sender, startup and sync listener over local TCP. Server replies are controlled fixture acknowledgments; no native parser/camera claim.', captures,
+    boundary: 'Actual store, API routes, presets, acknowledged RCON sender, startup and sync listener over local TCP. Server replies are controlled fixture acknowledgments; no native parser/camera claim.', captures,
   }, null, 2));
-  console.log(`PASS Camera policy: ${captures.length} real TCP RCON batches; validated save, selected/full apply, preset safety, startup/requestupdate and removal/wipe.`);
+  console.log(`PASS Camera policy: ${captures.length} real TCP RCON batches; refused hand-made input, preset safety, startup/requestupdate and strict storage.`);
 } finally {
   globalThis.fetch = originalFetch; await stopSync?.();
   for (const socket of sockets) socket.destroy();

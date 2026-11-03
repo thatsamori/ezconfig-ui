@@ -1,143 +1,103 @@
-import { successfulProcessingFixture } from './acknowledged-transport';
-// Ticket 03: real store/persistence/review/apply, with only RCON mocked.
-import { mock } from 'bun:test';
+// Ticket 03: General controls, ForcesRearingFromFront and weapon lengths through the editor and Apply, on the feature review harness.
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, resolve, sep } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { lookupDefault } from '../../src/lib/config/defaults';
+import { supportsWeapon } from '../../src/lib/config/types';
+import { WEAPON_CONFIG_OPTIONS } from '../../src/lib/config/weaponConfigSchema';
+import { getSchemaForCategory, validateEntries } from '../../src/lib/database/validation';
+import { categoryEntries, featureReview } from './feature-review-harness';
 
-const parent = resolve(tmpdir());
-const root = await mkdtemp(join(parent, 'ezconfig-weapon-general-'));
-process.env.DATABASES_PATH = root;
-const sent: string[][] = [];
-const originalFetch = globalThis.fetch;
-mock.module('../../src/lib/rcon/service', () => ({
-  executeAcknowledgedBatch: async (commands: string[]) => { sent.push(commands); return successfulProcessingFixture(commands); },
-}));
-try {
-  const { POST: save } = await import('../../src/app/api/config/[...path]/route');
-  const { GET: preview } = await import('../../src/app/api/apply/preview/route');
-  const { POST: apply } = await import('../../src/app/api/apply/route');
-  const { reviewRows, selectedReviewCommands, weapons } = await import('../../src/components/console/model');
-  const { useConfigStore, flushConfigWrites } = await import('../../src/lib/store/configStore');
-  const { lookupDefault } = await import('../../src/lib/config/defaults');
-  const { WEAPON_CONFIG_OPTIONS } = await import('../../src/lib/config/weaponConfigSchema');
-  const { supportsWeapon } = await import('../../src/lib/config/types');
-  const { getSchemaForCategory, validateEntries } = await import('../../src/lib/database/validation');
-  globalThis.fetch = (async (url: string, init: RequestInit) => {
-    assert(url.startsWith('/api/config/'));
-    return save(new Request('http://localhost' + url, init) as never, {
-      params: Promise.resolve({ path: url.slice('/api/config/'.length).split('/') }),
-    });
-  }) as unknown as typeof fetch;
-  const request = (body: unknown) => new Request('http://localhost/api', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+const values = {
+  CanBlock: false,
+  BlockStaminaNegation: 0,
+  SecondBlockStaminaNegation: 17.5,
+  BlockStaminaClamp: { x: 0, y: 19 },
+  ParryBoxTransformLocation: { x: 11, y: 22, z: 33 },
+  ParryBoxTransformRotation: { x: 5, y: 7, z: 9 },
+  ParryBoxTransformScale: { x: 1.1, y: 1.2, z: 1.3 },
+};
+const attackCategories = ['Strike', 'AltStrike', 'Stab', 'AltStab'];
+const flag = (value: boolean) => value ? 'True' : 'False';
+/** Spear's ForcesRearingFromFront per attack category, each sending only that key; undefined where one is not sent. */
+function rearing(batch: readonly string[]) {
+  return attackCategories.map(category => {
+    const entries = categoryEntries(batch, 'Spear', category);
+    if (entries) assert.deepEqual(Object.keys(entries), ['ForcesRearingFromFront']);
+    return entries?.ForcesRearingFromFront;
   });
-  const store = useConfigStore.getState();
-  async function readRows() {
-    await flushConfigWrites();
-    const response = await preview(); assert.equal(response.status, 200);
-    return reviewRows((await response.json()).commands);
-  }
-  async function applyRows(rows: ReturnType<typeof reviewRows>, names?: string[], wipe = false) {
-    const selected = rows.filter(row => !names || names.includes(row.database));
-    const commands = selectedReviewCommands(rows, new Set(selected.map(row => row.id)));
-    assert.equal((await apply(request({ commands, wipeDatabase: wipe }))).status, 200);
-    assert.deepEqual(sent[sent.length - 1], wipe ? ['string ezconfig WipeDatabases', ...commands] : commands);
-    return sent[sent.length - 1];
-  }
-  const values = {
-    CanBlock: false,
-    BlockStaminaNegation: 0,
-    SecondBlockStaminaNegation: 17.5,
-    BlockStaminaClamp: { x: 0, y: 19 },
-    ParryBoxTransformLocation: { x: 11, y: 22, z: 33 },
-    ParryBoxTransformRotation: { x: 5, y: 7, z: 9 },
-    ParryBoxTransformScale: { x: 1.1, y: 1.2, z: 1.3 },
-  };
+}
+/** A weapon's two General lengths as sent; undefined where one is not. */
+function lengths(batch: readonly string[], weapon: string) {
+  const general = categoryEntries(batch, weapon, 'General');
+  return { WeaponLength: general?.WeaponLength, AltWeaponLength: general?.AltWeaponLength };
+}
+async function writeCapture(variable: string, directory: string, file: string, data: Record<string, unknown>) {
+  if (process.env[variable] !== '1') return;
+  await mkdir(resolve(directory), { recursive: true });
+  await writeFile(join(resolve(directory), file), JSON.stringify({
+    source: 'Real store -> temporary persistence -> Apply (whole configuration after a wipe) -> captured RCON', ...data,
+  }, null, 2) + '\n');
+}
+
+await featureReview('weapon-general', async ({ set, reset, saved, editorValue, saveUnchecked, apply }) => {
   for (const [key, value] of Object.entries(values)) {
     assert(lookupDefault('Spear', 'General', key).defaultValue !== undefined);
-    store.setValue('Spear', 'General', key, value);
+    set('Spear', 'General', key, value);
   }
-  for (const category of ['Strike', 'AltStrike', 'Stab', 'AltStab']) {
+  for (const category of attackCategories) {
     assert(lookupDefault('Spear', category, 'ForcesRearingFromFront').defaultValue !== undefined);
-    store.setValue('Spear', category, 'ForcesRearingFromFront', category !== 'AltStrike');
+    set('Spear', category, 'ForcesRearingFromFront', category !== 'AltStrike');
   }
-  let rows = await readRows();
-  assert.equal(rows.length, 11);
-  assert.equal(rows.find(row => row.key === 'CanBlock')!.value, 'False');
-  assert.equal(rows.find(row => row.key === 'BlockStaminaNegation')!.value, '0.00');
-  assert.equal(rows.find(row => row.key === 'ParryBoxTransformLocation')!.value, 'X=11.00,Y=22.00,Z=33.00');
-  assert.equal(rows.find(row => row.key === 'ParryBoxTransformRotation')!.value, 'X=5.00,Y=7.00,Z=9.00');
-  assert.equal(rows.find(row => row.key === 'ParryBoxTransformScale')!.value, 'X=1.10,Y=1.20,Z=1.30');
-  assert.equal(rows.find(row => row.category === 'AltStrike')!.value, 'False');
-  assert.equal(rows.filter(row => row.key === 'ForcesRearingFromFront').length, 4);
-  const initialCommands = await applyRows(rows, undefined, true);
-  // Individual review selection must exclude every neighboring key/category.
-  for (const row of rows) {
-    const commands = selectedReviewCommands(rows, new Set([row.id]));
-    assert.equal(commands.length, 1);
-    assert.equal((await apply(request({ commands, wipeDatabase: false }))).status, 200);
-    assert.deepEqual(sent[sent.length - 1], commands);
-    const prefix = `string ezconfig ${row.database} ${row.category} `;
-    assert(commands[0].startsWith(prefix));
-    assert.deepEqual(JSON.parse(commands[0].slice(prefix.length)), { [row.key]: row.value });
-  }
+  const initialCommands = await apply();
+  const general = categoryEntries(initialCommands, 'Spear', 'General');
+  assert.deepEqual(Object.keys(general ?? {}).sort(), Object.keys(values).sort());
+  assert.equal(general?.CanBlock, 'False');
+  assert.equal(general?.BlockStaminaNegation, '0.00');
+  assert.equal(general?.ParryBoxTransformLocation, 'X=11.00,Y=22.00,Z=33.00');
+  assert.equal(general?.ParryBoxTransformRotation, 'X=5.00,Y=7.00,Z=9.00');
+  assert.equal(general?.ParryBoxTransformScale, 'X=1.10,Y=1.20,Z=1.30');
+  assert.deepEqual(rearing(initialCommands), ['True', 'False', 'True', 'True']);
+
+  // Stab toggles on its own; the other attack categories keep theirs.
   const rearingStages: Record<string, string[]> = {};
   for (const [label, value] of [['enabled', true], ['disabled', false]] as const) {
-    store.setValue('Spear', 'Stab', 'ForcesRearingFromFront', value);
-    rows = await readRows();
-    const row = rows.find(row => row.category === 'Stab' && row.key === 'ForcesRearingFromFront')!;
-    assert.equal(row.value, value ? 'True' : 'False');
-    const commands = selectedReviewCommands(rows, new Set([row.id]));
-    assert.equal((await apply(request({ commands, wipeDatabase: false }))).status, 200);
-    assert.deepEqual(sent[sent.length - 1], commands);
-    rearingStages[label] = commands;
+    set('Spear', 'Stab', 'ForcesRearingFromFront', value);
+    rearingStages[label] = await apply();
+    assert.deepEqual(rearing(rearingStages[label]), ['True', 'False', flag(value), 'True']);
   }
-  store.removeValue('Spear', 'General', 'ParryBoxTransformLocation');
-  store.removeValue('Spear', 'Stab', 'ForcesRearingFromFront');
-  rows = await readRows();
-  assert(!rows.some(row => row.key === 'ParryBoxTransformLocation'));
-  assert(!rows.some(row => row.category === 'Stab'));
-  assert(rows.some(row => row.key === 'ParryBoxTransformRotation'));
-  assert(rows.some(row => row.key === 'ParryBoxTransformScale'));
-  assert.equal(rows.filter(row => row.key === 'ForcesRearingFromFront').length, 3);
-  const removalCommands = await applyRows(rows, undefined, true);
+  // Reset removes one transform and Stab's only key; the other transforms and categories stay.
+  reset('Spear', 'General', 'ParryBoxTransformLocation');
+  reset('Spear', 'Stab', 'ForcesRearingFromFront');
+  const removalCommands = await apply();
+  const afterReset = categoryEntries(removalCommands, 'Spear', 'General');
+  assert.equal(afterReset?.ParryBoxTransformLocation, undefined);
+  assert(afterReset?.ParryBoxTransformRotation && afterReset.ParryBoxTransformScale);
+  assert.deepEqual(rearing(removalCommands), ['True', 'False', undefined, 'True']);
+
   const rearingCategoryBatches: Record<string, string[]> = {};
-  const rearingRemovalBatches: Record<string, { before: string[]; remove: string[] }> = {};
-  const attackCategories = ['Strike', 'AltStrike', 'Stab', 'AltStab'];
-  async function captureRearing(wipe = false) {
-    const saved = (await readRows()).filter(row => row.key === 'ForcesRearingFromFront');
-    const commands = selectedReviewCommands(saved, new Set(saved.map(row => row.id)));
-    assert.equal((await apply(request({ commands, wipeDatabase: wipe }))).status, 200);
-    const actual = sent[sent.length - 1];
-    assert.deepEqual(actual, wipe ? ['string ezconfig WipeDatabases', ...commands] : commands);
-    return actual;
-  }
   for (const [label, value] of [['allTrue', true], ['allFalse', false]] as const) {
-    for (const category of attackCategories) store.setValue('Spear', category, 'ForcesRearingFromFront', value);
-    const batch = await captureRearing();
-    assert.equal(batch.length, 4);
-    for (const category of attackCategories) {
-      const prefix = `string ezconfig Spear ${category} `;
-      const command = batch.find(item => item.startsWith(prefix)); assert(command);
-      assert.deepEqual(JSON.parse(command.slice(prefix.length)), { ForcesRearingFromFront: value ? 'True' : 'False' });
-    }
-    rearingCategoryBatches[label] = batch;
+    for (const category of attackCategories) set('Spear', category, 'ForcesRearingFromFront', value);
+    rearingCategoryBatches[label] = await apply();
+    assert.deepEqual(rearing(rearingCategoryBatches[label]), attackCategories.map(() => flag(value)));
   }
+  // Each category resets on its own from its non-default value.
+  const rearingRemovalBatches: Record<string, { before: string[]; remove: string[] }> = {};
   for (const removedCategory of attackCategories) {
-    for (const category of attackCategories) {
+    const flipped = attackCategories.map(category => {
       const baseline = lookupDefault('Spear', category, 'ForcesRearingFromFront').defaultValue;
       assert.equal(typeof baseline, 'boolean');
-      store.setValue('Spear', category, 'ForcesRearingFromFront', !baseline);
-    }
-    const before = await captureRearing();
-    store.removeValue('Spear', removedCategory, 'ForcesRearingFromFront');
-    const remove = await captureRearing(true);
-    assert.equal(before.length, 4); assert.equal(remove.length, 4);
-    assert(!remove.some(command => command.startsWith(`string ezconfig Spear ${removedCategory} `)));
+      set('Spear', category, 'ForcesRearingFromFront', !baseline);
+      return flag(!baseline);
+    });
+    const before = await apply();
+    assert.deepEqual(rearing(before), flipped);
+    reset('Spear', removedCategory, 'ForcesRearingFromFront');
+    const remove = await apply();
+    assert.deepEqual(rearing(remove), flipped.map((value, index) => attackCategories[index] === removedCategory ? undefined : value));
     rearingRemovalBatches[removedCategory] = { before, remove };
   }
+
   const mainEntry = WEAPON_CONFIG_OPTIONS.General.find(entry => entry.configKey === 'WeaponLength')!;
   const altEntry = WEAPON_CONFIG_OPTIONS.General.find(entry => entry.configKey === 'AltWeaponLength')!;
   assert.deepEqual({ label: mainEntry.label, minimum: mainEntry.minimum, maximum: mainEntry.maximum },
@@ -157,26 +117,21 @@ try {
   assert.equal(WEAPON_CONFIG_OPTIONS.General.filter(entry => supportsWeapon(entry, 'ArmingSword')).includes(altEntry), false);
   assert.equal(validateEntries({ AltWeaponLength: 120 }, 'ArmingSword', 'General').valid, false);
 
+  // The editor refuses an invalid length, so the shown and saved values stay as they were.
   const invalidLengths = [0, 0.999, -1, NaN, Infinity, -Infinity, 1e40];
-  for (const key of ['WeaponLength', 'AltWeaponLength']) {
-    store.setValue('Spear', 'General', key, key === 'WeaponLength' ? 120.5 : 90.25);
-    await flushConfigWrites();
-    const retained = store.getValue('Spear', 'General', key);
+  for (const [key, retained] of [['WeaponLength', 120.5], ['AltWeaponLength', 90.25]] as const) {
+    set('Spear', 'General', key, retained);
     for (const invalid of invalidLengths) {
       assert.equal(validateEntries({ [key]: invalid }, 'Spear', 'General').valid, false);
-      store.setValue('Spear', 'General', key, invalid);
-      assert.equal(store.getValue('Spear', 'General', key), retained);
+      set('Spear', 'General', key, invalid);
+      assert.equal(editorValue('Spear', 'General', key), retained);
     }
+    assert.equal(await saved('Spear', 'General', key), retained);
   }
-  const invalidApi = await save(request({ entries: { WeaponLength: 0 } }) as never, {
-    params: Promise.resolve({ path: ['Spear', 'General'] }),
-  });
-  assert.equal(invalidApi.status, 400);
-  const unsupportedApi = await save(request({ entries: { AltWeaponLength: 120 } }) as never, {
-    params: Promise.resolve({ path: ['ArmingSword', 'General'] }),
-  });
-  assert.equal(unsupportedApi.status, 400);
+  assert.equal(await saveUnchecked('Spear', 'General', { WeaponLength: 0 }), 400);
+  assert.equal(await saveUnchecked('ArmingSword', 'General', { AltWeaponLength: 120 }), 400);
 
+  // A constrained length is sent as entered, not rounded to two decimals.
   const lengthStages: Record<string, string[]> = {};
   for (const [label, main, alternate] of [
     ['shortenLengthen', 120.5, 240.25],
@@ -184,78 +139,45 @@ try {
     ['largeFiniteIndependent', 3e38, 2.5],
     ['nativeReplay', 240, 90],
   ] as const) {
-    store.setValue('Spear', 'General', 'WeaponLength', main);
-    store.setValue('Spear', 'General', 'AltWeaponLength', alternate);
-    const lengthRows = (await readRows()).filter(row => row.key === 'WeaponLength' || row.key === 'AltWeaponLength');
-    assert.equal(lengthRows.length, 2);
-    const commands = selectedReviewCommands(lengthRows, new Set(lengthRows.map(row => row.id)));
-    assert.equal((await apply(request({ commands, wipeDatabase: false }))).status, 200);
-    assert.deepEqual(sent[sent.length - 1], commands);
-    lengthStages[label] = commands;
+    set('Spear', 'General', 'WeaponLength', main);
+    set('Spear', 'General', 'AltWeaponLength', alternate);
+    lengthStages[label] = await apply();
+    assert.deepEqual(lengths(lengthStages[label], 'Spear'), { WeaponLength: String(main), AltWeaponLength: String(alternate) });
   }
-  store.removeValue('Spear', 'General', 'WeaponLength');
-  let lengthRows = (await readRows()).filter(row => row.key === 'WeaponLength' || row.key === 'AltWeaponLength');
-  assert.deepEqual(lengthRows.map(row => row.key), ['AltWeaponLength']);
-  const partialRemove = await applyRows(lengthRows, undefined, true);
-  store.removeValue('Spear', 'General', 'AltWeaponLength');
-  lengthRows = (await readRows()).filter(row => row.key === 'WeaponLength' || row.key === 'AltWeaponLength');
-  assert.equal(lengthRows.length, 0);
-  const wipe = await applyRows(lengthRows, undefined, true);
+  reset('Spear', 'General', 'WeaponLength');
+  const partialRemove = await apply();
+  assert.deepEqual(lengths(partialRemove, 'Spear'), { WeaponLength: undefined, AltWeaponLength: '90' });
+  reset('Spear', 'General', 'AltWeaponLength');
+  const wipe = await apply();
+  assert.deepEqual(lengths(wipe, 'Spear'), { WeaponLength: undefined, AltWeaponLength: undefined });
 
-  store.setValue('Spear', 'General', 'WeaponLength', 210.5);
-  store.setValue('Spear', 'General', 'AltWeaponLength', 100.25);
-  store.setValue('Greatsword', 'General', 'WeaponLength', 150.75);
-  store.setValue('Greatsword', 'General', 'AltWeaponLength', 80.5);
-  let rosterRows = (await readRows()).filter(row =>
-    (row.database === 'Spear' || row.database === 'Greatsword') &&
-    (row.key === 'WeaponLength' || row.key === 'AltWeaponLength'));
-  assert.equal(rosterRows.length, 4);
-  const twoWeapons = await applyRows(rosterRows);
-  store.removeValue('Spear', 'General', 'WeaponLength');
-  rosterRows = (await readRows()).filter(row =>
-    (row.database === 'Spear' || row.database === 'Greatsword') &&
-    (row.key === 'WeaponLength' || row.key === 'AltWeaponLength'));
-  assert(rosterRows.some(row => row.database === 'Spear' && row.key === 'AltWeaponLength'));
-  assert(!rosterRows.some(row => row.database === 'Spear' && row.key === 'WeaponLength'));
-  const removeSpearMain = await applyRows(rosterRows, undefined, true);
-  store.removeValue('Greatsword', 'General', 'AltWeaponLength');
-  rosterRows = (await readRows()).filter(row =>
-    (row.database === 'Spear' || row.database === 'Greatsword') &&
-    (row.key === 'WeaponLength' || row.key === 'AltWeaponLength'));
-  assert(rosterRows.some(row => row.database === 'Greatsword' && row.key === 'WeaponLength'));
-  assert(!rosterRows.some(row => row.database === 'Greatsword' && row.key === 'AltWeaponLength'));
-  const removeGreatswordAlt = await applyRows(rosterRows, undefined, true);
+  // Two weapons' lengths are independent of each other.
+  set('Spear', 'General', 'WeaponLength', 210.5);
+  set('Spear', 'General', 'AltWeaponLength', 100.25);
+  set('Greatsword', 'General', 'WeaponLength', 150.75);
+  set('Greatsword', 'General', 'AltWeaponLength', 80.5);
+  const twoWeapons = await apply();
+  assert.deepEqual(lengths(twoWeapons, 'Spear'), { WeaponLength: '210.5', AltWeaponLength: '100.25' });
+  assert.deepEqual(lengths(twoWeapons, 'Greatsword'), { WeaponLength: '150.75', AltWeaponLength: '80.5' });
+  reset('Spear', 'General', 'WeaponLength');
+  const removeSpearMain = await apply();
+  assert.deepEqual(lengths(removeSpearMain, 'Spear'), { WeaponLength: undefined, AltWeaponLength: '100.25' });
+  assert.deepEqual(lengths(removeSpearMain, 'Greatsword'), { WeaponLength: '150.75', AltWeaponLength: '80.5' });
+  reset('Greatsword', 'General', 'AltWeaponLength');
+  const removeGreatswordAlt = await apply();
+  assert.deepEqual(lengths(removeGreatswordAlt, 'Spear'), { WeaponLength: undefined, AltWeaponLength: '100.25' });
+  assert.deepEqual(lengths(removeGreatswordAlt, 'Greatsword'), { WeaponLength: '150.75', AltWeaponLength: undefined });
 
-  if (process.env.EZCONFIG_CAPTURE_LENGTH_COMMANDS === '1') {
-    const directory = resolve('.scratch/weapon-scale-ui');
-    await mkdir(directory, { recursive: true });
-    await writeFile(join(directory, 'ticket02-spear-length-captured-rcon.json'), JSON.stringify({
-      source: 'Real store -> temporary persistence -> review -> selected apply -> captured RCON',
-      database: 'Spear', category: 'General', defaultsCm: { WeaponLength: 180, AltWeaponLength: 135 },
-      stages: lengthStages, partialRemove, wipe,
-    }, null, 2) + '\n');
-  }
-  if (process.env.EZCONFIG_CAPTURE_ROSTER_LENGTH_COMMANDS === '1') {
-    const directory = resolve('.scratch/weapon-scale-ui');
-    await mkdir(directory, { recursive: true });
-    await writeFile(join(directory, 'ticket04-roster-length-captured-rcon.json'), JSON.stringify({
-      source: 'Real store -> temporary persistence -> review -> selected apply -> captured RCON',
-      databases: ['Spear', 'Greatsword'], category: 'General',
-      stages: { twoWeapons, removeSpearMain, removeGreatswordAlt },
-    }, null, 2) + '\n');
-  }
-  if (process.env.EZCONFIG_CAPTURE_GENERAL_COMMANDS === '1') {
-    const directory = resolve('.scratch/weapon-reliability-ui');
-    await mkdir(directory, { recursive: true });
-    await writeFile(join(directory, 'ticket03-captured-rcon.json'), JSON.stringify({
-      source: 'Real store -> temporary persistence -> review -> selected apply -> captured RCON',
-      initialCommands, removalCommands, rearingStages, rearingCategoryBatches, rearingRemovalBatches, values,
-    }, null, 2) + '\n');
-  }
-  console.log('PASS: General scalar/boolean/transform controls and all four ForcesRearingFromFront categories persist/review/select/apply/reset with explicit false/zero');
-} finally {
-  globalThis.fetch = originalFetch;
-  const target = resolve(root);
-  assert(target.startsWith(parent + sep) && target.slice(parent.length + 1).startsWith('ezconfig-weapon-general-'));
-  await rm(target, { recursive: true, force: true });
-}
+  await writeCapture('EZCONFIG_CAPTURE_LENGTH_COMMANDS', '.scratch/weapon-scale-ui', 'ticket02-spear-length-captured-rcon.json', {
+    database: 'Spear', category: 'General', defaultsCm: { WeaponLength: 180, AltWeaponLength: 135 },
+    stages: lengthStages, partialRemove, wipe,
+  });
+  await writeCapture('EZCONFIG_CAPTURE_ROSTER_LENGTH_COMMANDS', '.scratch/weapon-scale-ui', 'ticket04-roster-length-captured-rcon.json', {
+    databases: ['Spear', 'Greatsword'], category: 'General',
+    stages: { twoWeapons, removeSpearMain, removeGreatswordAlt },
+  });
+  await writeCapture('EZCONFIG_CAPTURE_GENERAL_COMMANDS', '.scratch/weapon-reliability-ui', 'ticket03-captured-rcon.json', {
+    initialCommands, removalCommands, rearingStages, rearingCategoryBatches, rearingRemovalBatches, values,
+  });
+});
+console.log('PASS: General scalar/boolean/transform controls and all four ForcesRearingFromFront categories persist/apply/reset with explicit false/zero');

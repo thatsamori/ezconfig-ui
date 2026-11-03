@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-test('General and ForcesRearingFromFront selections persist, review and send independently', () => {
+test('General and ForcesRearingFromFront values persist and send independently', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/weapon-general-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });

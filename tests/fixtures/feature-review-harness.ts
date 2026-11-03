@@ -45,6 +45,8 @@ export interface FeatureReview {
   reset(database: string, category: string, key: string): void;
   /** The saved value once the editor's saves finish; undefined at the game default. */
   saved(database: string, category: string, key: string): Promise<ConfigValue | undefined>;
+  /** The value the editor shows, which an edit it refuses leaves as it was; undefined at the game default. */
+  editorValue(database: string, category: string, key: string): ConfigValue | null | undefined;
   /** Send a save past the editor's own checks, as a hand-made request could; resolves to its status. */
   saveUnchecked(database: string, category: string, entries: Record<string, unknown>): Promise<number>;
   /** Store values without validation, as an older schema could have saved them. */
@@ -124,6 +126,7 @@ export async function featureReview(name: string, run: (review: FeatureReview) =
         assert.equal(response.status, 200);
         return (await response.json()).data[key];
       },
+      editorValue: (database, category, key) => store.getValue(database, category, key),
       async saveUnchecked(database, category, entries) {
         return (await saveCategory(new Request('http://localhost', json('PATCH', { entries })) as never, at([database, category]))).status;
       },

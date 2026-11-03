@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { categoryCommands, categoryEntries, featureReview, WIPE } from './feature-review-harness';
 
-await featureReview('harness-check', async ({ set, reset, saved, saveUnchecked, storeUnvalidated, apply }) => {
+await featureReview('harness-check', async ({ set, reset, saved, editorValue, saveUnchecked, storeUnvalidated, apply }) => {
   const { env } = await import('../../src/lib/env');
   console.log('STORAGE ' + JSON.stringify({ databases: env.databasesPath, presets: env.presetsPath, notes: env.notesPath, users: env.usersPath, rcon: env.rcon.host }));
   assert.deepEqual(await apply('empty'), [WIPE], 'an empty configuration still wipes');
@@ -39,6 +39,7 @@ await featureReview('harness-check', async ({ set, reset, saved, saveUnchecked, 
   const key = 'OutOfStaminaStunDuration';
   set('Character', 'Stun', key, 0.6);
   set('Character', 'Stun', key, -1);
+  assert.equal(editorValue('Character', 'Stun', key), 0.6);
   assert.equal(await saved('Character', 'Stun', key), 0.6);
   assert.equal(await saveUnchecked('Character', 'Stun', { [key]: -1 }), 400);
   assert.equal(await saved('Character', 'Stun', key), 0.6);
