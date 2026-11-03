@@ -14,9 +14,10 @@
  *   handling of that is #31.
  * - Reset to game defaults empties the document. It will also clear the
  *   Draft's origin once Rulesets (#35) give it one.
+ * - Discard changes (#32, through live-configurations.ts) makes the document
+ *   the Live configuration's. It will also copy its origin (#35).
  */
 import { addField, documentErrors, documentFields, placeValues, type EditorValues, type FieldError, type ValuesDocument } from '@/lib/config/valuesDocument';
-import { findOwnedGameServer } from './game-servers';
 import { platformStore } from './storage';
 
 export interface Draft {
@@ -53,8 +54,12 @@ export function readDraft(gameServerId: number): Draft | undefined {
 
 /** The Draft of one of the owner's game servers, by the id a route was given; another owner's reads as missing. */
 export function findOwnedDraft(ownerId: number, id: string): Draft | undefined {
-  const server = /^[1-9]\d{0,15}$/.test(id) ? findOwnedGameServer(ownerId, Number(id)) : undefined;
-  return server && readDraft(server.id);
+  // Read here rather than through game-servers.ts, whose page view reads Drafts (live-configurations.ts).
+  if (!/^[1-9]\d{0,15}$/.test(id)) return undefined;
+  const row = platformStore().get<Row>(
+    `SELECT ${COLUMNS} FROM drafts WHERE game_server_id = (SELECT id FROM game_servers WHERE id = ? AND owner_id = ?)`, Number(id), ownerId,
+  );
+  return row && draft(row);
 }
 
 export function draftView({ document, revision, savedAt }: Draft): DraftView {
@@ -90,4 +95,9 @@ export function saveDraft(gameServerId: number, baseRevision: number, document: 
 /** Reset to game defaults: an empty document. */
 export function resetDraft(gameServerId: number, baseRevision: number, now = Date.now()): DraftWrite | undefined {
   return write(gameServerId, baseRevision, () => ({}), now);
+}
+
+/** Discard changes: the document becomes `live`, the Live configuration's values. */
+export function discardDraft(gameServerId: number, baseRevision: number, live: ValuesDocument, now = Date.now()): DraftWrite | undefined {
+  return write(gameServerId, baseRevision, () => live, now);
 }
