@@ -26,7 +26,7 @@ test('walking speed survives the editor, Apply and reset with zero and negative 
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
 });
 
-test('crouch and directional controls remain independent through real store/review/selected apply', () => {
+test('crouch and directional controls remain independent through the editor, Apply and reset', () => {
   for (const key of ['MaxWalkSpeedCrouched', 'MaxWalkSpeedCrouchedWithRatPerk', 'BackpedalModifier', 'StrafeModifier']) {
     const entry = CHARACTER_CONFIG_OPTIONS.Movement.find(entry => entry.configKey === key)!;
     expect(entry.dataType).toBe(DataType.Float);
@@ -41,7 +41,7 @@ test('crouch and directional controls remain independent through real store/revi
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
 });
 
-test('sprint controls preserve explicit defaults and independent TimeToMaxSprint through review/apply', () => {
+test('sprint controls preserve explicit defaults and independent TimeToMaxSprint through the editor and Apply', () => {
   for (const key of ['PartialSprintModifier', 'SprintModifier', 'SprintAcceleration', 'SupersprintModifier']) {
     const entry = CHARACTER_CONFIG_OPTIONS.Movement.find(entry => entry.configKey === key)!;
     expect(entry.dataType).toBe(DataType.Float);
@@ -76,7 +76,7 @@ test('equipment subsprint controls retain independent main/alternate saved value
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
 });
 
-test('attack supersprint durations remain explicit independent seconds through save/review/apply', () => {
+test('attack supersprint durations remain explicit independent seconds through the editor and Apply', () => {
   for (const key of ['AttackSupersprintDuration', 'SecondAttackSupersprintDuration']) {
     const entry = CHARACTER_CONFIG_OPTIONS.Movement.find(entry => entry.configKey === key)!;
     expect(entry.dataType).toBe(DataType.Float);
