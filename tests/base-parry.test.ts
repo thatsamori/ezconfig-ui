@@ -4,7 +4,7 @@ import { CHARACTER_CONFIG_OPTIONS } from '../src/lib/config/characterConfigSchem
 import { DataType } from '../src/lib/config/types';
 import { validateEntries } from '../src/lib/database/validation';
 
-test('all ten base controls coexist with existing features through review and selected apply', () => {
+test('all ten base controls coexist with existing features through the editor and Apply', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/parry-combined-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });
@@ -33,21 +33,21 @@ test('base parry save, review selection and RCON apply preserve independent valu
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
 });
 
-test('parry angle review selection and Reset preserve independent values and zero', () => {
+test('parry angles preserve independent values, zero and Reset through Apply', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/parry-angles-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
 });
 
-test('parry timing controls each preserve a selected zero without dispatching siblings', () => {
+test('parry timing controls each preserve zero beside their siblings through Apply', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/parry-timing-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
 });
 
-test('detector window is independent of the TrueCombo toggle through review/apply', () => {
+test('detector window is independent of the TrueCombo toggle through Apply', () => {
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/parry-detector-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });
