@@ -18,8 +18,9 @@ are the contract between this app and the mod.
 `bun` must be on PATH: some tests spawn `bun` as a child process.
 - `bun install` - dependencies (`bun.lock` is the only lockfile).
 - `bun test ./tests` - full suite. Run as `bun --no-env-file test ./tests` with
-  `DATABASES_PATH`/`PRESETS_PATH`/`NOTES_PATH`/`USERS_PATH` pointing at temp dirs and
-  `RCON_HOST=127.0.0.1`, so no real data or server is touched.
+  `DATABASES_PATH`/`PRESETS_PATH`/`NOTES_PATH`/`USERS_PATH` pointing at temp dirs,
+  `DATABASE_PATH` at a file in one, and `RCON_HOST=127.0.0.1`, so no real data or
+  server is touched.
 - `bun run typecheck` - `tsc --noEmit`.
 - `bun run lint` - ESLint flat config (`eslint.config.mjs`, eslint-config-next).
 - `bun run init-db` - create empty databases; writes to `./Databases` (ignores
@@ -32,10 +33,14 @@ are the contract between this app and the mod.
   category schemas; `weaponConfigSchema.ts`), `gameDefaults.json`, `defaults.ts`.
 - `src/lib/rcon/` - RCON service, acknowledged batch protocol, automatic sync.
 - `src/lib/migrations/`, `src/lib/server-startup.ts`, `src/instrumentation.ts` -
-  startup storage migration (parry geometry).
+  startup hook: platform migrations, then the parry-geometry storage migration.
+- `src/lib/platform/` - platform storage: `storage.ts` is the only module that
+  opens the SQLite database; `migrations/` holds its numbered SQL migrations.
 - `src/lib/database/`, `src/app/api/` - persistence and API routes.
 - `string-schemas/` - generated `characterConfigSchema.txt`/`weaponConfigSchema.txt`.
-- `tests/` (`*.test.ts`) and `tests/fixtures/` (standalone child fixtures).
+- `tests/` (`*.test.ts`), `tests/fixtures/` (standalone child fixtures) and
+  `tests/helpers/` (`runPlatformFixture`: a child fixture with its own fresh,
+  migrated platform database).
 - `scripts/` - init-db, defaults export/import, parry migration CLI.
 - `docs/` - see index below; `docs/design/`, `docs/archive/` are reference only.
 
@@ -56,6 +61,16 @@ are the contract between this app and the mod.
 Key names never change once published. A rename is a new key plus deprecation
 of the old one, coordinated with the mod.
 
+## Adding a platform migration
+- Add the next `NNNN-name.sql` to `src/lib/platform/migrations/`. Shipped
+  migrations stay as they are: a change is a new migration.
+- Startup runs each file in its own transaction and sets `user_version` inside
+  it, so a file holds no `BEGIN`/`COMMIT`. `PRAGMA foreign_keys = OFF` has no
+  effect there: rebuilding a table that others reference needs a runner change
+  first, since dropping it fires their foreign key actions.
+- Startup migrates only when `DATABASE_PATH` is set, and then needs Bun
+  (`bun --bun next start`).
+
 ## RCON safety
 - Tests mock `src/lib/rcon/service` (see `tests/fixtures/*`); never open a real
   connection from a test or script.
@@ -64,7 +79,8 @@ of the old one, coordinated with the mod.
 
 ## Data and secrets
 `Databases/`, `Presets/User/`, `Notes/`, `users.json`, `.env*` (except
-`.env.example`) are gitignored user data. Never print, commit or overwrite them.
+`.env.example`) are gitignored user data, as is the platform database at
+`DATABASE_PATH` with its `.bak` copies. Never print, commit or overwrite them.
 Locations come from `DATABASES_PATH`, `PRESETS_PATH`, `NOTES_PATH` and
 `USERS_PATH` (defaults `./Databases`, `./Presets`, `./Notes`, `./users.json`;
 see `src/lib/env.ts`).
