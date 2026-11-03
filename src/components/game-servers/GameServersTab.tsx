@@ -7,9 +7,12 @@ import { relativeTime } from '@/components/console/model';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useRefreshingJson } from '@/lib/hooks/useRefreshingJson';
 import type { ConnectionStatus, GameServerView } from '@/lib/platform/game-servers';
+import type { ApplyReview, ReviewEntry } from '@/lib/platform/live-configurations';
+import { flushConfigWrites } from '@/lib/store/configStore';
 
 /** What the setup checklist pastes into Game.ini: the HTTP switch and the key, not the optional PlatformUrl. */
 const gameIni = (gameServerKey: string) => `[/Script/Mordhau.MordhauGameSession]
@@ -25,7 +28,9 @@ GameServerKey=${gameServerKey}`;
  * checklist; Regenerate key, Delete and the shared-key warning. The Game
  * server key is shown on the page that registering or regenerating leaves
  * open, and gone once the owner leaves it. Edit Draft opens the game server's
- * Draft in the editor; `initialOpenId` opens on a game server's page.
+ * Draft in the editor; `initialOpenId` opens on a game server's page. The
+ * page shows the Live configuration and Unapplied changes, and Applies the
+ * Draft after a review, or discards its changes.
  */
 export function GameServersTab({ initialOpenId, onEditDraft }: { initialOpenId?: number; onEditDraft?: (server: { id: number; name: string }) => void } = {}) {
   const [openId, setOpenId] = useState<number | null>(initialOpenId ?? null);
@@ -126,7 +131,7 @@ function ServerPage({ id, gameServerKey, onKey, onBack, onEditDraft }: {
         <strong>More than one server is using this key</strong>
         <p>Polls from different game servers with this key keep replacing each other. Each game server needs its own key: register the other server separately, then <RegenerateKeyButton onClick={confirmRegenerateKey} /> here and put the new key in this server&apos;s Game.ini only.</p>
       </div></div>}
-      {onEditDraft && <section className="draft-entry"><div><h3>Draft</h3><p>Edit Character and Weapon config here. The Draft saves as you edit; nothing reaches the game server until you Apply.</p></div><button className="primary-button" onClick={() => onEditDraft({ id: server.id, name: server.name })}>Edit Draft</button></section>}
+      <DraftSection server={server} onEditDraft={onEditDraft} onChanged={refresh} />
       {server.connection.state === 'never-connected' || gameServerKey ? <SetupChecklist server={server} gameServerKey={gameServerKey} onRegenerateKey={confirmRegenerateKey} /> : <dl className="server-facts">
         <dt>Reported build</dt><dd>{server.lastReport?.buildStamp ? <code>{server.lastReport.buildStamp}</code> : 'None reported'}</dd>
         <dt>Game server key</dt><dd>Ending in <code>{server.keyLast4}</code> · <RegenerateKeyButton onClick={confirmRegenerateKey} /></dd>
@@ -141,6 +146,145 @@ function ServerPage({ id, gameServerKey, onKey, onBack, onEditDraft }: {
       </Confirm>
     </>}
   </div>;
+}
+
+const BLOCKED: Record<NonNullable<GameServerView['applyBlocked']>, string> = { 'never-connected': 'Never connected', 'not-connected': 'Not connected', 'needs-updating': 'EZConfig needs updating' };
+/** Why Apply is disabled, as its button says it; undefined while it is not. */
+const blockedReason = (server: GameServerView) => !server.applyBlocked ? undefined
+  : server.applyBlocked === 'needs-updating' && !server.needsUpdating?.supported ? 'No Supported build yet' : BLOCKED[server.applyBlocked];
+
+/** The review of an Apply now, once the editor's saves have finished; undefined after saying in a toast why it failed. */
+async function loadReview(id: number): Promise<ApplyReview | undefined> {
+  // The review is of the saved Draft; the editor shows any save that failed.
+  await flushConfigWrites().catch(() => {});
+  return (await send<ApplyReview>(`/api/game-servers/${id}/apply`, 'GET'))?.data;
+}
+
+/**
+ * The Draft beside the Live configuration: none yet, or Pending since it was
+ * applied; Unapplied changes; Edit Draft, Discard changes and Apply. Apply
+ * opens the review first, and is disabled, saying why, unless the game server
+ * is Connected and on the Supported build.
+ */
+function DraftSection({ server, onEditDraft, onChanged }: { server: GameServerView; onEditDraft?: (server: { id: number; name: string }) => void; onChanged: () => void }) {
+  const [review, setReview] = useState<ApplyReview | 'loading' | null>(null);
+  const [discarding, setDiscarding] = useState<ApplyReview | null>(null);
+  const live = server.liveConfiguration;
+  const blocked = blockedReason(server);
+  const openReview = async () => {
+    setReview('loading');
+    setReview(await loadReview(server.id) ?? null);
+  };
+  const openDiscard = async () => {
+    const loaded = await loadReview(server.id);
+    if (loaded) setDiscarding(loaded);
+  };
+  const discard = async (base: ApplyReview) => {
+    try {
+      const response = await fetch(`/api/game-servers/${server.id}/draft/discard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revision: base.revision }) });
+      const body = await response.json().catch(() => ({})) as { success?: boolean; error?: string; data?: unknown };
+      if (response.ok && body.success) toast.success('Changes discarded: the Draft is the Live configuration again');
+      else toast.error(response.status === 409 && body.data ? 'The Draft changed meanwhile, so nothing was discarded. Check it, then discard again' : body.error || `The platform refused (${response.status})`);
+    } catch {
+      toast.error('Could not reach the platform');
+    }
+    onChanged();
+  };
+  const changes = discarding ? discarding.added.length + discarding.changed.length + discarding.reset.length : 0;
+  return <section className="draft-entry" aria-label="Draft">
+    <div className="draft-copy">
+      <h3>Draft{server.unappliedChanges && <span className="unapplied-tag">Unapplied changes</span>}</h3>
+      <p>Edit Character and Weapon config here. The Draft saves as you edit; nothing reaches the game server until you Apply.</p>
+      <p className="live-state">Live configuration: {live ? <>
+        <strong>Pending</strong> · applied <time dateTime={new Date(live.appliedAt).toISOString()} title={new Date(live.appliedAt).toLocaleString()}>{relativeTime(live.appliedAt)}</time>. The game server has not reported processing it yet.
+      </> : <><strong>none yet</strong>. The game server runs its own saved EZConfig values until the first Apply.</>}</p>
+    </div>
+    <div className="draft-actions">
+      {onEditDraft && <button className="outline-button" onClick={() => onEditDraft({ id: server.id, name: server.name })}>Edit Draft</button>}
+      {live && server.unappliedChanges && <button className="outline-button" onClick={openDiscard}>Discard changes</button>}
+      <button className="primary-button" disabled={!!blocked || review === 'loading'} onClick={openReview}>{blocked ? `Apply · ${blocked}` : 'Review and Apply'}</button>
+    </div>
+    {review && review !== 'loading' && <ApplyDialog server={server} review={review} onReview={setReview} onClose={() => setReview(null)} onApplied={onChanged} />}
+    <Confirm open={discarding !== null} onClose={() => setDiscarding(null)} onConfirm={() => { if (discarding) void discard(discarding); }} title="Discard changes?" action="Discard changes">
+      {changes ? `The Draft's ${changes} unapplied change${changes === 1 ? '' : 's'} are lost, and it` : 'The Draft'} goes back to the Live configuration applied {live ? relativeTime(live.appliedAt) : ''}. This can&apos;t be undone.
+    </Confirm>
+  </section>;
+}
+
+/**
+ * The review, then Apply. When the Draft or the Live configuration moved on
+ * since the review was built, Apply is refused and the review reopens as it is
+ * now; values the schema refuses block Apply, listed to fix.
+ */
+function ApplyDialog({ server, review, onReview, onClose, onApplied }: {
+  server: GameServerView; review: ApplyReview; onReview: (review: ApplyReview) => void; onClose: () => void; onApplied: () => void;
+}) {
+  const [applying, setApplying] = useState(false);
+  const [notice, setNotice] = useState('');
+  const first = review.liveConfigurationId === null;
+  const unchanged = !first && review.added.length + review.changed.length + review.reset.length === 0;
+  const blocked = blockedReason(server);
+  const apply = async () => {
+    setApplying(true);
+    setNotice('');
+    try {
+      const response = await fetch(`/api/game-servers/${server.id}/apply`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revision: review.revision, liveConfigurationId: review.liveConfigurationId }) });
+      const body = await response.json().catch(() => ({})) as { success?: boolean; error?: string; reason?: string; data?: ApplyReview; details?: ApplyReview['errors'] };
+      if (response.ok && body.success) {
+        toast.success(`Applied to ${server.name}: the game server gets it within a few seconds`);
+        onApplied();
+        onClose();
+      } else if (body.reason === 'stale' && body.data) {
+        onReview(body.data);
+        setNotice('The Draft or the Live configuration changed since this review was built. This is the review as it is now: check it, then Apply.');
+      } else if (body.details) {
+        onReview({ ...review, errors: body.details });
+      } else {
+        setNotice(body.error || `The platform refused (${response.status})`);
+      }
+    } catch {
+      setNotice('Could not reach the platform');
+    } finally {
+      setApplying(false);
+    }
+  };
+  return <Dialog open onOpenChange={open => { if (!open && !applying) onClose(); }}>
+    <DialogContent className="apply-review">
+      <DialogHeader>
+        <DialogTitle>Apply to {server.name}?</DialogTitle>
+        <DialogDescription>The whole Draft becomes the Live configuration, and the game server gets it within a few seconds.</DialogDescription>
+      </DialogHeader>
+      <div className="review-body">
+        {notice && <p className="review-notice" role="alert">{notice}</p>}
+        {review.errors.length > 0 && <div className="review-errors" role="alert"><strong>Fix these values in the Draft before you Apply</strong>
+          <ul>{review.errors.map(error => <li key={`${error.database}/${error.category}/${error.key}`}><span className="review-key">{place(error)} · <code>{error.key}</code></span><span>{error.error}</span></li>)}</ul>
+        </div>}
+        {first && <div className="review-warning"><TriangleAlert size={16} /><p><strong>First Apply to this game server.</strong> Every EZConfig value it has now is replaced, and anything not in the Draft returns to game default.</p></div>}
+        {first ? review.added.length ? <ReviewList title={`The Draft sets ${review.added.length} value${review.added.length === 1 ? '' : 's'}`} entries={review.added} />
+          : <p className="review-none">The Draft sets no values: every EZConfig value returns to game default.</p>
+          : unchanged ? <p className="review-none">No changes; the server will be sent this configuration again</p> : <>
+            {review.added.length > 0 && <ReviewList title={`Added (${review.added.length})`} entries={review.added} />}
+            {review.changed.length > 0 && <ReviewList title={`Changed (${review.changed.length})`} entries={review.changed} />}
+            {review.reset.length > 0 && <ReviewList title={`Reset to game default (${review.reset.length})`} entries={review.reset} />}
+          </>}
+      </div>
+      <DialogFooter>
+        <button type="button" className="outline-button" disabled={applying} onClick={onClose}>Cancel</button>
+        <button type="button" className="primary-button" disabled={applying || review.errors.length > 0 || !!blocked} onClick={apply}>{applying ? 'Applying…' : blocked ? `Apply · ${blocked}` : 'Apply'}</button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>;
+}
+
+/** Where a value sits, as the editor names it: a Character category, or a weapon and its category. */
+const place = ({ database, category }: { database: string; category?: string }) => database === 'Character' ? category : `${database} · ${category}`;
+const shown = (value: unknown) => typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value);
+
+function ReviewList({ title, entries }: { title: string; entries: ReviewEntry[] }) {
+  return <section className="review-list"><h4>{title}</h4><ul>{entries.map(entry => <li key={`${entry.database}/${entry.category}/${entry.key}`}>
+    <span className="review-key">{place(entry)} · <code>{entry.key}</code></span>
+    <span className="review-value">{'live' in entry && <><span className="review-before">{shown(entry.live)}</span> → </>}{'draft' in entry ? shown(entry.draft) : 'game default'}</span>
+  </li>)}</ul></section>;
 }
 
 function RegenerateKeyButton({ onClick }: { onClick: () => void }) {
