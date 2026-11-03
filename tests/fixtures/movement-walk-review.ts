@@ -1,6 +1,6 @@
 // Walking speed through the editor and Apply, on the feature review harness.
 import assert from 'node:assert/strict';
-import { categoryEntries, featureReview, WIPE } from './feature-review-harness';
+import { categoryCommands, categoryEntries, featureReview } from './feature-review-harness';
 
 await featureReview('movement-walk', async ({ set, reset, saved, apply }) => {
   set('Character', 'Parry', 'ParryUpTime', 0.31);
@@ -19,9 +19,7 @@ await featureReview('movement-walk', async ({ set, reset, saved, apply }) => {
   // Reset removes only this key; the wipe clears its earlier server state.
   reset('Character', 'Movement', 'MaxWalkSpeed');
   assert.equal(await saved('Character', 'Movement', 'MaxWalkSpeed'), undefined);
-  const batch = await apply();
-  assert.equal(batch[0], WIPE);
-  assert.deepEqual(batch.slice(1).sort(), [
+  assert.deepEqual(categoryCommands(await apply()), [
     'string ezconfig Character Movement {"TimeToMaxSprint":"0.96"}',
     'string ezconfig Character Parry {"ParryUpTime":"0.31"}',
   ]);
