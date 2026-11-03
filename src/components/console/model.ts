@@ -32,6 +32,20 @@ export function newValueOutcome(text: string, baseline: DefaultValue | undefined
   if (newValueError(text, entry)) return 'refused';
   return Number.isFinite(value) ? value : 'close';
 }
+/**
+ * The wheel over a focused number input steps its value instead of scrolling.
+ * Browsers leave a read-only input's value alone and scroll as usual, so the
+ * input is read-only until this wheel event has been handled. It keeps its
+ * focus, its selection and what it holds.
+ */
+export function holdNumberForWheel({ target }: Pick<Event, 'target'>) {
+  const input = target as HTMLInputElement | null;
+  if (input?.type !== 'number' || input.readOnly || !input.matches(':focus')) return;
+  input.readOnly = true;
+  setTimeout(() => {
+    input.readOnly = false;
+  });
+}
 export function toggleAttackGroup(current: string[], group: string): string[] {
   if (group === 'General') return ['General'];
   if (current.includes(group) && current.length === 1) return current;

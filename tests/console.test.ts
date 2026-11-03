@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { countOverrides, newValueError, newValueOutcome, sweepValue, toggleAttackGroup } from '../src/components/console/model';
+import { countOverrides, holdNumberForWheel, newValueError, newValueOutcome, sweepValue, toggleAttackGroup } from '../src/components/console/model';
 import { parrySections } from '../src/components/console/parry-sections';
 import { CHARACTER_CONFIG_OPTIONS } from '../src/lib/config/characterConfigSchema';
 import { resolveDefault } from '../src/lib/config/defaults';
@@ -10,6 +10,29 @@ describe('attack columns', () => {
     expect(toggleAttackGroup(['General'], 'Stab')).toEqual(['Stab']);
     expect(toggleAttackGroup(['Stab'], 'Strike')).toEqual(['Strike', 'Stab']);
     expect(toggleAttackGroup(['Strike'], 'Strike')).toEqual(['Strike']);
+  });
+});
+describe('the wheel over a number input (online-platform#50)', () => {
+  const input = (type: string, focused: boolean, readOnly = false) => ({ type, readOnly, matches: (selector: string) => selector === ':focus' && focused });
+  const wheelOver = (target: unknown) => holdNumberForWheel({ target: target as EventTarget });
+  const handled = () => new Promise(resolve => setTimeout(resolve));
+  test('a focused number input is read-only while the wheel event is handled, then editable again', async () => {
+    const focused = input('number', true);
+    wheelOver(focused);
+    expect(focused.readOnly).toBe(true);
+    wheelOver(focused);
+    await handled();
+    expect(focused.readOnly).toBe(false);
+  });
+  test('anything else is left as it is', async () => {
+    const others = [input('number', false), input('text', true), { tagName: 'DIV' }];
+    for (const other of others) wheelOver(other);
+    wheelOver(null);
+    const alreadyReadOnly = input('number', true, true);
+    wheelOver(alreadyReadOnly);
+    await handled();
+    expect(others.map(other => 'readOnly' in other && other.readOnly)).toEqual([false, false, false]);
+    expect(alreadyReadOnly.readOnly).toBe(true);
   });
 });
 describe("A Float cell's new value", () => {
