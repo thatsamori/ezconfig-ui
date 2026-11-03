@@ -109,7 +109,8 @@ Calls taken where the ticket left room:
   once an hour), and "not signed in" while they have none. The spec's User
   record has no last seen, so this adds no column. It goes when the sessions
   go: after Remove access, Sign out everywhere, or 30 days unused. A lasting
-  last seen would need a `users` column and a migration: the owner's call.
+  last seen would need a `users` column and a migration. The owner kept it as
+  it is (2026-11-03).
 - The typed confirm is the owner's Discord name as the list shows it,
   ignoring spaces around it, and the route checks it too, not only the
   dialog. A name that is hard to type can be pasted from the dialog.
