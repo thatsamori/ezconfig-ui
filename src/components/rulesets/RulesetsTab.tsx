@@ -44,8 +44,8 @@ export function RulesetsTab() {
           <span className="preset-icon"><Bookmark size={15} /></span>
           <div><h2>{ruleset.name}</h2><p className="preset-meta">{ruleset.versions.length} version{ruleset.versions.length === 1 ? '' : 's'} · created {relativeTime(ruleset.createdAt)}</p></div>
           <div className="ruleset-actions">
-            <button type="button" className="outline-button" onClick={() => setRenaming(ruleset)}>Rename</button>
-            <button type="button" className="outline-button danger-button" onClick={() => setDeleting(ruleset)}>Delete</button>
+            <button type="button" className="outline-button" aria-label={`Rename ${ruleset.name}`} onClick={() => setRenaming(ruleset)}>Rename</button>
+            <button type="button" className="outline-button danger-button" aria-label={`Delete ${ruleset.name}`} onClick={() => setDeleting(ruleset)}>Delete</button>
           </div>
         </div>
         <ol className="ruleset-version-list">{ruleset.versions.map(version => <li key={version.id}>

@@ -508,7 +508,11 @@ body { -webkit-font-smoothing: antialiased; }
 .modified-tag, .unmodified-tag { margin-left: 8px; font-size: 12px; font-weight: 500; }
 .modified-tag { color: #e0a83c; }
 .unmodified-tag { color: #6b6c72; }
-.bar-origin { font-size: 12.5px; }
+.bar-origin { display: flex; gap: 4px; font-size: 12.5px; }
+/* In the narrow bar the name gives way first, so Modified stays readable */
+.bar-origin .origin-label { display: flex; min-width: 0; }
+.bar-origin .origin-name { overflow: hidden; text-overflow: ellipsis; }
+.bar-origin .modified-tag, .bar-origin .unmodified-tag { flex-shrink: 0; }
 .ruleset-list { display: grid; gap: 12px; max-width: 720px; }
 .ruleset-card { background: #16171a; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 14px 18px; }
 .ruleset-card-heading { display: flex; align-items: center; gap: 12px; }
