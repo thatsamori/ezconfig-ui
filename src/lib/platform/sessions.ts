@@ -18,8 +18,8 @@ const sessionId = (token: string) => createHash('sha256').update(token).digest('
 /** Starts a session for a server owner; the token returned goes in the cookie and nowhere else. */
 export function startSession(userId: number, now = Date.now()): string {
   const token = randomBytes(32).toString('base64url'), store = platformStore();
-  // Expired sessions are never read again; each sign-in clears them out.
-  store.run('DELETE FROM sessions WHERE expires_at <= ?', now);
+  // Expired sessions are never read again; each sign-in clears them out, as does the daily sweep.
+  deleteExpiredSessions(now);
   store.run(
     'INSERT INTO sessions (id, user_id, created_at, expires_at, last_seen_at) VALUES (?, ?, ?, ?, ?)',
     sessionId(token), userId, now, now + SESSION_LIFETIME_MS, now,
@@ -49,4 +49,9 @@ export function endSession(token: string): void {
 /** Sign out everywhere: ends every session the server owner has. */
 export function endAllSessions(userId: number): void {
   platformStore().run('DELETE FROM sessions WHERE user_id = ?', userId);
+}
+
+/** Resolves to the number of expired sessions deleted. */
+export function deleteExpiredSessions(now = Date.now()): number {
+  return platformStore().run('DELETE FROM sessions WHERE expires_at <= ?', now);
 }
