@@ -417,6 +417,14 @@ input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-app
 .invite-link input { flex: 1; min-width: 0; height: 34px; padding: 0 10px; background: #0f1012; border: 1px solid rgba(255,255,255,.1); border-radius: 9px; color: #f2f2f3; font-family: var(--font-mono, monospace); font-size: 12px; }
 .invites-heading { margin-bottom: 12px; }
 .invite-times { color: #9a9ba1; font-size: 12.5px; margin-right: 6px; }
+.owner-row .user-avatar { flex-shrink: 0; background: #26272b center / cover no-repeat; }
+.owner-details { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.owner-details > div { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.owner-details strong { font-size: 14px; font-weight: 600; color: #f2f2f3; overflow-wrap: anywhere; }
+.owner-details .role-pill { margin-right: 0; white-space: nowrap; }
+.role-pill.removed { color: #e0a83c; background: rgba(224,168,60,.12); }
+.owner-confirm { display: grid; gap: 8px; font-size: 13px; color: #d4d4d8; }
+.owner-confirm strong { color: #f2f2f3; overflow-wrap: anywhere; }
 [data-slot=input], [data-slot=textarea] { background: #0f1012; border-color: rgba(255,255,255,.1); border-radius: 9px; font-size: 13px; }
 [data-slot=button] { border-radius: 9px; font-size: 13px; }
 body { -webkit-font-smoothing: antialiased; }
