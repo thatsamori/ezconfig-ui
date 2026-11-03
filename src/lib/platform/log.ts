@@ -8,7 +8,9 @@
  * - Name the event with a fixed string, never one built from input.
  * - A line names platform ids only: game server, user, Live configuration,
  *   Invite (its id, never its code); plus `count`, a number (how many polls
- *   had an unknown key in an hour). Any other field passed in is dropped.
+ *   had an unknown key in an hour), and `buildStamp`, kept only in its
+ *   `YYYYMMDD-HHMMSS` form (a poll may report any text). Any other field
+ *   passed in is dropped.
  *   A new field is added here, after checking it against the list below.
  * - Never logged, in an event name, a message or an error: any part of a Game
  *   server key; session tokens; `Cookie` or `Authorization` headers; Invite
@@ -33,7 +35,8 @@ type Level = 'info' | ProblemLevel;
 
 const ID_FIELDS = ['userId', 'gameServerId', 'liveConfigurationId', 'inviteId'] as const;
 const COUNT_FIELDS = ['count'] as const;
-export type LogIds = Partial<Record<(typeof ID_FIELDS)[number], PlatformId> & Record<(typeof COUNT_FIELDS)[number], number>>;
+const BUILD_STAMP = /^\d{8}-\d{6}$/;
+export type LogIds = Partial<Record<(typeof ID_FIELDS)[number], PlatformId> & Record<(typeof COUNT_FIELDS)[number], number> & { buildStamp: string | null }>;
 
 export interface LogHealthEntry {
   time: string;
@@ -58,7 +61,7 @@ const healthKey = Symbol.for('ezconfig-ui.platform-log.health.v1');
 const shared = globalThis as typeof globalThis & { [key: symbol]: LogHealth | undefined };
 const health = shared[healthKey] ??= { warnings: 0, errors: 0, recent: [] };
 
-// Copied field by field: a caller may hand over a whole row, and only its ids and counts may leave.
+// Copied field by field: a caller may hand over a whole row, and only its ids, counts and build stamp may leave.
 function pickIds(ids: LogIds): LogIds {
   const picked: LogIds = {};
   for (const field of ID_FIELDS) {
@@ -69,6 +72,8 @@ function pickIds(ids: LogIds): LogIds {
     const value: unknown = ids[field];
     if (typeof value === 'number' && Number.isFinite(value)) picked[field] = value;
   }
+  const stamp: unknown = ids.buildStamp;
+  if (typeof stamp === 'string' && BUILD_STAMP.test(stamp)) picked.buildStamp = stamp;
   return picked;
 }
 

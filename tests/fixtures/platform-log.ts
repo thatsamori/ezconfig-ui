@@ -10,6 +10,9 @@ const scenarios: Record<string, () => void> = {
     // A count is a number or nothing.
     log.info('poll.key-rejected', { count: 3 });
     log.info('poll.key-rejected', { count: 'ezconfig-count-text' } as unknown as LogIds);
+    // A build stamp only in its YYYYMMDD-HHMMSS form: a poll may report any text.
+    log.info('poll.not-supported-build', { gameServerId: 7, buildStamp: '20261102-153000' });
+    log.info('poll.not-supported-build', { gameServerId: 7, buildStamp: 'ezconfig-stamp-text' });
   },
   problems: () => {
     log.error('delivery.failed', Object.assign(new Error('delivery failed'), {
