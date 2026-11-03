@@ -499,6 +499,10 @@ body { -webkit-font-smoothing: antialiased; }
 .crumb-link:hover { color: #f2f2f3; }
 .field-error { display: block; color: #e5484d; font-size: 11px; line-height: 1.4; margin-top: 3px; overflow-wrap: anywhere; }
 .save-problem { color: #e0a83c; }
+.unsaved-edits { margin-top: 10px; padding: 10px 12px; background: rgba(224,168,60,.07); border: 1px solid rgba(224,168,60,.25); border-radius: 9px; font-size: 12px; line-height: 1.5; color: #d4d4d8; overflow-wrap: anywhere; }
+.unsaved-edits ul { margin: 6px 0; padding-left: 18px; list-style: disc; max-height: 9em; overflow-y: auto; }
+.unsaved-edits .mono { color: #e0a83c; }
+.unsaved-edits .text-button { margin-left: 0; }
 .text-button { margin-left: 8px; color: #d4d4d8; text-decoration: underline; text-underline-offset: 2px; }
 .draft-entry { display: flex; align-items: center; gap: 16px; justify-content: space-between; background: #16171a; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 14px 18px; margin-bottom: 24px; max-width: 720px; }
 .draft-entry h3 { font-size: 14px; font-weight: 600; }

@@ -1,7 +1,7 @@
 /**
  * A game server's Draft through the route handlers: load and save, validation
- * errors, stale revisions, Reset to game defaults, values the schema has no
- * place for, and pins. One scenario per run (argv[2]), each in its own process
+ * errors, stale revisions, two writers on one revision, Reset to game
+ * defaults, values the schema has no place for, and pins. One scenario per run (argv[2]), each in its own process
  * with the env set by tests/platform-drafts.test.ts. Asserts as it goes.
  */
 import assert from 'node:assert/strict';
@@ -128,6 +128,26 @@ switch (process.argv[2]) {
     const refused = await reset(session, id, 0);
     assert.deepEqual(refused, { status: 409, cache: 'no-store', body: { success: false, error: 'The Draft changed since this page loaded it', data: view } });
     assert.equal(stored(id).overrides, JSON.stringify(first), 'a stale reset resets nothing');
+    break;
+  }
+  case 'two-writers': {
+    // Two tabs write on the same revision at once: exactly one is written, and the other is refused with the Draft the first left.
+    const race = async (writes: (() => Promise<Awaited<ReturnType<typeof answer>>>)[]) => {
+      const revision = stored(id).revision;
+      const answers = await Promise.all(writes.map(write => write()));
+      assert.deepEqual(answers.map(({ status }) => status).sort(), [200, 409], 'exactly one write succeeds');
+      assert.equal(stored(id).revision, revision + 1, 'the Draft moved on once');
+      const current = await loaded(session, id);
+      const refused = answers.find(({ status }) => status === 409)!;
+      assert.deepEqual(refused, { status: 409, cache: 'no-store', body: { success: false, error: 'The Draft changed since this page loaded it', data: current } }, 'the refusal carries the current Draft');
+      return answers.findIndex(({ status }) => status === 200);
+    };
+    const tabs = [{ Character: { MaxWalkSpeed: 450 } }, { Weapon: { ArmingSword: { Strike: { Windup: 0.5 } } } }];
+    const winner = await race(tabs.map(document => () => save(session, id, 0, document)));
+    assert.equal(stored(id).overrides, JSON.stringify(tabs[winner]), "the refused save's document is not stored");
+    // A save and Reset to game defaults on the same revision.
+    const next = await race([() => save(session, id, 1, { Character: { MaxWalkSpeed: 600 } }), () => reset(session, id, 1)]);
+    assert.equal(stored(id).overrides, next === 0 ? JSON.stringify({ Character: { MaxWalkSpeed: 600 } }) : '{}');
     break;
   }
   case 'reset': {

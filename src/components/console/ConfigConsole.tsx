@@ -12,7 +12,7 @@ import { SavePresetDialog } from '@/components/presets/SavePresetDialog';
 import { NotesDialog } from '@/components/notes';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
-import { useConfigStore, flushConfigWrites, fieldName, type ConfigState } from '@/lib/store/configStore';
+import { useConfigStore, flushConfigWrites, fieldName, editName, type ConfigState } from '@/lib/store/configStore';
 import { useSessionStore } from '@/lib/store';
 import { WEAPON_CONFIG_OPTIONS } from '@/lib/config/weaponConfigSchema';
 import { CHARACTER_CONFIG_OPTIONS, CharacterConfigGroupName } from '@/lib/config/characterConfigSchema';
@@ -81,8 +81,8 @@ function KeyRow({
     {notesOpen && <NotesDialog open={notesOpen} onOpenChange={setNotesOpen} configKey={entry.configKey} context={database === 'Character' ? `Character · ${groups[0]}` : database} notes={notes} onAddNote={addNote} onEditNote={editNote} onDeleteNote={deleteNote} />}
   </>;
 }
-/** The status of the open Draft's saves, with what the owner can do about a failed or stale one. */
-function SaveStatus({ onReload }: { onReload: () => void }) {
+/** The status of the open Draft's saves, with what the owner can do about a failed one. */
+function SaveStatus() {
   const draft = useConfigStore(state => state.draft);
   const saveState = useConfigStore(state => state.saveState);
   const saveError = useConfigStore(state => state.saveError);
@@ -90,7 +90,40 @@ function SaveStatus({ onReload }: { onReload: () => void }) {
   if (!draft) return null;
   const them = draft.dropped === 1 ? 'it' : 'them';
   const hidden = draft.dropped ? ` · ${draft.dropped} stored value${draft.dropped === 1 ? ' is' : 's are'} not shown: this build has no key or weapon for ${them}. Saves keep ${them}.` : '';
-  return <p className="config-sync-status" role="status">{saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? draft.savedAt ? <>Saved <time dateTime={new Date(draft.savedAt).toISOString()} title={new Date(draft.savedAt).toLocaleString()}>{new Date(draft.savedAt).toLocaleTimeString()}</time></> : 'No saves yet' : <span className="save-problem">{saveError}</span>}{saveState === 'failed' && <button className="text-button" onClick={retrySave}>Retry</button>}{saveState === 'stale' && <button className="text-button" onClick={onReload}>Reload the Draft</button>}{hidden}</p>;
+  return <p className="config-sync-status" role="status">{saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? draft.savedAt ? <>Saved <time dateTime={new Date(draft.savedAt).toISOString()} title={new Date(draft.savedAt).toLocaleString()}>{new Date(draft.savedAt).toLocaleTimeString()}</time></> : 'No saves yet' : <span className="save-problem">{saveError}</span>}{saveState === 'failed' && <button className="text-button" onClick={retrySave}>Retry</button>}{hidden}</p>;
+}
+/** The edits another tab's save left unsaved here, each with the value it set, until the owner dismisses them. */
+function UnsavedEdits() {
+  const unsaved = useConfigStore(state => state.unsaved);
+  const dismiss = useConfigStore(state => state.dismissUnsaved);
+  if (!unsaved.length) return null;
+  const one = unsaved.length === 1;
+  return <div className="unsaved-edits" role="alert"><p>The Draft changed in another tab, so {one ? 'this edit was' : `these ${unsaved.length} edits were`} not saved. The editor shows the saved Draft; make {one ? 'it' : 'them'} again to keep {one ? 'it' : 'them'}.</p><ul>{unsaved.map(edit => <li key={fieldName(edit.database, edit.category, edit.key)}>{editName(edit)} <span className="mono">→ {showValue(edit.value)}</span></li>)}</ul><button className="text-button" onClick={dismiss}>Dismiss</button></div>;
+}
+/** How often the open editor fetches its Draft again, to pick up another tab's saves. */
+const DRAFT_REFRESH_MS = 3_000;
+/** True while the owner is typing a value in the editor: a refresh waits rather than replace it. */
+const typingValue = () => {
+  const active = document.activeElement;
+  return !!active?.closest('.config-table') && (active.matches('input, select, textarea') || !!active.closest('form'));
+};
+/** While the editor is showing, fetches its Draft again every few seconds the page is visible, and at once when it is shown again. */
+function useDraftRefresh(showing: boolean) {
+  useEffect(() => {
+    if (!showing) return;
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void useConfigStore.getState().refreshDraft(typingValue);
+    };
+    refresh();
+    const timer = setInterval(refresh, DRAFT_REFRESH_MS);
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [showing]);
 }
 function ConsoleContent() {
   const [tab, setTab] = useState('servers');
@@ -112,11 +145,11 @@ function ConsoleContent() {
   const draft = useConfigStore(state => state.draft);
   const loading = useConfigStore(state => state.loading);
   const loadError = useConfigStore(state => state.loadError);
-  const stale = useConfigStore(state => state.saveState === 'stale');
-  const ready = !!draft && !loading && !stale;
+  const ready = !!draft && !loading;
   const operator = useSessionStore(state => state.user?.operator ?? false);
   const isCharacter = tab === 'character';
   const configScreen = (tab === 'weapons' || isCharacter) && editing !== null;
+  useDraftRefresh(configScreen);
   const database = isCharacter ? 'Character' : weapon;
   const visibleGroups = isCharacter ? [charGroup] : groups;
   const title = isCharacter ? charGroup : weapon;
@@ -234,7 +267,7 @@ function ConsoleContent() {
       <section className="config-content" ref={contentRef}><header className="config-header"><div className="content-heading"><div><p className="crumb"><button className="crumb-link" onClick={showServerPage}>{editing?.name}</button> · Draft · {isCharacter ? 'Character' : 'Weapons'}</p><h1>{title}</h1></div><div className="header-actions">{globalSearch}<button className="outline-button" disabled={!ready} onClick={resetScope}>Reset {isCharacter ? 'group' : 'weapon'}</button></div></div>{isCharacter ? <p className="character-hint">Server-wide values. Rows marked feature are toggles; the parameters under them are stored and sent regardless, but the mod only reads them while the toggle is on.</p> : <div className="attack-toolbar"><div className="attack-chips">{attackGroups.map(group => {
                 const n = countEntries(values.weapons[weapon]?.[group]);
                 return <button key={group} className={groups.includes(group) ? 'selected' : ''} aria-pressed={groups.includes(group)} onClick={() => setGroups(toggleAttackGroup(groups, group))}>{group !== 'General' && <span className="chip-checkbox">{groups.includes(group) && <Check size={9} />}</span>}{group}{n > 0 && <b>{n}</b>}</button>;
-              })}</div><span>{groups[0] === 'General' ? 'General has its own keys' : `${groups.length} of 4 attack types shown`}</span></div>}<SaveStatus onReload={reopenDraft} /></header>
+              })}</div><span>{groups[0] === 'General' ? 'General has its own keys' : `${groups.length} of 4 attack types shown`}</span></div>}<SaveStatus /><UnsavedEdits /></header>
       <div className="config-scroll">{loading ? <p className="empty-state">Loading the Draft…</p> : loadError || !draft ? <div className="empty-state" role="alert">{loadError || 'The Draft is not open.'} <button className="outline-button" onClick={reopenDraft}>Retry</button></div> : <div className="config-table" role="table" aria-label={`${title} configuration`} style={{
             '--columns': visibleGroups.length
           } as React.CSSProperties}><div className="config-table-inner"><div className="config-grid table-heading" role="row"><span role="columnheader">Config key</span>{visibleGroups.map(group => <span role="columnheader" key={group}>{isCharacter ? 'Value' : group}{visibleGroups.length > 1 && <button className="icon-button" aria-label={`Hide ${group}`} onClick={() => setGroups(toggleAttackGroup(groups, group))}><X size={12} /></button>}</span>)}<span role="columnheader" className="sr-only">Actions</span></div>{rowSections.map(section => <div role="rowgroup" key={section.title}>{section.title && <div role="row" className="config-section-heading"><div role="cell" aria-colspan={visibleGroups.length + 2}><h2>{section.title}</h2></div></div>}{section.entries.map(entry => <KeyRow key={`${database}/${visibleGroups.join('/')}/${entry.configKey}`} entry={entry} database={database} groups={visibleGroups} values={values} onSweep={setSweep} highlighted={searchDestination?.configKey === entry.configKey && searchDestination.tab === tab && searchDestination.group === visibleGroups[0] && (isCharacter || searchDestination.weapon === weapon)} />)}</div>)}{rows.length === 0 && <p className="empty-state">No keys in this group</p>}</div></div>}</div>

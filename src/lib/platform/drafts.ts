@@ -10,8 +10,10 @@
  *   kept as stored. The editor never shows them, so a save never removes them.
  * - A value equal to its game default is kept as an override; a key the
  *   editor resets is simply not in the document.
- * - A write on a stale revision is refused with the current Draft; the tab's
- *   handling of that is #31.
+ * - Every write names the revision it was based on and goes through `write`,
+ *   which refuses it with the current Draft when the Draft has moved on
+ *   (online-platform#31). A route answers that with `staleDraft`. Discard
+ *   changes (#32) and the Ruleset writes (#35) join here the same way.
  * - Reset to game defaults empties the document. It will also clear the
  *   Draft's origin once Rulesets (#35) give it one.
  * - Discard changes (#32, through live-configurations.ts) makes the document
@@ -39,6 +41,8 @@ export type DraftWrite =
   | { ok: true; draft: Draft }
   | { ok: false; reason: 'invalid'; errors: FieldError[] }
   | { ok: false; reason: 'stale'; draft: Draft };
+/** A write with no values to check: written, or refused as stale. */
+type CheckedWrite = Exclude<DraftWrite, { reason: 'invalid' }>;
 
 type Row = { game_server_id: number; overrides: string; revision: number; saved_at: number | null };
 const COLUMNS = 'game_server_id, overrides, revision, saved_at';
@@ -66,10 +70,13 @@ export function draftView({ document, revision, savedAt }: Draft): DraftView {
   return { ...placeValues(document), revision, savedAt };
 }
 
-/** Writes `next(current)` if the Draft is still at `baseRevision`; undefined when the game server has no Draft. */
-function write(gameServerId: number, baseRevision: number, next: (current: Draft) => ValuesDocument, now: number): DraftWrite | undefined {
+/** A route's 409 body for a stale write: the current Draft, which the tab takes in place of its own. */
+export const staleDraft = (current: Draft) => ({ success: false as const, error: 'The Draft changed since this page loaded it', data: draftView(current) });
+
+/** The revision check every Draft write goes through: writes `next(current)` if the Draft is still at `baseRevision`; undefined when the game server has no Draft. */
+function write(gameServerId: number, baseRevision: number, next: (current: Draft) => ValuesDocument, now: number): CheckedWrite | undefined {
   const store = platformStore();
-  return store.transaction((): DraftWrite | undefined => {
+  return store.transaction((): CheckedWrite | undefined => {
     const current = readDraft(gameServerId);
     if (!current) return undefined;
     if (current.revision !== baseRevision) return { ok: false, reason: 'stale', draft: current };
@@ -93,7 +100,7 @@ export function saveDraft(gameServerId: number, baseRevision: number, document: 
 }
 
 /** Reset to game defaults: an empty document. */
-export function resetDraft(gameServerId: number, baseRevision: number, now = Date.now()): DraftWrite | undefined {
+export function resetDraft(gameServerId: number, baseRevision: number, now = Date.now()): CheckedWrite | undefined {
   return write(gameServerId, baseRevision, () => ({}), now);
 }
 
