@@ -1,6 +1,7 @@
 import { successfulProcessingFixture } from './fixtures/acknowledged-transport';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { NextRequest } from 'next/server';
+import { signInForTest } from './helpers/platform-session';
 const sent: string[][] = [];
 const writes: {
   weapon: string;
@@ -48,7 +49,9 @@ const {
 const {
   POST: bulk
 } = await import('../src/app/api/config/bulk-weapons/route');
-const request = (body: unknown) => new Request('http://localhost/api', {
+// The routes need a session; this one is in the suite's DATABASE_PATH.
+const session = await signInForTest();
+const request = (body: unknown) => session.request('/api', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'

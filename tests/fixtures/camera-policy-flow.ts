@@ -11,10 +11,12 @@ import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import JSZip from 'jszip';
+import { signInForTest, type TestSession } from '../helpers/platform-session';
 
 const root = await mkdtemp(join(tmpdir(), 'ezconfig-camera-'));
 process.env.DATABASES_PATH = join(root, 'Databases');
 process.env.PRESETS_PATH = join(root, 'Presets');
+process.env.DATABASE_PATH = join(root, 'platform.db');
 process.env.RCON_HOST = '127.0.0.1'; process.env.RCON_PASSWORD = 'local-fixture-only';
 const sockets = new Set<Socket>();
 const captures: { name: string; commands: string[]; wire: string[] }[] = [];
@@ -60,13 +62,15 @@ await new Promise<void>(done => server.listen(0, '127.0.0.1', done));
 process.env.RCON_PORT = String((server.address() as { port: number }).port);
 const originalFetch = globalThis.fetch;
 let stopSync: (() => Promise<void>) | undefined;
-const request = (body: unknown) => new Request('http://localhost/api', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+let session: TestSession | undefined;
+const request = (body: unknown) => session!.request('/api', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const params = { params: Promise.resolve({ path: ['Character', 'Camera'] }) };
 async function until(check: () => boolean) {
   const end = Date.now() + 5000;
   while (!check()) { assert(Date.now() < end, 'Fixture did not settle'); await Bun.sleep(5); }
 }
 try {
+  session = await signInForTest();
   const { POST: save, GET: read } = await import('../../src/app/api/config/[...path]/route');
   const { DELETE: clear } = await import('../../src/app/api/config/clear/route');
   const { GET: preview } = await import('../../src/app/api/apply/preview/route');
@@ -78,15 +82,15 @@ try {
   let writes = 0;
   globalThis.fetch = (async (url: string, init: RequestInit) => {
     writes++;
-    if (url === '/api/config/clear') return clear();
-    return save(new Request('http://localhost' + url, init) as never, { params: Promise.resolve({ path: url.slice('/api/config/'.length).split('/') }) });
+    if (url === '/api/config/clear') return clear(session!.request(url, init));
+    return save(session!.request(url, init) as never, { params: Promise.resolve({ path: url.slice('/api/config/'.length).split('/') }) });
   }) as unknown as typeof fetch;
   const store = useConfigStore.getState();
   async function applySaved(stage: string, expected: Record<string, unknown>) {
     name = stage; await flushConfigWrites();
     const saved = await read(request({}) as never, params); assert.equal(saved.status, 200);
     assert.deepEqual((await saved.json()).data, expected);
-    const response = await preview(); assert.equal(response.status, 200);
+    const response = await preview(session!.request('/api/apply/preview')); assert.equal(response.status, 200);
     const { commands } = await response.json();
     const result = await apply(request({})); assert.equal(result.status, 200);
     assert.equal((await result.json()).success, true);
@@ -128,7 +132,7 @@ try {
   for (const value of [120.5, '120']) {
     const zip = new JSZip(); zip.file('manifest.json', JSON.stringify({ title: 'Bad camera', description: '' })); zip.file('Character/Camera.json', JSON.stringify({ CustomFOV: true, CustomFOVMax: value }));
     const form = new FormData(); form.append('name', 'invalid-camera'); form.append('file', new File([await zip.generateAsync({ type: 'arraybuffer' })], 'camera.zip'));
-    assert.equal((await importPreset(new Request('http://localhost/api/presets/import', { method: 'POST', body: form }) as never)).status, 400);
+    assert.equal((await importPreset(session!.request('/api/presets/import', { method: 'POST', body: form }) as never)).status, 400);
     await assert.rejects(stat(join(process.env.PRESETS_PATH!, 'User', 'invalid-camera')));
   }
   const validZip = new JSZip();
@@ -136,7 +140,7 @@ try {
   validZip.file('Character/Camera.json', '{"CustomFOV":true,"CustomFOVMax":1.2e2}');
   const validForm = new FormData(); validForm.append('name', 'imported-camera');
   validForm.append('file', new File([await validZip.generateAsync({ type: 'arraybuffer' })], 'camera.zip'));
-  assert.equal((await importPreset(new Request('http://localhost/api/presets/import', { method: 'POST', body: validForm }) as never)).status, 200);
+  assert.equal((await importPreset(session!.request('/api/presets/import', { method: 'POST', body: validForm }) as never)).status, 200);
   await store.loadPreset(await loadUserPresetData('imported-camera'));
   await applySaved('imported-preset-semantic-integer', { CustomFOV: true, CustomFOVMax: 120 });
 
@@ -168,7 +172,7 @@ try {
   }, null, 2));
   console.log(`PASS Camera policy: ${captures.length} real TCP RCON batches; refused hand-made input, preset safety, startup/requestupdate and strict storage.`);
 } finally {
-  globalThis.fetch = originalFetch; await stopSync?.();
+  globalThis.fetch = originalFetch; await stopSync?.(); session?.close();
   for (const socket of sockets) socket.destroy();
   await new Promise<void>(done => server.close(() => done()));
   const target = resolve(root); assert(target.startsWith(resolve(tmpdir()) + sep) && target.split(sep).at(-1)!.startsWith('ezconfig-camera-'));

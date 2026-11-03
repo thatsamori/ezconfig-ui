@@ -7,9 +7,12 @@ import { join, resolve, sep } from "node:path";
 import { runAcknowledgedBatch } from "../../src/lib/rcon/batch";
 import { BATCH_PROTOCOL, encodeBatchFrame, type BatchFrame, type BatchProcessingResult } from "../../src/lib/rcon/batch-protocol";
 import { applyFeedback } from "../../src/lib/rcon/apply-feedback";
+import { signInForTest, type TestSession } from "../helpers/platform-session";
 
 const parent = resolve(tmpdir()); const root = await mkdtemp(join(parent, "ezconfig-batch-apply-"));
-process.env.DATABASES_PATH = root;
+const databases = join(root, "Databases");
+process.env.DATABASES_PATH = databases; process.env.DATABASE_PATH = join(root, "platform.db");
+let session: TestSession | undefined;
 const originalFetch = globalThis.fetch; const originalError = console.error;
 let mode = "success", request = 0, run = 0;
 const captures: { mode: string; commands: readonly string[]; frames: BatchFrame[]; wire: string[] }[] = [];
@@ -49,27 +52,28 @@ mock.module("../../src/lib/rcon/service", () => ({
   },
 }));
 try {
+  await mkdir(databases); session = await signInForTest(); const signedIn = session;
   const { POST: save } = await import("../../src/app/api/config/[...path]/route");
   const { GET: preview } = await import("../../src/app/api/apply/preview/route");
   const { POST: apply } = await import("../../src/app/api/apply/route");
   const { readApplyRecord } = await import("../../src/lib/database/applyRecord");
   const { useConfigStore, flushConfigWrites } = await import("../../src/lib/store/configStore");
   const { reviewRows, selectedReviewCommands } = await import("../../src/components/console/model");
-  globalThis.fetch = (async (url: string, init: RequestInit) => save(new Request("http://localhost" + url, init) as never, { params: Promise.resolve({ path: url.slice("/api/config/".length).split("/") }) })) as unknown as typeof fetch;
+  globalThis.fetch = (async (url: string, init: RequestInit) => save(signedIn.request(url, init) as never, { params: Promise.resolve({ path: url.slice("/api/config/".length).split("/") }) })) as unknown as typeof fetch;
   const store = useConfigStore.getState();
   store.setValue("Character", "Combat", "StaminaCostModifier", 1.2);
   store.setValue("Character", "Combat", "MeleeWindupModifier", .8);
   store.setValue("Weapon/ArmingSword", "Strike", "Damage", [1, 2, 3, 4]);
   store.setValue("Weapon/ArmingSword", "Strike", "Windup", .6);
   await flushConfigWrites();
-  const view = await preview(); assert.equal(view.status, 200);
+  const view = await preview(signedIn.request("/api/apply/preview")); assert.equal(view.status, 200);
   const previewData = await view.json();
   const rows = reviewRows(previewData.commands); assert.equal(rows.length, 4);
   const all = selectedReviewCommands(rows, new Set(rows.map((row) => row.id)));
   const selectedRow = rows.find((row) => row.key === "Damage")!;
   const selected = selectedReviewCommands(rows, new Set([selectedRow.id]));
   const submit = async (body: unknown) => {
-    const response = await apply(new Request("http://localhost/api/apply", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
+    const response = await apply(signedIn.request("/api/apply", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
     return { status: response.status, body: await response.json() };
   };
   const full = await submit({}); assert.equal(full.status, 200); assert.equal(full.body.acceptedValues, 4); assert.equal(full.body.commandsSucceeded, 3);
@@ -78,11 +82,11 @@ try {
   assert.equal((await readApplyRecord())!.values, 4);
   const single = await submit({ commands: selected, wipeDatabase: false }); assert.equal(single.body.acceptedValues, 1); assert.equal(single.body.configurationCleared, false);
   assert.equal((captures.at(-1)!.frames[1] as Extract<BatchFrame, { op: "command" }>).command, selected[0].slice(7));
-  const history = await readFile(join(root, ".last-apply.json"), "utf8");
+  const history = await readFile(join(databases, ".last-apply.json"), "utf8");
   for (const failMode of ["denied", "reject-after-wipe", "reject-after-values", "missing-command"]) {
     mode = failMode;
     const failed = await submit({ commands: all, wipeDatabase: true }); assert.equal(failed.body.success, false);
-    assert.equal(await readFile(join(root, ".last-apply.json"), "utf8"), history);
+    assert.equal(await readFile(join(databases, ".last-apply.json"), "utf8"), history);
     const frames = captures.at(-1)!.frames;
     if (mode === "denied") { assert.deepEqual(frames.map((f) => f.op), ["begin"]); assert.equal(failed.body.configurationCleared, false); }
     else {
@@ -102,16 +106,16 @@ try {
     const empty = await submit({ commands: [], wipeDatabase }); assert.equal(empty.body.success, true); assert.equal(empty.body.acceptedValues, 0); assert.equal(empty.body.configurationCleared, wipeDatabase);
   }
   // Force only the metadata write to fail after confirmed processing.
-  await rename(join(root, ".last-apply.json"), join(root, ".last-apply.previous")); await mkdir(join(root, ".last-apply.json"));
+  await rename(join(databases, ".last-apply.json"), join(databases, ".last-apply.previous")); await mkdir(join(databases, ".last-apply.json"));
   console.error = (...args: unknown[]) => metadataErrors.push(args);
   const metadataFailure = await submit({ commands: selected, wipeDatabase: false });
   assert.equal(metadataFailure.body.success, true); assert.equal(metadataFailure.body.acceptedValues, 1); assert.match(metadataFailure.body.metadataWarning, /history could not be saved/);
   assert.equal(metadataErrors.length, 1); assert.equal(captures.at(-1)!.frames.filter((f) => f.op === "command").length, 1);
-  await flushConfigWrites(); const stillSaved = await preview(); assert.equal(reviewRows((await stillSaved.json()).commands).length, 4);
+  await flushConfigWrites(); const stillSaved = await preview(signedIn.request("/api/apply/preview")); assert.equal(reviewRows((await stillSaved.json()).commands).length, 4);
   if (process.env.EZ_BATCH_CAPTURE_PATH) await writeFile(process.env.EZ_BATCH_CAPTURE_PATH, JSON.stringify(captures, null, 2));
   console.log("PASS: acknowledged full/selected apply, captured framing, fail-stop/progress, empty operations, confirmed completion and independent metadata failure");
 } finally {
-  globalThis.fetch = originalFetch; console.error = originalError;
+  globalThis.fetch = originalFetch; console.error = originalError; session?.close();
   const target = resolve(root); assert(target.startsWith(parent + sep) && target.slice(parent.length + 1).startsWith("ezconfig-batch-apply-"));
   await rm(target, { recursive: true, force: true });
 }
