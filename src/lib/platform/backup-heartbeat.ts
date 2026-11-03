@@ -31,3 +31,11 @@ export function recordBackupHeartbeat(now = Date.now()): void {
 export function readLastBackupHeartbeat(): Date | null {
   return state.last === undefined ? null : new Date(state.last);
 }
+
+/**
+ * Overdue: no heartbeat for more than `BACKUP_HEARTBEAT_STALE_MS`, or none
+ * yet and the process started more than that long ago.
+ */
+export function backupHeartbeatOverdue(startedAt: number, now = Date.now()): boolean {
+  return now - (state.last ?? startedAt) > BACKUP_HEARTBEAT_STALE_MS;
+}

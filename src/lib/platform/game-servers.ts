@@ -137,12 +137,23 @@ export function recordPoll(server: GameServer, report: PollReport, now = Date.no
   );
 }
 
-export function connectionStatus(server: GameServer, now = Date.now()): ConnectionStatus {
+export function connectionStatus(server: Pick<GameServer, 'id' | 'lastPollAt'>, now = Date.now()): ConnectionStatus {
   const activity = pollActivity(server.id);
   if (activity.held) return { state: 'connected' };
   const lastSeenAt = Math.max(server.lastPollAt ?? -Infinity, activity.lastEndedAt ?? -Infinity);
   if (lastSeenAt === -Infinity) return { state: 'never-connected' };
   return now - lastSeenAt <= CONNECTED_WITHIN_MS ? { state: 'connected' } : { state: 'not-connected', lastSeenAt };
+}
+
+/**
+ * For the platform operator's status page: how many game servers are
+ * registered and Connected, and the build stamp each Connected one reported
+ * last (null: none). Names no game server or owner.
+ */
+export function countGameServers(now = Date.now()): { registered: number; connectedBuildStamps: (string | null)[] } {
+  const rows = platformStore().all<{ id: number; last_poll_at: number | null; reported_build_stamp: string | null }>('SELECT id, last_poll_at, reported_build_stamp FROM game_servers');
+  const connected = rows.filter(row => connectionStatus({ id: row.id, lastPollAt: row.last_poll_at }, now).state === 'connected');
+  return { registered: rows.length, connectedBuildStamps: connected.map(row => row.reported_build_stamp) };
 }
 
 export function gameServerView(server: GameServer, now = Date.now(), supportedBuild = readSupportedBuild()?.stamp ?? null): GameServerView {
