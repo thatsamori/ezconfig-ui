@@ -10,7 +10,6 @@ function scalar(
     configKey,
     dataType: DataType.Float,
     isImplemented: measured,
-    defaultVariesByMotion: true,
     documentation: `${documentation} Takes effect on the next parry; an ongoing parry keeps its base values through recovery. Cswics mod: ${cswicsReference}.`,
   };
 }

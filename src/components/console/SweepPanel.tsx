@@ -75,7 +75,10 @@ export function SweepPanel({
   };
   return <Dialog open onOpenChange={open => {
     if (!open && !staging) onClose();
-  }}><DialogContent className="console-sheet sweep-sheet" onInteractOutside={event => {
+  }}><DialogContent className="console-sheet sweep-sheet" onEscapeKeyDown={event => {
+      // Escape in a new value's input discards that value, not the sheet.
+      if (event.target instanceof Element && event.target.closest('.new-value')) event.preventDefault();
+    }} onInteractOutside={event => {
       if (staging) event.preventDefault();
     }}>
     <DialogHeader className="sheet-header"><DialogDescription>Bulk edit · {groups.join(' · ')}</DialogDescription><DialogTitle>{entry.configKey}</DialogTitle></DialogHeader>

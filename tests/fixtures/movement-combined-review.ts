@@ -41,7 +41,7 @@ await featureReview('movement-combined', async ({ set, reset, saved, apply }) =>
   const keys = Object.keys(values);
   assert.equal(keys.length, 13);
   assert.deepEqual(MOVEMENT_CONFIG_OPTIONS.map(entry => entry.configKey).sort(), [...keys].sort());
-  assert(MOVEMENT_CONFIG_OPTIONS.every(entry => entry.dataType === DataType.Float && entry.isImplemented && entry.requiresExplicitValue && entry.default === undefined));
+  assert(MOVEMENT_CONFIG_OPTIONS.every(entry => entry.dataType === DataType.Float && entry.isImplemented && entry.default === undefined));
   const recovery = { WorldRecoveryTime: '0.65' };
   set('Character', 'Movement', 'TimeToMaxSprint', .8);
   set('Character', 'Recovery', 'WorldRecoveryTime', .65);

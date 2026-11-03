@@ -74,7 +74,7 @@ function KeyRow({
   return <>
     <div role="row" tabIndex={-1} data-config-key={entry.configKey} className={`config-grid config-row${overridden ? ' has-override' : ''}${muted ? ' feature-muted' : ''}${highlighted ? ' search-destination' : ''}`} title={muted ? 'Feature parameter: stored and sent, but only read while the feature toggle is on.' : undefined}>
       <div role="cell" className="key-cell"><div className="key-label"><span title={entry.documentation || entry.configKey}>{entry.label ?? entry.configKey}</span>{entry.isFeatureToggle && <span className="feature-badge">feature</span>}<button className={`notes-button${notes.length ? ' has-notes' : ''}`} title={notes.length ? `${notes.length} notes` : 'Add a note'} aria-label={`Notes for ${entry.configKey}`} onClick={() => setNotesOpen(true)}><MessageCircle size={12} />{notes.length || ''}</button></div>{muted && <small>needs {entry.gatedBy}</small>}</div>
-      {groups.map((group, index) => <div role="cell" key={group} data-config-database={database} data-config-category={group} data-config-key={entry.configKey}><ValueEditor entry={entry} database={database} category={group} value={rowValues[index]} label={`${database} ${group} ${entry.label ?? entry.configKey}`} onChange={value => setValue(database, group, entry.configKey, value)} onReset={() => removeValue(database, group, entry.configKey)} />{fieldErrors[fieldName(database, group, entry.configKey)] && <small className="field-error" role="alert">{fieldErrors[fieldName(database, group, entry.configKey)]}</small>}</div>)}
+      {groups.map((group, index) => <div role="cell" key={group} data-config-database={database} data-config-category={group} data-config-key={entry.configKey}><ValueEditor entry={entry} database={database} category={group} value={rowValues[index]} label={`${database} ${group} ${entry.label ?? entry.configKey}`} onChange={value => setValue(database, group, entry.configKey, value)} onReset={() => removeValue(database, group, entry.configKey)} error={fieldErrors[fieldName(database, group, entry.configKey)]} /></div>)}
       <div role="cell" className="row-actions">{groups.length > 1 && isOverride(first) && <button className="set-all" title={`Write ${showValue(first)} to ${groups.join(', ')}`} onClick={() => groups.forEach(group => setValue(database, group, entry.configKey, structuredClone(first)))}>Set all {groups.length}</button>}{database !== 'Character' && !entry.supportedWeapons && <button className="sweep-link" onClick={() => onSweep(entry)}>All weapons →</button>}</div>
     </div>
     {notesOpen && <NotesDialog open={notesOpen} onOpenChange={setNotesOpen} configKey={entry.configKey} context={database === 'Character' ? `Character · ${groups[0]}` : database} notes={notes} onAddNote={addNote} onEditNote={editNote} onDeleteNote={deleteNote} />}
@@ -104,7 +104,7 @@ const DRAFT_REFRESH_MS = 3_000;
 /** True while the owner is typing a value in the editor: a refresh waits rather than replace it. */
 const typingValue = () => {
   const active = document.activeElement;
-  return !!active?.closest('.config-table') && (active.matches('input, select, textarea') || !!active.closest('form'));
+  return !!active?.closest('.config-table') && active.matches('input, select, textarea');
 };
 /** While the editor is showing, fetches its Draft again every few seconds the page is visible, and at once when it is shown again. */
 function useDraftRefresh(showing: boolean) {

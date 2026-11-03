@@ -10,7 +10,6 @@ function scalar(
     configKey,
     dataType: DataType.Float,
     isImplemented: measured,
-    defaultVariesByMotion: true,
     documentation: `${documentation} Uses the configured value when recovery begins; an ongoing recovery keeps its base values after an update or wipe. Cswics mod: ${cswicsReference}.`,
   };
 }

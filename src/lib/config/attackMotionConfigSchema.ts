@@ -45,7 +45,6 @@ function scalar(configKey: string, documentation: string, measured = false): Con
     configKey,
     dataType: DataType.Float,
     isImplemented: measured,
-    defaultVariesByMotion: true,
     documentation: documentation + lifecycle,
   };
 }
