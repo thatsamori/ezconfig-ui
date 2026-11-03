@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { LIVE_STATE } from '@/components/game-servers/StatusBadges';
 import type { PlatformStatus } from '@/lib/platform/status';
 
 async function readStatus(): Promise<PlatformStatus> {
@@ -14,7 +15,23 @@ const when = (time: number | string) => new Date(time).toLocaleString(undefined,
 const iso = (time: number) => new Date(time).toISOString();
 const plural = (count: number, one: string) => `${count} ${one}${count === 1 ? '' : 's'}`;
 
-/** The platform operator's status page: game server counts, health and backup, computed when it loads. */
+const LIVE_STATES = ['pending', 'blocked', 'confirmed', 'failed'] as const;
+
+/** How server owners are getting on across the platform: counts only, naming no game server or owner. */
+export function ActivitySection({ activity: { serverOwners, liveConfigurations, gameServersApplied } }: { activity: PlatformStatus['activity'] }) {
+  return <section className="status-section" aria-labelledby="status-activity">
+    <h2 id="status-activity" className="preset-section-title">Activity</h2>
+    <dl className="server-facts">
+      <dt>Server owners</dt><dd><strong>{serverOwners.total}</strong> · <strong>{serverOwners.seenLast24h}</strong> seen in the last 24 h · <strong>{serverOwners.seenLast7Days}</strong> in the last 7 days</dd>
+      <dt>Live configurations</dt><dd><ul className="status-states">{LIVE_STATES.map(state => <li key={state}><span className={`status-dot ${state}`} /><strong>{liveConfigurations[state]}</strong> {LIVE_STATE[state]}</li>)}</ul></dd>
+      <dt>No Live configuration yet</dt><dd><strong>{liveConfigurations.none}</strong> {liveConfigurations.none === 1 ? 'game server' : 'game servers'}</dd>
+      <dt>Game servers Applied</dt><dd><strong>{gameServersApplied.last24h}</strong> in the last 24 h · <strong>{gameServersApplied.last7Days}</strong> in the last 7 days</dd>
+    </dl>
+    <p className="status-muted status-activity-note">Server owners include you. Seen can run low: last seen is written at most once an hour, and signing out clears it. Game servers Applied counts game servers, not Applies: one Applied three times counts once.</p>
+  </section>;
+}
+
+/** The platform operator's status page: game server counts, activity, health and backup, computed when it loads. */
 export function StatusPage() {
   const [status, setStatus] = useState<PlatformStatus | null>(null);
   const [loadError, setLoadError] = useState('');
@@ -50,6 +67,8 @@ export function StatusPage() {
             <strong>{count}</strong> {buildStamp === null ? 'reporting no build stamp' : <>on <code>{buildStamp}</code></>}{supported && <span className="role-pill admin">Supported build</span>}
           </li>)}</ul>}
         </section>
+
+        <ActivitySection activity={status.activity} />
 
         <section className="status-section" aria-labelledby="status-backup">
           <h2 id="status-backup" className="preset-section-title">Backup</h2>
