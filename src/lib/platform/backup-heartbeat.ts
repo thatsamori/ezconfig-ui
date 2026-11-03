@@ -1,9 +1,9 @@
 /**
  * Litestream's backup heartbeat (spec: Platform operator pages, Backup).
  *
- * Litestream calls `/internal/backup-heartbeat` on localhost every minute, but
- * only while the database has synced to the bucket within that minute
- * (`deploy/litestream.yml.example`). The app keeps the time of the last call in
+ * Litestream calls `/internal/backup-heartbeat` on localhost every 75 s (its
+ * 1-minute interval, checked every 15 s), but only while the database has
+ * synced to the bucket within the last minute (`deploy/litestream.yml.example`). The app keeps the time of the last call in
  * process memory, so a restart forgets it. The operator page reads it and warns
  * after `BACKUP_HEARTBEAT_STALE_MS` without one, or that long after start with
  * none yet.

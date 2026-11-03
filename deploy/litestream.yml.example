@@ -20,9 +20,10 @@ snapshot:
   interval: 24h
   retention: 336h
 
-# Every minute, while the database has synced to the bucket within that minute,
-# Litestream calls the app on loopback. The app records the time for the
-# operator page; Caddy refuses /internal/* from outside.
+# While the database has synced to the bucket within the last minute, Litestream
+# calls the app on loopback. 1m is its shortest interval and it checks every
+# 15 s, so the calls come every 75 s. The app records the time for the operator
+# page; Caddy refuses /internal/* from outside.
 heartbeat-url: http://127.0.0.1:3000/internal/backup-heartbeat
 heartbeat-interval: 1m
 

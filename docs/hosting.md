@@ -19,7 +19,7 @@ the summary. The restore check and the restore runbook are
 | The database (`DATABASE_PATH`), migrated at startup | `/var/lib/ezconfig-platform/platform.db` | `src/lib/platform/migrations/` |
 | The app's settings | `/etc/ezconfig-platform/platform.env`, root 0600 | `.env.example` |
 | Caddy: certificate, HTTP to HTTPS, HSTS, proxy, refuses `/internal/*` | `/etc/caddy/Caddyfile`; hostnames and email in `/etc/ezconfig-platform/caddy.env`, root 0600 | `deploy/Caddyfile`, `deploy/caddy.service.conf` |
-| Litestream: streams the database to the bucket, calls the heartbeat every minute | `litestream.service`; config with the bucket key in `/etc/litestream.yml`, root 0600 | `deploy/litestream.service`, `deploy/litestream.yml.example` |
+| Litestream: streams the database to the bucket, calls the heartbeat every 75 s | `litestream.service`; config with the bucket key in `/etc/litestream.yml`, root 0600 | `deploy/litestream.service`, `deploy/litestream.yml.example` |
 | The journal: 30 days, at most 2 GB | `/etc/systemd/journald.conf.d/ezconfig-platform.conf` | `deploy/journald.conf` |
 | Security upgrades, rebooting at 10:00 UTC when needed | `/etc/apt/apt.conf.d/52ezconfig-platform` | `deploy/unattended-upgrades.conf` |
 
