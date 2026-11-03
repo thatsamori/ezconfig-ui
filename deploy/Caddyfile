@@ -10,6 +10,18 @@
 # `log` directive, so only Caddy's own messages reach the journal.
 {
 	email {$ACME_EMAIL}
+	# Its errors for a request (the app down, say) keep the method, host and
+	# status, without who sent it: the platform's logs hold no IP addresses or
+	# secrets, and a URI can carry a sign-in code.
+	log default {
+		format filter {
+			request>remote_ip delete
+			request>remote_port delete
+			request>client_ip delete
+			request>headers delete
+			request>uri delete
+		}
+	}
 	servers {
 		# Polls are held for 50 s (the proof route, 120 s), so a response may be
 		# written long after its request; the game's HTTP client gives up at 180 s.
