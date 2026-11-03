@@ -324,6 +324,7 @@ input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-app
 .status-dot.unapplied { background: #e0a83c; box-shadow: 0 0 0 4px rgba(224,168,60,.15); }
 .bar-standing strong { font-weight: 600; }
 .bar-standing strong.unapplied { color: #e0a83c; }
+.bar-standing strong.refused { color: #e5484d; }
 .bar-standing > span { color: #9a9ba1; overflow: hidden; text-overflow: ellipsis; }
 .bar-live { padding-left: 16px; color: #9a9ba1; font-size: 12px; }
 .bar-live .live-badge, .bar-live .connection { font-size: 12px; }

@@ -37,6 +37,9 @@ export type VersionTarget = { rulesetId: number } | { name: string };
 
 export type ValueChange = { database: string; category: string; key: string; value: ConfigValue };
 
+/** A value a field refuses as typed. It never reaches the Draft, so it is named to the owner until it is fixed or discarded. */
+export type RefusedValue = Omit<ValueChange, 'value'> & { text: string; error: string; discard: () => void };
+
 export interface ConfigState {
   /** The open Draft's values, under their keys' current categories. */
   values: DraftValues;
@@ -51,6 +54,8 @@ export interface ConfigState {
    * key), or as the last refused save named them.
    */
   fieldErrors: Record<string, string>;
+  /** The values fields hold and refuse as typed; each field adds its own with holdRefused. */
+  refused: RefusedValue[];
   /** Edits made here that another tab's save left unsaved, named until dismissed; a null value was a Reset. */
   unsaved: ValueChange[];
 
@@ -269,6 +274,7 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
   saveState: 'saved',
   saveError: '',
   fieldErrors: {},
+  refused: [],
   unsaved: [],
 
   openDraft: async (gameServerId) => {
@@ -398,3 +404,13 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
 
   dismissUnsaved: () => set({ unsaved: [] }),
 }));
+
+/** Names `value` as refused until the returned function is called: a field holds it from when it is typed until it is fixed, discarded or the field goes away. */
+export function holdRefused(value: RefusedValue): () => void {
+  useConfigStore.setState(state => ({ refused: [...state.refused, value] }));
+  return () => useConfigStore.setState(state => ({ refused: state.refused.filter(held => held !== value) }));
+}
+
+/** How many fields show a refused value, typed there or marked by the platform. */
+export const refusedCount = ({ refused, fieldErrors }: Pick<ConfigState, 'refused' | 'fieldErrors'>) =>
+  new Set([...refused.map(value => fieldName(value.database, value.category, value.key)), ...Object.keys(fieldErrors)]).size;

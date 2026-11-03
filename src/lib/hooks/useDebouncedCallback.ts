@@ -8,12 +8,14 @@ export type SaveState = "idle" | "pending" | "saved";
  * - localValue: current local value for instant UI
  * - setLocalValue: update local value (triggers debounced save)
  * - saveState: 'idle' | 'pending' | 'saved'
+ * - flush: save a pending value now
+ * - reset: drop what was typed, saving nothing, and show the value given
  */
 export function useDebouncedCallback<T>(
   externalValue: T,
   callback: (value: T) => void,
   delay: number = 1000
-): [T, (value: T) => void, SaveState, () => void] {
+): [T, (value: T) => void, SaveState, () => void, (value: T) => void] {
   const [localValue, setLocalValue] = useState<T>(externalValue);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,5 +85,12 @@ export function useDebouncedCallback<T>(
     setSaveState("saved");
   }, []);
 
-  return [localValue, setValue, saveState, flush];
+  const reset = useCallback((value: T) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    hasPending.current = false;
+    setLocalValue(value);
+    setSaveState("idle");
+  }, []);
+
+  return [localValue, setValue, saveState, flush, reset];
 }
