@@ -31,13 +31,15 @@ export function useRulesets() {
 /**
  * Save as Ruleset version: the open Draft becomes version 1 of a new Ruleset
  * or the next version of one of the owner's, with an optional description,
- * and that version its origin. Nothing is applied. Mounted while open.
+ * and that version its origin. Nothing is applied. Mounted while open, set
+ * at first to a new Ruleset (`newRuleset`) or to the next version of the
+ * Draft's origin's.
  */
-export function SaveVersionDialog({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
+export function SaveVersionDialog({ onOpenChange, newRuleset = false }: { onOpenChange: (open: boolean) => void; newRuleset?: boolean }) {
   const { rulesets, error } = useRulesets();
   const count = useConfigStore(state => countOverrides(state.values));
   // 'new', or the id of the Ruleset to add the next version to: at first the Draft's origin's, the likely next version.
-  const [target, setTarget] = useState<'new' | number>(() => useConfigStore.getState().draft?.origin?.rulesetId ?? 'new');
+  const [target, setTarget] = useState<'new' | number>(() => newRuleset ? 'new' : useConfigStore.getState().draft?.origin?.rulesetId ?? 'new');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
