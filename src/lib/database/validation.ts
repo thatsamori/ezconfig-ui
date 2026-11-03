@@ -4,8 +4,8 @@
  * Validates config entries against the schema to ensure:
  * - Config key exists in the schema
  * - Value type matches the expected data type, and holds nothing else: a value
- *   that passes is a boolean, a finite number, a list of them, a vector of
- *   exactly its axes or a listed choice, even from a file someone else made
+ *   that passes is a boolean, a finite number, a short list of them, a vector
+ *   of exactly its axes or a listed choice, even from a file someone else made
  */
 
 import {
@@ -104,6 +104,17 @@ function getTypeName(dataType: DataType): string {
 const isStorableNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
+/**
+ * Far above any key's list (the game's own hold at most 4): each value is a
+ * field in the editor and a number in a command.
+ */
+const FLOAT_ARRAY_MAX = 64;
+
+const isFloatArray = (value: unknown): value is number[] =>
+  Array.isArray(value) &&
+  value.length <= FLOAT_ARRAY_MAX &&
+  value.every(isStorableNumber);
+
 /** An object with exactly these axes, each a storable number, and nothing else. */
 function isVector(value: unknown, axes: readonly string[]): boolean {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -137,7 +148,12 @@ function getActualTypeName(value: ConfigValue): string {
     return "String";
   }
   if (Array.isArray(value)) {
-    return value.every(isStorableNumber) ? "FloatArray" : "Array";
+    if (isFloatArray(value)) {
+      return "FloatArray";
+    }
+    return value.every(isStorableNumber)
+      ? `FloatArray of ${value.length} values, more than ${FLOAT_ARRAY_MAX}`
+      : "Array";
   }
   if (isVector(value, VECTOR_AXES)) {
     return "Vector";
@@ -160,7 +176,7 @@ function valueMatchesType(value: ConfigValue, dataType: DataType): boolean {
       return isStorableNumber(value);
 
     case DataType.FloatArray:
-      return Array.isArray(value) && value.every(isStorableNumber);
+      return isFloatArray(value);
 
     case DataType.String:
       return typeof value === "string";

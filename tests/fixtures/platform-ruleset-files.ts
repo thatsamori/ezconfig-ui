@@ -285,6 +285,11 @@ switch (process.argv[2]) {
     const typed = await draftRoute.PUT(friend.request(`/api/game-servers/${draftServer}/draft`, { method: 'PUT', body: `{"revision":${revision},"document":{"Character":{"MaxWalkSpeed":1e999}}}` }), at(draftServer));
     assert.equal(typed.status, 400, 'a Draft save refuses it too');
 
+    // A list is as long as an editor and a command can bear, however long the file.
+    const lists = (length: number) => fileOf({ name: 'Lists', values: { Weapon: { ArmingSword: { Strike: { Damage: Array(length).fill(1) } } } } });
+    assert.deepEqual([(await review(friend, lists(64))).body.data!.values, (await review(friend, lists(64))).body.data!.dropped], [1, 0]);
+    assert.deepEqual((await review(friend, lists(65))).body.data!.droppedValues.map(({ key, error }) => [key, error]), [['Damage', 'Expected FloatArray, got FloatArray of 65 values, more than 64']]);
+
     // A file can name any number of values: the review stays small, and says how many.
     const many = Object.fromEntries(Array.from({ length: 5000 }, (_, index) => [`Retired${index}`, index]));
     const large = (await review(friend, fileOf({ name: 'Large', values: { Character: { ...many, MaxWalkSpeed: 450 } } }))).body.data!;
