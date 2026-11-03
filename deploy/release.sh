@@ -9,7 +9,7 @@
 # Rolling back is deploying an older commit.
 set -euo pipefail
 
-readonly REPO=https://github.com/amorijs/mordhau-ezconfig.git
+readonly REPO=https://github.com/thatsamori/ezconfig-ui.git
 readonly ROOT=/srv/ezconfig-platform
 readonly APP_USER=ezconfig
 readonly SERVICE=ezconfig-platform
