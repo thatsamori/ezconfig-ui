@@ -10,7 +10,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { GameServerView } from '@/lib/platform/game-servers';
 import type { ApplyReview, ReviewEntry } from '@/lib/platform/live-configurations';
-import { flushConfigWrites, useConfigStore } from '@/lib/store/configStore';
+import { fieldName, flushConfigWrites, useConfigStore, type RefusedValue } from '@/lib/store/configStore';
 
 /**
  * Apply and Discard changes, shared by the game server's page and the
@@ -48,10 +48,18 @@ export async function loadReview(id: number): Promise<ApplyReview | undefined> {
 export const place = ({ database, category }: { database: string; category?: string }) => database === 'Character' ? category : `${database} · ${category}`;
 const shown = (value: unknown) => typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value);
 
+/** The values fields hold and refuse as typed: the review is of the saved Draft, which does not have them. */
+export function RefusedValues({ values }: { values: RefusedValue[] }) {
+  return <div className="apply-errors" role="alert"><strong>Refused, so not in the Draft: fix or discard before you Apply</strong>
+    <ul>{values.map(value => <li key={fieldName(value.database, value.category, value.key)}><span className="apply-key">{place(value)} · <code>{value.key}</code></span><span>{value.text && `${value.text}: `}{value.error}</span></li>)}</ul>
+  </div>;
+}
+
 /**
  * The review, then Apply. When the Draft or the Live configuration moved on
  * since the review was built, Apply is refused and the review reopens as it is
- * now; values the schema refuses block Apply, listed to fix. Apply has focus
+ * now; values the schema refuses block Apply, listed to fix, and so do values
+ * the editor's fields refuse as typed, listed to fix or discard. Apply has focus
  * when the review opens, so Enter confirms, except on the first Apply, which
  * replaces every EZConfig value the game server has.
  */
@@ -61,6 +69,7 @@ export function ApplyDialog({ server, review, onReview, onClose, onApplied }: {
   const [applying, setApplying] = useState(false);
   const [notice, setNotice] = useState('');
   const applyButton = useRef<HTMLButtonElement>(null);
+  const refused = useConfigStore(state => state.refused);
   const first = review.liveConfigurationId === null;
   const unchanged = !first && review.added.length + review.changed.length + review.reset.length === 0;
   const blocked = blockedReason(server);
@@ -100,6 +109,7 @@ export function ApplyDialog({ server, review, onReview, onClose, onApplied }: {
       </DialogHeader>
       <div className="apply-body">
         {notice && <p className="apply-notice" role="alert">{notice}</p>}
+        {refused.length > 0 && <RefusedValues values={refused} />}
         {review.errors.length > 0 && <div className="apply-errors" role="alert"><strong>Fix these values in the Draft before you Apply</strong>
           <ul>{review.errors.map(error => <li key={`${error.database}/${error.category}/${error.key}`}><span className="apply-key">{place(error)} · <code>{error.key}</code></span><span>{error.error}</span></li>)}</ul>
         </div>}
@@ -114,7 +124,8 @@ export function ApplyDialog({ server, review, onReview, onClose, onApplied }: {
       </div>
       <DialogFooter>
         <button type="button" className="outline-button" disabled={applying} onClick={onClose}>Cancel</button>
-        <button type="button" className="primary-button" ref={applyButton} disabled={applying || review.errors.length > 0 || !!blocked} onClick={apply}>{applying ? 'Applying…' : blocked ? `Apply · ${blocked}` : 'Apply'}</button>
+        {refused.length > 0 && <button type="button" className="outline-button" onClick={() => refused.forEach(value => value.discard())}>Discard {refused.length === 1 ? 'this value' : 'these values'}</button>}
+        <button type="button" className="primary-button" ref={applyButton} disabled={applying || refused.length > 0 || review.errors.length > 0 || !!blocked} onClick={apply}>{applying ? 'Applying…' : blocked ? `Apply · ${blocked}` : 'Apply'}</button>
       </DialogFooter>
     </DialogContent>
   </Dialog>;
