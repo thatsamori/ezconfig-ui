@@ -2,7 +2,8 @@
  * The checks route handlers run, and the cookies sign-in sets.
  *
  * Every route handler outside sign-in starts with `requireSession(request)`,
- * before it reads anything:
+ * or `requireOperator(request)` for the platform operator's pages, before it
+ * reads anything:
  * - a request that changes data (any method but GET and HEAD) must carry an
  *   `Origin` equal to the public URL's, so another site cannot submit it;
  * - every request needs a live session cookie.
@@ -19,6 +20,7 @@ import { avatarUrl, isPlatformOperator, type ServerOwner } from './users';
 
 export const SESSION_COOKIE = 'ezconfig_session';
 export const SIGN_IN_STATE_COOKIE = 'ezconfig_sign_in_state';
+export const INVITE_COOKIE = 'ezconfig_invite';
 const SIGN_IN_PATH = '/api/auth/discord';
 const SIGN_IN_STATE_LIFETIME_S = 600;
 
@@ -71,6 +73,14 @@ export function requireSession(request: Request): SessionCheck {
   }
 }
 
+/** `requireSession`, then the platform operator only (`OPERATOR_DISCORD_IDS`): any other server owner gets 403. */
+export function requireOperator(request: Request): SessionCheck {
+  const session = requireSession(request);
+  if (!session.ok || isPlatformOperator(session.user.discordId)) return session;
+  log.warn('operator.refused', 'Refused an operator request from a server owner who is not a platform operator', { userId: session.user.id });
+  return refuse(403, 'Only the platform operator can do this');
+}
+
 const cookie = (name: string, value: string, maxAgeSeconds: number, path = '/') =>
   `${name}=${value}; Path=${path}; Max-Age=${maxAgeSeconds}; HttpOnly; Secure; SameSite=Lax`;
 
@@ -80,3 +90,6 @@ export const endedSessionCookie = () => cookie(SESSION_COOKIE, '', 0);
 /** Ties Discord's redirect back to the browser that started signing in. */
 export const signInStateCookie = (state: string) => cookie(SIGN_IN_STATE_COOKIE, state, SIGN_IN_STATE_LIFETIME_S, SIGN_IN_PATH);
 export const usedSignInStateCookie = () => cookie(SIGN_IN_STATE_COOKIE, '', 0, SIGN_IN_PATH);
+/** Carries an Invite link's code from the sign-in button to Discord's redirect back, never to Discord. */
+export const inviteCookie = (code: string) => cookie(INVITE_COOKIE, code, SIGN_IN_STATE_LIFETIME_S, SIGN_IN_PATH);
+export const usedInviteCookie = () => cookie(INVITE_COOKIE, '', 0, SIGN_IN_PATH);

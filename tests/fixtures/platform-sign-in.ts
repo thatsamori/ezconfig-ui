@@ -68,7 +68,7 @@ const rows = <Row>(sql: string, ...params: (string | number)[]) => platformStore
 
 /** A browser going through the sign-in button and Discord's redirect back, as `code`'s account. */
 async function signInAs(code: string) {
-  const start = await startSignIn();
+  const start = await startSignIn(request('/api/auth/discord', { origin: null }));
   assert.equal(start.status, 303);
   const location = new URL(start.headers.get('Location')!);
   const stateCookie = cookieNamed(start, SIGN_IN_STATE_COOKIE)!;
@@ -248,7 +248,7 @@ const scenarios: Record<string, () => Promise<void>> = {
   },
 
   async 'state'() {
-    const start = await startSignIn();
+    const start = await startSignIn(request('/api/auth/discord', { origin: null }));
     const state = new URL(start.headers.get('Location')!).searchParams.get('state')!;
     const back = async (query: string, cookie?: string) => (await callback(request(`/api/auth/discord/callback?${query}`, { origin: null, cookie }))).headers.get('Location');
     // Discord's redirect without this browser's state cookie, or with another one, is refused before the code is used.
@@ -268,7 +268,7 @@ const scenarios: Record<string, () => Promise<void>> = {
 
   /** The instance has no Discord application or database configured (env from the test). */
   async 'not-configured'() {
-    const start = await startSignIn();
+    const start = await startSignIn(request('/api/auth/discord', { origin: null }));
     assert.equal(start.status, 303);
     assert.equal(start.headers.get('Location'), '/?sign-in=failed');
     assert.equal(cookieNamed(start, SIGN_IN_STATE_COOKIE), undefined);
