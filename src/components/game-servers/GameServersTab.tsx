@@ -17,7 +17,8 @@ GameServerKey=${gameServerKey}`;
 
 /**
  * Game servers: the owner's list with registering, and a game server's page
- * with its connection status and, until it first connects, the setup
+ * with its connection status, EZConfig needs updating when it runs another
+ * build than the Supported build, and, until it first connects, the setup
  * checklist. The Game server key is shown on the page that registering opens,
  * and gone once the owner leaves it. Edit Draft opens the game server's Draft
  * in the editor; `initialOpenId` opens on a game server's page.
@@ -75,7 +76,7 @@ function ServerList({ onOpen, onRegistered }: { onOpen: (id: number) => void; on
     {servers === undefined ? <p className="empty-state" role={error ? 'alert' : undefined}>{error || 'Loading game servers…'}</p>
       : servers.length === 0 ? <p className="empty-state">No game servers yet. Register one to get its key.</p>
       : <ul className="server-list">{servers.map(server => <li key={server.id}>
-        <button className="server-row" onClick={() => onOpen(server.id)}><span className="preset-icon"><Server size={15} /></span><strong>{server.name}</strong><ConnectionBadge connection={server.connection} /></button>
+        <button className="server-row" onClick={() => onOpen(server.id)}><span className="preset-icon"><Server size={15} /></span><strong>{server.name}</strong>{server.needsUpdating && <span className="needs-updating-tag">{server.needsUpdating.supported ? 'EZConfig needs updating' : 'No Supported build yet'}</span>}<ConnectionBadge connection={server.connection} /></button>
       </li>)}</ul>}
     {servers !== undefined && error && <p className="refresh-error" role="status">{error}</p>}
   </div>;
@@ -87,6 +88,7 @@ function ServerPage({ id, gameServerKey, onBack, onEditDraft }: { id: number; ga
     <button className="outline-button back-button" onClick={onBack}><ArrowLeft size={14} />All game servers</button>
     {!server ? <p className="empty-state" role={error ? 'alert' : undefined}>{error || 'Loading the game server…'}</p> : <>
       <div className="standalone-heading"><div><p className="crumb">Game server</p><h1>{server.name}</h1></div><ConnectionBadge connection={server.connection} /></div>
+      {server.needsUpdating && <NeedsUpdating build={server.needsUpdating} />}
       {onEditDraft && <section className="draft-entry"><div><h3>Draft</h3><p>Edit Character and Weapon config here. The Draft saves as you edit; nothing reaches the game server until you Apply.</p></div><button className="primary-button" onClick={() => onEditDraft({ id: server.id, name: server.name })}>Edit Draft</button></section>}
       {server.connection.state === 'never-connected' || gameServerKey ? <SetupChecklist server={server} gameServerKey={gameServerKey} /> : <dl className="server-facts">
         <dt>Reported build</dt><dd>{server.lastReport?.buildStamp ? <code>{server.lastReport.buildStamp}</code> : 'None reported'}</dd>
@@ -95,6 +97,20 @@ function ServerPage({ id, gameServerKey, onBack, onEditDraft }: { id: number; ga
       {error && <p className="refresh-error" role="status">{error}</p>}
     </>}
   </div>;
+}
+
+/** The game server runs a build that is not the Supported build, so the platform sends it nothing. */
+function NeedsUpdating({ build }: { build: NonNullable<GameServerView['needsUpdating']> }) {
+  const running = build.running ? <code>{build.running}</code> : 'a build with no build stamp';
+  return <section className="needs-updating" aria-label="Build">
+    {build.supported ? <>
+      <h2>EZConfig needs updating</h2>
+      <p>The game server runs {running}; the Supported build is <code>{build.supported}</code>. The platform sends configuration only to the Supported build, so this server gets nothing until it restarts onto it. Restart the game server to load the latest EZConfig.</p>
+    </> : <>
+      <h2>No Supported build yet</h2>
+      <p>The game server runs {running}. The platform sends nothing to any game server until the platform operator sets the Supported build.</p>
+    </>}
+  </section>;
 }
 
 function SetupChecklist({ server, gameServerKey }: { server: GameServerView; gameServerKey?: string }) {

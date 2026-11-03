@@ -48,7 +48,8 @@ export function proxy(request: NextRequest) {
 export const config: ProxyConfig = {
   matcher: [{
     // Pages only: not API routes, static files, image optimization or the favicon, and not prefetches.
-    source: '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    // Not the game server poll either: behind the proxy, a game server hanging up no longer ends its held poll.
+    source: '/((?!api|game-server/|_next/static|_next/image|favicon.ico).*)',
     missing: [
       { type: 'header', key: 'next-router-prefetch' },
       { type: 'header', key: 'purpose', value: 'prefetch' },

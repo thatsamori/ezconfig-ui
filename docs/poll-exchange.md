@@ -1,7 +1,8 @@
 # Poll exchange: the platform–mod contract
 
-Status: the platform side is built (online-platform#26). The mod builds its
-poll loop against this page ([#29](../.scratch/online-platform/issues/29-mod-polls-the-platform.md)).
+Status: the platform side is built (online-platform#26, and the Supported
+build in #27). The mod builds its poll loop against this page
+([#29](../.scratch/online-platform/issues/29-mod-polls-the-platform.md)).
 The field names, answers and status codes are a published contract, like the
 Game.ini names: change them only together with the mod, and record the change
 here and in the mod's ADR for the poll loop.
@@ -80,7 +81,8 @@ Every response is a JSON object whose `answer` the mod switches on, with
 
 | Status | `answer` | When | Other fields | The mod then |
 |---|---|---|---|---|
-| `200` | `no-change` | The hold (50 s) ended with nothing to deliver. | none | polls again at once |
+| `200` | `no-change` | The hold (50 s) ended with nothing to deliver, and `buildStamp` is the Supported build. | none | polls again at once |
+| `200` | `not-supported-build` | The hold (50 s) ended, and `buildStamp` is not the Supported build: another stamp, `""`, or no Supported build is set. Nothing is ever delivered to it. | none | polls again at once |
 | `200` | `superseded` | A newer poll with the same key arrived while this one was held. | none | waits about 10 s, then polls |
 | `401` | `key-rejected` | The `Authorization` header is missing or not `Bearer <key>`, or the key is unknown: never registered, regenerated, or its game server deleted. | none | logs once, then retries every 60 s |
 | `400` | `bad-request` | The key is known but the body breaks this contract. | `error`: which field and why | treats it as a failure: logs `error`, waits about 10 s |
@@ -90,8 +92,7 @@ Coming with later slices, and part of the contract now:
 
 | Status | `answer` | Slice | When | Other fields | The mod then |
 |---|---|---|---|---|---|
-| `200` | `not-supported-build` | [#27](../.scratch/online-platform/issues/27-supported-build.md) | `buildStamp` is not the Supported build, or none is set. Answered when the hold ends; nothing is delivered. | none | polls again at once |
-| `200` | `live-configuration` | [#32](../.scratch/online-platform/issues/32-apply-a-draft-and-deliver-it.md) | The game server's Live configuration differs from the reported `processed.liveConfigurationId` (answered at once), or an Apply wakes the held poll. | `liveConfigurationId`, `commands` | processes it, then polls at once with `processed` |
+| `200` | `live-configuration` | [#32](../.scratch/online-platform/issues/32-apply-a-draft-and-deliver-it.md) | On the Supported build only: the game server's Live configuration differs from the reported `processed.liveConfigurationId` (answered at once), or an Apply wakes the held poll. | `liveConfigurationId`, `commands` | processes it, then polls at once with `processed` |
 
 A `live-configuration` answer:
 
@@ -128,6 +129,11 @@ not JSON, or an `answer` the mod does not know.
   held.
 - A poll is held for up to 50 s. The mod's request timeout, and any proxy in
   front of the platform, must allow at least 60 s.
+- A poll whose `buildStamp` is not the Supported build is held like any
+  other, so an outdated game server stays Connected without polling in a
+  tight loop. Whether it is the Supported build is decided when the hold
+  ends: the platform operator can switch the Supported build at any time,
+  without a deploy, and a held poll gets the answer for the build it reported.
 - Held polls are keyed by game server. The newest poll supersedes the held
   one, whichever instance sent it. Two game servers sharing one key supersede
   each other on every poll.
@@ -142,6 +148,9 @@ not JSON, or an `answer` the mod does not know.
   stays Connected.
 - **Not connected**, with last seen: no poll for more than about 15 s.
 - **Never connected**: no poll yet.
+- **EZConfig needs updating**, beside the connection status: the last
+  reported `buildStamp` is not the Supported build. The page shows both
+  stamps. While no Supported build is set, it says so instead.
 - The last build stamp and the last `processed` id and result, as reported.
 
 ## Recorded and logged
@@ -154,11 +163,17 @@ not JSON, or an `answer` the mod does not know.
 - Routine polls are never logged. The platform logs:
   - `poll.superseded` (info, with `gameServerId`);
   - `poll.bad-request` (warning, with `gameServerId` and the `error`);
+  - `poll.not-supported-build` (info, with `gameServerId` and the
+    `buildStamp` when it has the `YYYYMMDD-HHMMSS` form), when a game
+    server's first poll, or a poll whose `buildStamp` differs from its last
+    one, reports a build that is not the Supported build;
   - `poll.key-rejected` (info, with `count`), once per clock hour that had any.
 
 ## Trying it by hand
 
-Register a game server on the Game servers tab, copy its key, then:
+Register a game server on the Game servers tab, copy its key, and as the
+platform operator set the Supported build to `20261102-120000` on the
+Supported build page. Then:
 
 ```bash
 curl -X POST http://localhost:3000/game-server/poll -H "Authorization: Bearer ezc_gsk_..." -H "Content-Type: application/json" -d '{"buildStamp":"20261102-120000","instanceId":"manual-test"}'
@@ -166,4 +181,6 @@ curl -X POST http://localhost:3000/game-server/poll -H "Authorization: Bearer ez
 
 The server page shows Connected within 2 s. The command answers
 `{"answer":"no-change"}` after 50 s, and the page shows Not connected about
-15 s later.
+15 s later. With another `buildStamp`, or before the Supported build is set,
+it answers `{"answer":"not-supported-build"}` after 50 s and the page shows
+EZConfig needs updating.

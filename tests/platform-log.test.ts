@@ -30,14 +30,16 @@ test('an info event is one JSON line on stdout with its time, level, event and p
   expect(without(out[0], 'time')).toEqual({ level: 'info', event: 'apply', userId: 'user-1', gameServerId: 7, liveConfigurationId: 'live-3' });
 });
 
-test('a whole record passed as ids keeps only its platform ids, and a count only when it is a number', () => {
+test('a whole record passed as ids keeps only its platform ids, a count only when it is a number, and a build stamp only in its form', () => {
   const { out, stdout } = run('record-as-ids');
   expect(out.map(line => without(line, 'time'))).toEqual([
     { level: 'info', event: 'game-server.registered', gameServerId: 7 },
     { level: 'info', event: 'poll.key-rejected', count: 3 },
     { level: 'info', event: 'poll.key-rejected' },
+    { level: 'info', event: 'poll.not-supported-build', gameServerId: 7, buildStamp: '20261102-153000' },
+    { level: 'info', event: 'poll.not-supported-build', gameServerId: 7 },
   ]);
-  for (const leaked of ['Duel Yard', 'hash-of-key', 'discord-name', 'ezconfig-count-text']) expect(stdout).not.toContain(leaked);
+  for (const leaked of ['Duel Yard', 'hash-of-key', 'discord-name', 'ezconfig-count-text', 'ezconfig-stamp-text']) expect(stdout).not.toContain(leaked);
 });
 
 test('warnings and errors go to stderr, and an error is reduced to its message and stack', () => {

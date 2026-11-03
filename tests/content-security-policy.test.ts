@@ -47,10 +47,10 @@ describe('Content-Security-Policy', () => {
     expect(hosts.sort()).toEqual(['https://cdn.discordapp.com', 'https://fonts.googleapis.com', 'https://fonts.gstatic.com']);
   });
 
-  test('it covers every page, and not API routes, static files or prefetches', () => {
+  test('it covers every page, and not API routes, the poll endpoint, static files or prefetches', () => {
     const matches = (url: string, headers = {}) => unstable_doesMiddlewareMatch({ config, url, headers });
-    for (const url of ['/', '/?sign-in=failed', '/servers/1', '/invites/abc']) expect(matches(url)).toBe(true);
-    for (const url of ['/api/auth/session', '/_next/static/chunks/main.js', '/_next/image?url=x', '/favicon.ico']) expect(matches(url)).toBe(false);
+    for (const url of ['/', '/?sign-in=failed', '/servers/1', '/invites/abc', '/game-servers/1']) expect(matches(url)).toBe(true);
+    for (const url of ['/api/auth/session', '/game-server/poll', '/_next/static/chunks/main.js', '/_next/image?url=x', '/favicon.ico']) expect(matches(url)).toBe(false);
     expect(matches('/', { 'next-router-prefetch': '1' })).toBe(false);
   });
 });
