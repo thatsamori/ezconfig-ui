@@ -14,7 +14,7 @@ the summary. The restore check and the restore runbook are
 
 | What | On the instance | In the repo |
 |---|---|---|
-| The app: `bun --bun next start` on 127.0.0.1:3000, one process, restarted whenever it exits | `ezconfig-platform.service`, running `/srv/ezconfig-platform/current` | `deploy/ezconfig-platform.service` |
+| The app: `next start` on Bun (`bun --bun node_modules/next/dist/bin/next start`) on 127.0.0.1:3000, one process, restarted whenever it exits | `ezconfig-platform.service`, running `/srv/ezconfig-platform/current` | `deploy/ezconfig-platform.service` |
 | Releases, the newest 3 | `/srv/ezconfig-platform/releases/<UTC time>-<commit>` | `deploy/release.sh` |
 | The database (`DATABASE_PATH`), migrated at startup | `/var/lib/ezconfig-platform/platform.db` | `src/lib/platform/migrations/` |
 | The app's settings | `/etc/ezconfig-platform/platform.env`, root 0600 | `.env.example` |

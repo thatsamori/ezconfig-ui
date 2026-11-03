@@ -21,7 +21,9 @@ WorkingDirectory=/srv/ezconfig-platform/current
 EnvironmentFile=/etc/ezconfig-platform/platform.env
 Environment=NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
 # On loopback only: Caddy is the way in, and Litestream's heartbeat calls it here.
-ExecStart=/usr/local/bin/bun --bun next start --hostname 127.0.0.1 --port 3000
+# `next start` from Next's own entry file: `bun --bun next start` would look up
+# the `next` bin and run it as a child process, two processes instead of one.
+ExecStart=/usr/local/bin/bun --bun node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3000
 Restart=always
 RestartSec=2
 # A restart drops held polls; game servers poll again after about 10 s.
