@@ -83,3 +83,9 @@ live game server and the live instance are the owner's.
   try minutes earlier stopped at the fetch: the owner had set the repo to
   private, and `release.sh` fetches it without credentials. It changed nothing
   on the instance, and the second try ran once the repo was public again.
+- 21:44: `main` at `d04dfcb` deployed in 73 s, with #48, #49 and #46. There was no
+  migration this time. The app, Litestream, Caddy and the timer are active, and
+  the app logged no warnings or errors in the 5 minutes after it. `/` answers
+  200; the session API, the game servers API and a poll with no key answer 401;
+  `/internal/backup-heartbeat` answers 403. The releases kept are `d04dfcb`,
+  `5fe3bc1` and `5c6158f`.
