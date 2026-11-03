@@ -25,6 +25,9 @@ describe("a game server's Draft through its route handlers", () => {
   test('refuses a save or reset on a stale revision with the current Draft', () => {
     expect(scenario('stale')).toEqual([]);
   });
+  test('two writers on the same revision: exactly one succeeds, and the other gets the rejection with the current Draft', () => {
+    expect(scenario('two-writers')).toEqual([]);
+  });
   test('Reset to game defaults empties the Draft, with the revision checked', () => {
     expect(scenario('reset')).toEqual([]);
   });

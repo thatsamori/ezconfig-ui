@@ -16,7 +16,7 @@
  */
 import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/platform/auth';
-import { draftView, findOwnedDraft, readRevision, saveDraft } from '@/lib/platform/drafts';
+import { draftView, findOwnedDraft, readRevision, saveDraft, staleDraft } from '@/lib/platform/drafts';
 import { log } from '@/lib/platform/log';
 import { isValuesDocument } from '@/lib/config/valuesDocument';
 
@@ -55,7 +55,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!saved) return failure(404, 'No such game server');
     if (saved.ok) return NextResponse.json({ success: true, data: { revision: saved.draft.revision, savedAt: saved.draft.savedAt } }, { headers: NO_STORE });
     if (saved.reason === 'invalid') return NextResponse.json({ success: false, error: 'Validation failed', details: saved.errors }, { status: 400, headers: NO_STORE });
-    return NextResponse.json({ success: false, error: 'The Draft changed since this page loaded it', data: draftView(saved.draft) }, { status: 409, headers: NO_STORE });
+    return NextResponse.json(staleDraft(saved.draft), { status: 409, headers: NO_STORE });
   } catch (error) {
     log.error('draft.save-failed', error, { userId });
     return failure(500, 'Could not save the Draft');

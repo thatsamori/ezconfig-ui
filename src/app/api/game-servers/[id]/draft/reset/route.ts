@@ -9,7 +9,7 @@
  */
 import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/platform/auth';
-import { draftView, findOwnedDraft, readRevision, resetDraft } from '@/lib/platform/drafts';
+import { draftView, findOwnedDraft, readRevision, resetDraft, staleDraft } from '@/lib/platform/drafts';
 import { log } from '@/lib/platform/log';
 
 const NO_STORE = { 'Cache-Control': 'no-store' };
@@ -27,7 +27,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (revision === undefined) return failure(400, 'Send the revision the reset is based on');
     const reset = resetDraft(id, revision);
     if (!reset) return failure(404, 'No such game server');
-    if (!reset.ok) return NextResponse.json({ success: false, error: 'The Draft changed since this page loaded it', data: reset.reason === 'stale' ? draftView(reset.draft) : undefined }, { status: 409, headers: NO_STORE });
+    if (!reset.ok) return NextResponse.json(staleDraft(reset.draft), { status: 409, headers: NO_STORE });
     return NextResponse.json({ success: true, data: draftView(reset.draft) }, { headers: NO_STORE });
   } catch (error) {
     log.error('draft.reset-failed', error, { userId });
