@@ -81,9 +81,10 @@ instance's settings or secrets.
   `src/app/api/game-servers/[id]/apply/` and
   `.../draft/discard/`; the poll route delivers from it.
   Rulesets: `rulesets.ts` (Save as Ruleset version, loading a version,
-  rename and delete) behind `src/app/api/rulesets/` and `.../draft/save-version/`
-  and `.../draft/load/`; `origins.ts` gives a Draft's or Live configuration's
-  origin and whether it is modified.
+  rename and delete, and exporting and importing a Ruleset file) behind
+  `src/app/api/rulesets/` and `.../draft/save-version/` and `.../draft/load/`;
+  a Ruleset file's format is `src/lib/config/rulesetFile.ts`; `origins.ts` gives
+  a Draft's or Live configuration's origin and whether it is modified.
   Notes: `notes.ts` (per database and key name, author from the session, and
   the body sanitizer, sanitize-html with an allowlist) behind `src/app/api/notes/`.
 - `src/proxy.ts` - the Content-Security-Policy, with a fresh nonce per request, on
