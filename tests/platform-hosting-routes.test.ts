@@ -1,6 +1,5 @@
 import { afterEach, expect, spyOn, test } from 'bun:test';
 import { GET as heartbeat } from '../src/app/internal/backup-heartbeat/route';
-import { POST as heldPost } from '../src/app/proof/held-post/route';
 import { BACKUP_HEARTBEAT_STALE_MS, readLastBackupHeartbeat, recordBackupHeartbeat } from '../src/lib/platform/backup-heartbeat';
 
 // Next sets X-Forwarded-For to the socket's address when a request has none; Caddy sets it to the client's.
@@ -50,28 +49,4 @@ test('a heartbeat after a stale gap is logged as resumed', () => {
   recordBackupHeartbeat(last + 2 * BACKUP_HEARTBEAT_STALE_MS + 1);
   expect(loggedEvents()).toEqual(['backup.heartbeat.resumed']);
   expect(readLastBackupHeartbeat()!.getTime()).toBe(last + 2 * BACKUP_HEARTBEAT_STALE_MS + 1);
-});
-
-const post = (body?: string) => heldPost(new Request('http://127.0.0.1:3000/proof/held-post', { method: 'POST', body, headers: { 'content-type': 'application/json' } }));
-
-test('the held-POST proof route holds for holdSeconds, then answers with the time held and the runtime', async () => {
-  const started = performance.now();
-  const response = await post(JSON.stringify({ holdSeconds: 1 }));
-  const elapsed = performance.now() - started;
-  expect(response.status).toBe(200);
-  const body = await response.json() as { heldMs: number; runtime: string };
-  expect(body.heldMs).toBeGreaterThanOrEqual(990);
-  expect(elapsed).toBeGreaterThanOrEqual(990);
-  expect(elapsed).toBeLessThan(5000);
-  expect(body.runtime).toBe(`bun ${Bun.version}`);
-});
-
-test('the held-POST proof route refuses a hold outside 1 to 120 whole seconds at once', async () => {
-  const started = performance.now();
-  for (const body of ['{"holdSeconds":0}', '{"holdSeconds":121}', '{"holdSeconds":1.5}', '{"holdSeconds":"5"}', 'null', 'not json']) {
-    const response = await post(body);
-    expect({ body, status: response.status }).toEqual({ body, status: 400 });
-    expect((await response.json() as { error: string }).error).toBe('holdSeconds must be a whole number from 1 to 120');
-  }
-  expect(performance.now() - started).toBeLessThan(1000);
 });

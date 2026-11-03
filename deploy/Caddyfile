@@ -23,8 +23,8 @@
 		}
 	}
 	servers {
-		# Polls are held for 50 s (the proof route, 120 s), so a response may be
-		# written long after its request; the game's HTTP client gives up at 180 s.
+		# Polls are held for 50 s, so a response may be written long after its
+		# request; the game's HTTP client gives up at 180 s.
 		timeouts {
 			read_header 10s
 			read_body 30s

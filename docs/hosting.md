@@ -79,11 +79,12 @@ for about 10 to 20 s. The SSH host defaults to the `ezconfig-platform` alias;
 
 ## Checks
 
-- A held POST is answered through Caddy and Next.js on Bun. The route is
-  temporary, and the poll endpoint (`online-platform#26`) replaces it:
+- A held poll is answered through Caddy and Next.js on Bun. Register a game
+  server on the Game servers tab and use its key. The poll is held for 50 s,
+  then answered `200` with `{"answer":"no-change"}` (`docs/poll-exchange.md`):
 
   ```bash
-  curl -sS -X POST https://<platform hostname>/proof/held-post -H 'content-type: application/json' -d '{"holdSeconds":120}' -w '\n%{http_code} after %{time_total} s\n'
+  curl -sS -X POST https://<platform hostname>/game-server/poll -H 'Authorization: Bearer <game server key>' -H 'content-type: application/json' -d '{"buildStamp":"20261102-120000","instanceId":"hosting-check"}' -w '\n%{http_code} after %{time_total} s\n'
   ```
 
 - The heartbeat path is refused from outside, with 403, at either hostname:

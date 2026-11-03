@@ -119,3 +119,5 @@ stays at 20.
   merges second may add `game-server` to the matcher's exclusions.
 - Game servers list in byte order of their lower-cased names, so a name
   starting with `Ä` sorts after `Z`.
+
+2026-11-02: Merged with #22, so its proof route `POST /proof/held-post` is removed.
