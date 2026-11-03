@@ -69,9 +69,9 @@ to 24 (the old general review's unused `weapons` is gone).
     sync.
   - `parry-migration-*.ts`: the parry-geometry migration.
   - The movement, recovery, stun and free-stun reviews belong to
-    [19](19-move-character-movement-recovery-and-stun-reviews.md). The
-    parry, base parry, attack motion, geometry and bubble reviews belong
-    to [20](20-move-parry-geometry-and-attack-motion-reviews.md).
+    [19](19-move-character-feature-reviews.md). The parry, base parry,
+    attack motion, geometry and bubble reviews belong to
+    [20](20-move-parry-and-geometry-feature-reviews.md).
 - Captures keep their env vars, files and keys, but every stage is now a
   whole delivered batch that starts with the wipe. There are two
   exceptions. `EZ_WEAPON_CAPTURE_PATH` has no `selected` stage any more:
