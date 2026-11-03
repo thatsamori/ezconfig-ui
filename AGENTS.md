@@ -43,6 +43,9 @@ are the contract between this app and the mod.
   migrated platform database).
 - `scripts/` - init-db, defaults export/import, parry migration CLI.
 - `docs/` - see index below; `docs/design/`, `docs/archive/` are reference only.
+- `deploy/` - the platform instance's units, Caddyfile, Litestream template and
+  provisioning; `scripts/deploy.ts` (`bun run deploy <commit>`) runs
+  `deploy/release.sh` on it. Kept LF (`.gitattributes`).
 
 ## Adding a config key
 1. Add the entry to the right schema in `src/lib/config/`.
@@ -104,6 +107,7 @@ see `src/lib/env.ts`).
 - `docs/stun-rules-validation.md` - stun/acknowledgment validation record (human pass deferred).
 - `docs/weapon-reliability-validation.md` - weapon reliability validation record.
 - `docs/archive/README.md` - Jan 2026 planning archive (superseded).
+- `docs/hosting.md` - the platform instance: what runs where, provisioning, `bun run deploy`, checks.
 
 Pending decision: removing the temporary parry-geometry startup migration hook.
 
