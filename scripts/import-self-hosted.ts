@@ -4,20 +4,23 @@
  * hand against DATABASE_PATH (the ticket's Comments have the commands). It
  * and its test are deleted after the owner's import (#42).
  *
- *   bun --no-env-file run scripts/import-self-hosted.ts --databases <dir> --presets <dir> --notes <dir>
- *     --discord-id <id> --game-server <name> --old-username <name> [--ruleset-name <name>] [--commit]
+ *   bun --no-env-file run scripts/import-self-hosted.ts --presets <dir> --notes <dir> --discord-id <id>
+ *     --old-username <name> ... [--note-author <old username>=<discord id> ...]
+ *     [--databases <dir> --game-server <name> [--ruleset-name <name>]] [--commit]
  *
- * - Databases/ becomes the named game server's Draft, and version 1 of the
- *   "Self-hosted" Ruleset (--ruleset-name), which is the Draft's origin.
- *   Nothing is applied: the game server has no Live configuration until the
- *   owner reviews the Draft and Applies.
+ * - With --databases and --game-server: Databases/ becomes the named game
+ *   server's Draft, and version 1 of the "Self-hosted" Ruleset (--ruleset-name),
+ *   which is the Draft's origin. Nothing is applied: the game server has no Live
+ *   configuration until the owner reviews the Draft and Applies. Without them,
+ *   no game server, Draft or Live configuration is read or written.
  * - Each preset in Presets/User/, and in Presets/Static/ except GameDefault,
  *   becomes a Ruleset with one version 1: named after its manifest title, or
  *   its folder if the title is empty or the manifest missing, with the
  *   manifest's description.
- * - Notes by the old username become the owner's; the rest have no author.
- *   All get the import time as created time, in file order, and pass the
- *   Note sanitizer. Notes on keys the schema lacks are imported and hidden.
+ * - Notes by an --old-username become the owner's, those by a --note-author's
+ *   old username become that server owner's, and the rest have no author. All
+ *   get the import time as created time, in file order, and pass the Note
+ *   sanitizer. Notes on keys the schema lacks are imported and hidden.
  *
  * Values are read by key name, with no category, and placed as loading a
  * Ruleset version places them (valuesDocument.ts). A value with no place, or
@@ -29,9 +32,10 @@
  *
  * A dry run unless --commit: it prints the report and writes nothing.
  * --commit writes everything in one transaction, or nothing. Either way it
- * refuses when the Draft was ever saved, the game server has a Live
- * configuration, a Ruleset name it would create is taken (ignoring case), two
- * of its names collide, or its Notes are already there; so it cannot run twice.
+ * refuses when a Ruleset name it would create is taken (ignoring case), two of
+ * its names collide, its Notes are already there, or a --note-author has no
+ * server owner; so it cannot run twice. With a game server, it also refuses
+ * when the Draft was ever saved or the game server has a Live configuration.
  *
  * It reads the old formats itself, as the self-hosted app wrote them, so it
  * needs none of the self-hosted code (#41 removes it):
@@ -56,9 +60,11 @@ import { readDescription, readRulesetName } from '../src/lib/platform/rulesets';
 import { closePlatformStore, platformStore, readPlatformMigrations } from '../src/lib/platform/storage';
 import { findServerOwnerByDiscordId } from '../src/lib/platform/users';
 
-const USAGE = `Usage: bun --no-env-file run scripts/import-self-hosted.ts --databases <Databases folder> --presets <Presets folder> --notes <Notes folder>
-  --discord-id <your Discord user id> --game-server <game server name> --old-username <your self-hosted username>
-  [--ruleset-name <name of the Ruleset Databases becomes; default "Self-hosted">] [--commit]
+const USAGE = `Usage: bun --no-env-file run scripts/import-self-hosted.ts --presets <Presets folder> --notes <Notes folder>
+  --discord-id <your Discord user id> --old-username <a self-hosted username of yours; repeat for several>
+  [--note-author <someone else's self-hosted username>=<their Discord user id>; repeat for several]
+  [--databases <Databases folder> --game-server <game server name> [--ruleset-name <name of the Ruleset Databases becomes; default "Self-hosted">]]
+  [--commit]
 With DATABASE_PATH set to the platform database. A dry run until --commit.`;
 
 /** One value as an old file holds it. `category` is the file's name without .json. */
@@ -269,27 +275,35 @@ function collisions(rulesets: NewRuleset[]): string[] {
     `${same.length} Rulesets would be called ${quoted(same[0].name)} (names ignore case): ${same.map(ruleset => `${quoted(ruleset.name)} from ${ruleset.source}`).join(', ')}. Edit a copied manifest's title${same.some(ruleset => ruleset.source.startsWith('Databases')) ? ' or pass another --ruleset-name' : ''}.`);
 }
 
-interface Target { ownerId: number; ownerName: string; gameServerId: number; gameServerName: string }
+/** The server owners other than the importer that Notes go to, by old username. */
+type NoteAuthors = Map<string, { id: number; username: string }>;
+interface Target { ownerId: number; ownerName: string; gameServer?: { id: number; name: string } }
 
 /**
- * What the platform must hold for the import: the owner and their game
- * server, a Draft never saved, no Live configuration, none of the names, and
- * none of the Notes (a run after its game server and Rulesets were deleted
- * would add them twice).
+ * What the platform must hold for the import: the owner, each --note-author,
+ * none of the names, and none of the Notes (a run after its game server and
+ * Rulesets were deleted would add them twice). With a game server named: that
+ * server, a Draft never saved, and no Live configuration.
  */
-function checkPlatform(discordId: string, gameServer: { name: string; nameKey: string }, rulesets: NewRuleset[], notes: FoundNote[]): { target?: Target; problems: string[] } {
+function checkPlatform(discordId: string, gameServer: { name: string; nameKey: string } | null, rulesets: NewRuleset[], notes: FoundNote[], noteAuthorIds: Map<string, string>): { target?: Target; authors: NoteAuthors; problems: string[] } {
   const store = platformStore();
   const found: string[] = [];
   const stored = new Set(store.all<{ database_name: string; key_name: string; body: string }>('SELECT database_name, key_name, body FROM notes')
     .map(row => JSON.stringify([row.database_name, row.key_name, row.body])));
   const again = notes.filter(note => stored.has(JSON.stringify([note.database, note.key, note.body]))).length;
   if (again) found.push(`${again} of the Notes to import are already on the platform, on the same key with the same body, as if the import ran before. Delete them there first, or leave them out of the copied Notes/.`);
+  const authors: NoteAuthors = new Map();
+  for (const [oldName, id] of noteAuthorIds) {
+    const author = findServerOwnerByDiscordId(id);
+    if (author) authors.set(oldName, { id: author.id, username: author.username });
+    else found.push(`No server owner has Discord id ${id}, named for Notes by ${quoted(oldName)}: that account must sign in to the platform first.`);
+  }
   const owner = findServerOwnerByDiscordId(discordId);
-  if (!owner) return { problems: [...found, `No server owner has Discord id ${discordId}: sign in to the platform with that account first.`] };
-  const server = store.get<{ id: number; name: string }>('SELECT id, name FROM game_servers WHERE owner_id = ? AND name_key = ?', owner.id, gameServer.nameKey);
-  if (!server) {
+  if (!owner) return { authors, problems: [...found, `No server owner has Discord id ${discordId}: sign in to the platform with that account first.`] };
+  const server = gameServer && store.get<{ id: number; name: string }>('SELECT id, name FROM game_servers WHERE owner_id = ? AND name_key = ?', owner.id, gameServer.nameKey);
+  if (gameServer && !server) {
     found.push(`${owner.username} has no game server called ${quoted(gameServer.name)}: register it on the platform first.`);
-  } else {
+  } else if (server) {
     const draft = readDraft(server.id)!;
     if (draft.revision > 0 || draft.savedAt !== null) {
       found.push(`The Draft of ${quoted(server.name)} was saved (revision ${draft.revision}), and the import fills only a Draft never saved. Delete that game server, register it again and import before opening its Draft.`);
@@ -300,16 +314,16 @@ function checkPlatform(discordId: string, gameServer: { name: string; nameKey: s
     const taken = store.get<{ name: string }>('SELECT name FROM rulesets WHERE owner_id = ? AND name_key = ?', owner.id, ruleset.nameKey);
     if (taken) found.push(`${owner.username} already has a Ruleset called ${quoted(taken.name)}, the name ${ruleset.source} would take.`);
   }
-  return { target: server && { ownerId: owner.id, ownerName: owner.username, gameServerId: server.id, gameServerName: server.name }, problems: found };
+  return { target: { ownerId: owner.id, ownerName: owner.username, gameServer: server ?? undefined }, authors, problems: found };
 }
 
 /** Writes the whole import in one transaction, checking the platform again inside it. */
-function write(discordId: string, gameServer: { name: string; nameKey: string }, rulesets: NewRuleset[], notes: FoundNote[], oldUsername: string, now: number) {
+function write(discordId: string, gameServer: { name: string; nameKey: string } | null, rulesets: NewRuleset[], notes: FoundNote[], oldUsernames: string[], noteAuthorIds: Map<string, string>, now: number) {
   const store = platformStore();
   store.transaction(() => {
-    const check = checkPlatform(discordId, gameServer, rulesets, notes);
+    const check = checkPlatform(discordId, gameServer, rulesets, notes, noteAuthorIds);
     if (check.problems.length) throw new Refused(check.problems);
-    const { ownerId, gameServerId } = check.target!;
+    const { ownerId, gameServer: server } = check.target!;
     const versions = rulesets.map(ruleset => {
       const { id } = store.get<{ id: number }>('INSERT INTO rulesets (owner_id, name, name_key, created_at) VALUES (?, ?, ?, ?) RETURNING id', ownerId, ruleset.name, ruleset.nameKey, now)!;
       return store.get<{ id: number }>(
@@ -318,11 +332,14 @@ function write(discordId: string, gameServer: { name: string; nameKey: string },
       )!.id;
     });
     // The first Ruleset is Databases', "Self-hosted": the Draft gets its values and it as the origin.
-    const draft = loadDraft(gameServerId, 0, { document: rulesets[0].values.document, originId: versions[0] }, now);
-    if (!draft?.ok) throw new Error('The Draft moved on inside the import transaction');
+    if (server) {
+      const draft = loadDraft(server.id, 0, { document: rulesets[0].values.document, originId: versions[0] }, now);
+      if (!draft?.ok) throw new Error('The Draft moved on inside the import transaction');
+    }
     for (const note of notes) {
+      const authorId = note.createdBy === null ? null : oldUsernames.includes(note.createdBy) ? ownerId : check.authors.get(note.createdBy)?.id ?? null;
       store.run('INSERT INTO notes (database_name, key_name, author_id, body, created_at) VALUES (?, ?, ?, ?, ?)',
-        note.database, note.key, note.createdBy === oldUsername ? ownerId : null, note.body, now);
+        note.database, note.key, authorId, note.body, now);
     }
   });
 }
@@ -330,12 +347,14 @@ function write(discordId: string, gameServer: { name: string; nameKey: string },
 const valuesLabel = (count: number) => `${count} value${count === 1 ? '' : 's'}`;
 const cut = (text: string) => ([...text].length > 200 ? `${[...text].slice(0, 200).join('')}…` : text);
 
-function report(lines: string[], { gameServerName, rulesets, notes, droppedNotes, oldUsername }: {
-  gameServerName: string; rulesets: NewRuleset[]; notes: FoundNote[]; droppedNotes: DroppedNote[]; oldUsername: string;
+function report(lines: string[], { gameServerName, rulesets, notes, droppedNotes, oldUsernames, noteAuthorIds, authors }: {
+  gameServerName: string | null; rulesets: NewRuleset[]; notes: FoundNote[]; droppedNotes: DroppedNote[]; oldUsernames: string[]; noteAuthorIds: Map<string, string>; authors: NoteAuthors;
 }) {
-  const [selfHosted] = rulesets;
   lines.push('', 'Destinations');
-  lines.push(`  Draft of game server ${quoted(gameServerName)}: ${valuesLabel(selfHosted.values.count)}, origin ${quoted(selfHosted.name)} version 1. No Live configuration until you review it and Apply.`);
+  if (gameServerName !== null) {
+    const [selfHosted] = rulesets;
+    lines.push(`  Draft of game server ${quoted(gameServerName)}: ${valuesLabel(selfHosted.values.count)}, origin ${quoted(selfHosted.name)} version 1. No Live configuration until you review it and Apply.`);
+  }
   for (const ruleset of rulesets) {
     const dropped = ruleset.values.dropped.length;
     lines.push(`  Ruleset ${quoted(ruleset.name)} version 1: ${valuesLabel(ruleset.values.count)}${dropped ? ` (${dropped} dropped)` : ''}, from ${ruleset.source}${ruleset.description ? `, description ${quoted(cut(ruleset.description))}` : ''}`);
@@ -347,15 +366,19 @@ function report(lines: string[], { gameServerName, rulesets, notes, droppedNotes
   }
   lines.push('', `Not read: ${notRead.length}`, ...notRead.map(entry => `  ${entry}`));
 
-  const owned = notes.filter(note => note.createdBy === oldUsername);
+  const by = (name: string) => notes.filter(note => note.createdBy === name).length;
   const others = new Map<string, number>();
-  for (const note of notes) if (note.createdBy !== oldUsername) others.set(note.createdBy ?? '', (others.get(note.createdBy ?? '') ?? 0) + 1);
+  for (const note of notes) {
+    if (note.createdBy !== null && (oldUsernames.includes(note.createdBy) || noteAuthorIds.has(note.createdBy))) continue;
+    others.set(note.createdBy ?? '', (others.get(note.createdBy ?? '') ?? 0) + 1);
+  }
   const hidden = new Map<string, number>();
   for (const note of notes) if (!isNoteKey(note.database, note.key)) hidden.set(`${note.database} / ${note.key}`, (hidden.get(`${note.database} / ${note.key}`) ?? 0) + 1);
   const changed = notes.filter(note => note.body !== note.original);
   lines.push('', `Notes: ${notes.length}`);
-  lines.push(`  Yours (by old username ${quoted(oldUsername)}): ${owned.length}`);
-  lines.push(`  With no author ("a former server owner"): ${notes.length - owned.length}${others.size ? ` (${[...others].map(([name, count]) => `${name ? `by ${quoted(name)}` : 'by no one recorded'}: ${count}`).join(', ')})` : ''}`);
+  lines.push(`  Yours (by old username ${oldUsernames.map(quoted).join(', ')}): ${oldUsernames.reduce((sum, name) => sum + by(name), 0)}`);
+  for (const [oldName, id] of noteAuthorIds) lines.push(`  ${authors.get(oldName)?.username ?? 'No server owner yet'} (by old username ${quoted(oldName)}, Discord id ${id}): ${by(oldName)}`);
+  lines.push(`  With no author ("a former server owner"): ${[...others.values()].reduce((sum, count) => sum + count, 0)}${others.size ? ` (${[...others].map(([name, count]) => `${name ? `by ${quoted(name)}` : 'by no one recorded'}: ${count}`).join(', ')})` : ''}`);
   lines.push(`  On keys the schema lacks, imported and hidden: ${[...hidden.values()].reduce((sum, count) => sum + count, 0)}`, ...[...hidden].map(([key, count]) => `    ${key}: ${count}`));
   lines.push(`  Bodies the sanitizer changed: ${changed.length}`);
   for (const note of changed) {
@@ -370,23 +393,37 @@ function main() {
     args = parseArgs({
       options: {
         databases: { type: 'string' }, presets: { type: 'string' }, notes: { type: 'string' },
-        'discord-id': { type: 'string' }, 'game-server': { type: 'string' }, 'old-username': { type: 'string' },
+        'discord-id': { type: 'string' }, 'game-server': { type: 'string' }, 'old-username': { type: 'string', multiple: true }, 'note-author': { type: 'string', multiple: true },
         'ruleset-name': { type: 'string', default: 'Self-hosted' }, commit: { type: 'boolean', default: false },
       },
     }).values;
   } catch (error) {
     stop(`${(error as Error).message}\n${USAGE}`, 2);
   }
-  const missing = (['databases', 'presets', 'notes', 'discord-id', 'game-server', 'old-username'] as const).filter(name => !args[name]);
+  const oldUsernames = args['old-username'] ?? [];
+  const missing = [
+    ...(['presets', 'notes', 'discord-id'] as const).filter(name => !args[name]),
+    ...(!oldUsernames.length || oldUsernames.includes('') ? ['old-username'] : []),
+  ];
   if (missing.length) stop(`Missing ${missing.map(name => `--${name}`).join(', ')}\n${USAGE}`, 2);
+  if (!args.databases !== !args['game-server']) stop(`--databases and --game-server go together: both to fill a Draft, neither for only the Rulesets and Notes.\n${USAGE}`, 2);
   for (const name of ['databases', 'presets', 'notes'] as const) {
-    if (!existsSync(args[name]!) || !statSync(args[name]!).isDirectory()) stop(`--${name}: no folder at ${args[name]}`, 2);
+    const path = args[name];
+    if (path && (!existsSync(path) || !statSync(path).isDirectory())) stop(`--${name}: no folder at ${path}`, 2);
+  }
+  const noteAuthorIds = new Map<string, string>();
+  for (const entry of args['note-author'] ?? []) {
+    const split = entry.lastIndexOf('=');
+    const oldName = entry.slice(0, Math.max(split, 0)), id = entry.slice(split + 1);
+    if (!oldName || !/^\d{1,20}$/.test(id)) stop(`--note-author ${entry}: use <old username>=<Discord id>\n${USAGE}`, 2);
+    if (oldUsernames.includes(oldName) || noteAuthorIds.has(oldName)) stop(`--note-author ${entry}: ${quoted(oldName)} has an author already\n${USAGE}`, 2);
+    noteAuthorIds.set(oldName, id);
   }
   const selfHostedName = readRulesetName(args['ruleset-name']);
   if (!selfHostedName.ok) stop(`--ruleset-name: ${selfHostedName.error}`, 2);
-  const gameServer = readGameServerName(args['game-server']);
-  if (!gameServer.ok) stop(`--game-server: ${gameServer.error}`, 2);
-  const discordId = args['discord-id']!, oldUsername = args['old-username']!, commit = args.commit!;
+  const gameServer = args['game-server'] ? readGameServerName(args['game-server']) : null;
+  if (gameServer && !gameServer.ok) stop(`--game-server: ${gameServer.error}`, 2);
+  const discordId = args['discord-id']!, commit = args.commit!;
 
   // The app creates and migrates the database at startup; the import never does either.
   const databasePath = process.env.DATABASE_PATH;
@@ -398,18 +435,18 @@ function main() {
 
   const now = Date.now();
   const rulesets: NewRuleset[] = [
-    { name: selfHostedName.name, nameKey: selfHostedName.nameKey, source: 'Databases (--ruleset-name)', description: null, values: resolveValues(readConfigurationFolder(args.databases!, 'Databases')) },
+    ...(args.databases ? [{ name: selfHostedName.name, nameKey: selfHostedName.nameKey, source: 'Databases (--ruleset-name)', description: null, values: resolveValues(readConfigurationFolder(args.databases, 'Databases')) }] : []),
     ...readPresets(args.presets!),
   ];
   const { notes, dropped: droppedNotes } = readNotes(args.notes!);
   problems.push(...collisions(rulesets));
-  const check = checkPlatform(discordId, gameServer, rulesets, notes);
+  const check = checkPlatform(discordId, gameServer, rulesets, notes, noteAuthorIds);
   problems.push(...check.problems);
 
   let written = false;
   if (commit && !problems.length) {
     try {
-      write(discordId, gameServer, rulesets, notes, oldUsername, now);
+      write(discordId, gameServer, rulesets, notes, oldUsernames, noteAuthorIds, now);
       written = true;
     } catch (error) {
       if (!(error instanceof Refused)) throw error;
@@ -419,11 +456,13 @@ function main() {
 
   const lines = [`EZConfig one-time import${commit ? '' : ': dry run, nothing is written'}`];
   if (check.target) lines.push(`Server owner: ${check.target.ownerName} (Discord id ${discordId})`);
-  report(lines, { gameServerName: check.target?.gameServerName ?? gameServer.name, rulesets, notes, droppedNotes, oldUsername });
+  report(lines, { gameServerName: gameServer && (check.target?.gameServer?.name ?? gameServer.name), rulesets, notes, droppedNotes, oldUsernames, noteAuthorIds, authors: check.authors });
   if (problems.length) {
     lines.push('', `Refused, so nothing was written: ${problems.length}`, ...problems.map(problem => `  - ${problem}`));
   } else if (written) {
-    lines.push('', `Imported: the Draft, ${rulesets.length} Rulesets and ${notes.length} Notes. Nothing reaches the game server until you review its Draft and Apply.`);
+    lines.push('', gameServer
+      ? `Imported: the Draft, ${rulesets.length} Rulesets and ${notes.length} Notes. Nothing reaches the game server until you review its Draft and Apply.`
+      : `Imported: ${rulesets.length} Rulesets and ${notes.length} Notes. No game server was touched.`);
   } else {
     lines.push('', 'Dry run passed. Run again with --commit to import.');
   }

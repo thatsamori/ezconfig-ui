@@ -21,6 +21,8 @@ interface Scenario {
   importer: (...extra: string[]) => PlatformFixtureResult;
   /** The same, with `env` over DATABASE_PATH and the rest. */
   importerWith: (env: Record<string, string>, ...extra: string[]) => PlatformFixtureResult;
+  /** Runs the script for Rulesets and Notes only: no --databases, no --game-server. */
+  rulesetsAndNotes: (...extra: string[]) => PlatformFixtureResult;
   root: string;
   /** Every row of every table, to compare before and after. */
   dump: () => string;
@@ -86,13 +88,15 @@ function scenario<T>(files: Files, work: (scenario: Scenario) => T): T {
         INSERT INTO drafts (game_server_id) VALUES (7), (8);
         INSERT INTO rulesets (owner_id, name, name_key, created_at) VALUES (2, 'Competitive', 'competitive', 0);
       `);
-      const args = ['--databases', join(old, 'Databases'), '--presets', join(old, 'Presets'), '--notes', join(old, 'Notes'), '--discord-id', '1001', '--game-server', 'duel na', '--old-username', 'chris'];
+      const shared = ['--presets', join(old, 'Presets'), '--notes', join(old, 'Notes'), '--discord-id', '1001', '--old-username', 'chris'];
+      const args = ['--databases', join(old, 'Databases'), '--game-server', 'duel na', ...shared];
       const dump = () => JSON.stringify(
         (database.query("SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' ORDER BY name").all() as { name: string }[])
           .map(({ name }) => [name, database.query(`SELECT * FROM "${name}"`).all()]),
       );
       const importerWith = (env: Record<string, string>, ...extra: string[]) => run('scripts/import-self-hosted.ts', { args: [...args, ...extra], env });
-      return work({ database, importer: (...extra) => importerWith({}, ...extra), importerWith, root, dump });
+      const rulesetsAndNotes = (...extra: string[]) => run('scripts/import-self-hosted.ts', { args: [...shared, ...extra], env: {} });
+      return work({ database, importer: (...extra) => importerWith({}, ...extra), importerWith, rulesetsAndNotes, root, dump });
     } finally {
       database.close();
     }
@@ -238,6 +242,90 @@ describe('the one-time import', () => {
       // Deleting the game server's work and the Rulesets is not enough to import the Notes twice.
       database.exec("DELETE FROM rulesets WHERE owner_id = 1; UPDATE drafts SET overrides = '{}', revision = 0, saved_at = NULL WHERE game_server_id = 7");
       expectRefused(scenarioState, [], '6 of the Notes to import are already on the platform, on the same key with the same body, as if the import ran before.');
+    });
+  });
+
+  test('with no --databases and --game-server it imports only the Rulesets and Notes, whatever the game servers hold', () => {
+    scenario(OLD, ({ database, rulesetsAndNotes, dump }) => {
+      // The owner's game server has been edited and applied to, which the Draft import refuses.
+      database.exec(`UPDATE drafts SET overrides = '{"Character":{"CanDodge":false}}', revision = 2, saved_at = 5 WHERE game_server_id = 7;
+        INSERT INTO live_configurations (game_server_id, id, overrides, applied_at) VALUES (7, 'live-1', '{}', 5)`);
+      const drafts = () => database.query('SELECT * FROM drafts ORDER BY game_server_id').all();
+      const lives = () => database.query('SELECT * FROM live_configurations').all();
+      const draftsBefore = drafts(), livesBefore = lives();
+      const args = ['--old-username', 'Chris', '--note-author', 'alice=1002'];
+
+      const before = dump();
+      const dry = rulesetsAndNotes(...args);
+      expect(dry.stderr).toBe('');
+      expect(dry.exitCode).toBe(0);
+      expect(dump()).toBe(before);
+      for (const line of [
+        'Server owner: Owner (Discord id 1001)',
+        'Destinations',
+        'Ruleset "Competitive" version 1: 2 values, from Presets/User/competitive (manifest title)',
+        'Yours (by old username "chris", "Chris"): 3',
+        'Other (by old username "alice", Discord id 1002): 1',
+        'With no author ("a former server owner"): 2 (by "bob": 1, by no one recorded: 1)',
+        'Dry run passed. Run again with --commit to import.',
+      ]) expect(dry.stdout).toContain(line);
+      expect(dry.stdout).not.toContain('Draft of game server');
+      expect(dry.stdout).not.toContain('Self-hosted');
+
+      const result = rulesetsAndNotes(...args, '--commit');
+      expect(result.stderr).toBe('');
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Imported: 4 Rulesets and 6 Notes. No game server was touched.');
+
+      expect((database.query('SELECT name FROM rulesets WHERE owner_id = ? ORDER BY id').all(OWNER) as { name: string }[]).map(row => row.name))
+        .toEqual(['Competitive', 'nomanifest', 'untitled', 'Movement']);
+      expect(drafts()).toEqual(draftsBefore);
+      expect(lives()).toEqual(livesBefore);
+      expect(database.query('SELECT key_name, author_id FROM notes ORDER BY id').all()).toEqual([
+        { key_name: 'CanDodge', author_id: OWNER },
+        { key_name: 'CanDodge', author_id: 2 },
+        { key_name: 'CanDodge', author_id: OWNER },
+        { key_name: 'RetiredKey', author_id: null },
+        { key_name: 'MaxWalkSpeed', author_id: null },
+        { key_name: 'Windup', author_id: OWNER },
+      ]);
+
+      // It still cannot run twice.
+      const again = rulesetsAndNotes(...args, '--commit');
+      expect(again.exitCode).toBe(1);
+      expect(again.stdout).toContain('6 of the Notes to import are already on the platform');
+      expect(again.stdout).toContain('Owner already has a Ruleset called "Competitive"');
+    });
+  });
+
+  test('refuses a --note-author with no server owner on the platform', () => {
+    scenario(OLD, ({ rulesetsAndNotes, dump }) => {
+      const before = dump();
+      for (const extra of [[], ['--commit']]) {
+        const result = rulesetsAndNotes('--note-author', 'alice=9999', ...extra);
+        expect(result.exitCode).toBe(1);
+        expect(result.stdout).toContain('Refused, so nothing was written');
+        expect(result.stdout).toContain('No server owner has Discord id 9999, named for Notes by "alice": that account must sign in to the platform first.');
+        expect(dump()).toBe(before);
+      }
+    });
+  });
+
+  test('--databases and --game-server go together, and each old username has one author', () => {
+    scenario({}, ({ rulesetsAndNotes }) => {
+      for (const [extra, message] of [
+        [['--databases', '.'], '--databases and --game-server go together'],
+        [['--game-server', 'Duel NA'], '--databases and --game-server go together'],
+        [['--note-author', 'alice'], '--note-author alice: use <old username>=<Discord id>'],
+        [['--note-author', '=1002'], '--note-author =1002: use <old username>=<Discord id>'],
+        [['--note-author', 'alice=x'], '--note-author alice=x: use <old username>=<Discord id>'],
+        [['--note-author', 'chris=1002'], '--note-author chris=1002: "chris" has an author already'],
+        [['--note-author', 'alice=1002', '--note-author', 'alice=1001'], '--note-author alice=1001: "alice" has an author already'],
+      ] as const) {
+        const result = rulesetsAndNotes(...extra);
+        expect(result.exitCode).toBe(2);
+        expect(result.stderr).toContain(message);
+      }
     });
   });
 
