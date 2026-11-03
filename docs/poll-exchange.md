@@ -2,8 +2,8 @@
 
 Status: the platform side is built (online-platform#26, the Supported build
 in #27, Regenerate key, Delete and the shared-key warning in #28, Apply's
-delivery in #32, and Confirmed, Failed and the re-delivery rules in #33). The
-mod builds its poll loop against this page
+delivery in #32, Confirmed, Failed and the re-delivery rules in #33, and
+Blocked in #44). The mod builds its poll loop against this page
 ([#29](../.scratch/online-platform/issues/29-mod-polls-the-platform.md)), and
 processes and reports deliveries against it
 ([#34](../.scratch/online-platform/issues/34-mod-processes-live-configuration.md)).
@@ -86,8 +86,8 @@ Every response is a JSON object whose `answer` the mod switches on, with
 
 | Status | `answer` | When | Other fields | The mod then |
 |---|---|---|---|---|
-| `200` | `live-configuration` | On the Supported build only. At once, never held: the game server has a Live configuration, and its id is not the reported `processed.liveConfigurationId` (another id, one the platform does not know, or no `processed`). Or, while the poll is held, an Apply makes a new Live configuration. Never before the game server's first Apply. | `liveConfigurationId`, `commands` (below) | processes it, then polls at once with `processed` |
-| `200` | `no-change` | The hold (50 s) ended with nothing to deliver, and `buildStamp` is the Supported build. | none | polls again at once |
+| `200` | `live-configuration` | On the Supported build only. At once, never held: the game server has a Live configuration that is not Blocked, and its id is not the reported `processed.liveConfigurationId` (another id, one the platform does not know, or no `processed`). Or, while the poll is held, an Apply makes a new Live configuration. Never before the game server's first Apply. | `liveConfigurationId`, `commands` (below) | processes it, then polls at once with `processed` |
+| `200` | `no-change` | The hold (50 s) ended with nothing to deliver (a Blocked Live configuration is never delivered), and `buildStamp` is the Supported build. | none | polls again at once |
 | `200` | `not-supported-build` | The hold (50 s) ended, and `buildStamp` is not the Supported build: another stamp, `""`, or no Supported build is set. Nothing is ever delivered to it. | none | polls again at once |
 | `200` | `superseded` | A newer poll with the same key arrived while this one was held. | none | waits about 10 s, then polls |
 | `401` | `key-rejected` | The `Authorization` header is missing or not `Bearer <key>`, or the key is unknown: never registered, regenerated, or its game server deleted. Also a held poll, at once, when Regenerate key or Delete ends its key. | none | logs once, then retries every 60 s |
@@ -151,6 +151,15 @@ When it is sent (the re-delivery rules):
 - Never to a game server that has no Live configuration yet (before its
   first Apply): its polls get `no-change`, so the first poll from a server
   that already runs EZConfig never wipes the values it has.
+- Never while it is Blocked: the current schema refuses a value in it that
+  the schema has a place for, as a deploy that tightens a key (a whole number
+  where a fraction was allowed, a smaller range) can leave a stored one. It
+  is never sent in part either, since the wipe would put a dropped value at
+  its game default. A poll that would get it is held and answered
+  `no-change`, as if there were nothing to send, so the mod keeps the values
+  it has and polls once per hold. An Apply of the fixed Draft wakes the held
+  poll with the new Live configuration: Apply refuses a Draft the schema
+  refuses.
 - A game server that is not Connected when an Apply happens gets it at its
   next poll; nothing expires. A newer Apply replaces the Live configuration,
   so the newest one is delivered.
@@ -161,9 +170,9 @@ not JSON, or an `answer` the mod does not know.
 
 ## Reporting: Confirmed, Failed and Pending
 
-The owner sees the Live configuration as Pending, Confirmed or Failed. The
-platform computes it from the game server's last reported `processed` when
-asked, and never stores it:
+The owner sees the Live configuration as Pending, Blocked, Confirmed or
+Failed. The platform computes it from the game server's last reported
+`processed` and the current schema when asked, and never stores it:
 
 - **Confirmed**: `processed.liveConfigurationId` is the Live configuration's
   and `result.success` is true. Keys in `result.unknownKeys` show as a warning
@@ -173,6 +182,13 @@ asked, and never stores it:
   `failure.database` when it is a weapon class, or the wipe when both are
   `""`), shows `failure.error`, and says the game server runs only the
   categories before it.
+- **Blocked**: it would be Pending, and the current schema refuses a value in
+  it, so it cannot be sent (above). The page names each value (Character or
+  the weapon class, the category, the key and the schema's error), and says
+  to fix them in the Draft and Apply. Confirmed and Failed stay as reported
+  when the schema now refuses a value, since they say what the game server
+  runs. Such a configuration becomes Blocked only when it has to be sent
+  again, as after a build change.
 - **Pending**: anything else, including an id the platform does not know,
   an earlier Apply's id, or no `processed`.
 - None before the first Apply.
@@ -235,9 +251,10 @@ Confirmed or Failed; repeating it changes nothing.
   key, while the shared-key warning above is tripped.
 - The Live configuration's state, as its own indicator beside the connection
   status, on the server list and the server page, so "Failed, and now Not
-  connected" shows both: Pending with how long since the Apply, Confirmed with
-  when, or Failed with when; none before the first Apply. The server page adds
-  the ignored keys and the Failed detail.
+  connected" shows both: Pending with how long since the Apply, Blocked,
+  Confirmed with when, or Failed with when; none before the first Apply. The
+  server page adds the ignored keys, the Failed detail and the values a
+  Blocked one holds that the schema refuses.
 - The last build stamp and the last `processed` id and result, as reported.
 
 ## Recorded and logged
@@ -263,6 +280,10 @@ Confirmed or Failed; repeating it changes nothing.
     `liveConfigurationId`), for each delivery, at once or from a held poll.
     The Apply that made it is logged as `live-configuration.applied`, with the
     server owner's `userId` as well. Neither logs any value.
+  - `live-configuration.blocked` (warning, with `gameServerId` and
+    `liveConfigurationId`), the first time since the platform started that a
+    poll on the Supported build finds that Live configuration Blocked. A
+    restart logs it once more. No key name, category or value is logged.
   - each reported result once, when a poll reports a `processed` id or result
     that differs from the last one recorded, with `gameServerId` and the
     reported `liveConfigurationId`, known or not, when it has the form the
