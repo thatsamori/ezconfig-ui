@@ -1,97 +1,95 @@
+// All five geometry dimensions after the real parry-geometry startup migration, through the editor
+// and Apply, on the feature review harness. The startup check stays with that migration (online-platform#41).
 import { mock } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, resolve, sep } from 'node:path';
-import { successfulProcessingFixture } from './acknowledged-transport';
+import { writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
+import type { ConfigValue } from '../../src/lib/database/types';
+import { categoryCommands, categoryEntries, featureReview, WIPE } from './feature-review-harness';
 
-const root = await mkdtemp(join(tmpdir(), 'ezconfig-geometry-combined-'));
-process.env.DATABASES_PATH = join(root, 'Databases');
-process.env.PRESETS_PATH = join(root, 'Presets');
-const sent: string[][] = [];
-const automatic: string[][] = [];
-mock.module('../../src/lib/rcon/service', () => ({ executeAcknowledgedBatchAt: async (_target: unknown, commands: string[]) => { automatic.push([...commands]); return successfulProcessingFixture(commands); }, executeAcknowledgedBatch: async (commands: string[]) => { sent.push([...commands]); return successfulProcessingFixture(commands); } }));
+// The automatic sync's listener is mocked; what it delivers goes to the harness's mocked RCON.
 mock.module('../../src/lib/rcon/sync-listener', () => ({ connectSyncListener: async () => { let close!: () => void; const closed = new Promise<void>(resolve => { close = resolve; }); return { closed, close: async () => close() }; } }));
 const probe = createServer();
 await new Promise<void>(resolve => probe.listen(0, '127.0.0.1', resolve));
 const ownershipPort = (probe.address() as { port: number }).port;
 await new Promise<void>(resolve => probe.close(() => resolve()));
-let stop: (() => Promise<void>) | undefined;
-const originalFetch = globalThis.fetch;
-const request = (body: unknown) => new Request('http://localhost/api', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-try {
+
+/** Every value a batch sends as category/key/value, so batches compare regardless of order. */
+const contents = (batch: string[]) => categoryCommands(batch).flatMap(command => {
+  const [database, category] = command.split(' ').slice(2, 4);
+  return Object.entries(categoryEntries(batch, database, category)!).map(([key, value]) => `${database}/${category}/${key}/${value}`);
+}).sort();
+const geometry: Record<string, string[]> = { Parry: ['ForwardParryLength', 'ForwardParryHalfWidth'], Movement: ['EllipseBubbleRadius', 'EllipseBubbleLength', 'EllipseBubbleMaxHeightDiff'] };
+/** The geometry dimensions a batch sends, by key. */
+const dimensions = (batch: string[]) => Object.fromEntries(Object.entries(geometry).flatMap(([category, keys]) =>
+  Object.entries(categoryEntries(batch, 'Character', category) ?? {}).filter(([key]) => keys.includes(key))));
+
+await featureReview('geometry-combined', async ({ set, reset, saved, storeUnvalidated, apply, synced }) => {
   const { PARRY_TRANSFORM_KEYS } = await import('../../src/lib/migrations/parry-geometry');
   const { registerServerStartup } = await import('../../src/lib/server-startup');
-  const character = join(process.env.DATABASES_PATH, 'Character');
-  await mkdir(character, { recursive: true });
-  // Representative valid legacy transform payloads for category/lifecycle proof.
+  const { stopRegisteredAutomaticSync } = await import('../../src/lib/rcon/automatic-sync-bootstrap');
+  // Representative valid legacy transform payloads, saved in Combat as the older schema did.
   const transforms = Object.fromEntries(PARRY_TRANSFORM_KEYS.map(key => [key, key.endsWith('Scale') ? { x: 1, y: 1, z: 1 } : { x: 0, y: 0, z: 0 }]));
-  const parry: Record<string, unknown> = { ForwardParryLength: 50, ForwardParryHalfWidth: 100, ParryUpTime: 2, TrueCombo: false, ExperimentalParry: false, [PARRY_TRANSFORM_KEYS[0]]: { x: 0, y: 0, z: 0 } };
+  const parry: Record<string, ConfigValue> = { ForwardParryLength: 50, ForwardParryHalfWidth: 100, ParryUpTime: 2, TrueCombo: false, ExperimentalParry: false, [PARRY_TRANSFORM_KEYS[0]]: { x: 0, y: 0, z: 0 } };
   const movement: Record<string, number> = { EllipseBubbleRadius: 220, EllipseBubbleLength: 200, EllipseBubbleMaxHeightDiff: 150, MaxWalkSpeedCrouched: 80, MaxWalkSpeedCrouchedWithRatPerk: 160 };
-  await writeFile(join(character, 'Combat.json'), JSON.stringify({ ...transforms, CanJumpKick: true }));
-  await writeFile(join(character, 'Parry.json'), JSON.stringify(parry));
-  await writeFile(join(character, 'Movement.json'), JSON.stringify(movement));
-  await writeFile(join(character, 'DebugTools.json'), JSON.stringify({ AllowVisualizeBlockCollider: false }));
-  stop = (await import('../../src/lib/rcon/automatic-sync-bootstrap')).stopRegisteredAutomaticSync;
-  await registerServerStartup({ NEXT_RUNTIME: 'nodejs', RCON_AUTO_SYNC_ENABLED: 'true', DATABASES_PATH: process.env.DATABASES_PATH, PRESETS_PATH: process.env.PRESETS_PATH, RCON_HOST: '127.0.0.1', RCON_PORT: '17947', RCON_PASSWORD: 'isolated-placeholder', RCON_AUTO_SYNC_OWNER_PORT: String(ownershipPort) });
-  const deadline = Date.now() + 2000;
-  while (!automatic.length) { assert(Date.now() < deadline); await Bun.sleep(5); }
-  assert.equal(automatic.length, 1);
-  assert.equal(automatic[0][0], 'string ezconfig WipeDatabases');
-  assert.deepEqual(JSON.parse(await readFile(join(character, 'Combat.json'), 'utf8')), { CanJumpKick: true });
-  const { POST: save } = await import('../../src/app/api/config/[...path]/route');
-  const { GET: preview } = await import('../../src/app/api/apply/preview/route');
-  const { POST: apply } = await import('../../src/app/api/apply/route');
-  const { reviewRows, selectedReviewCommands } = await import('../../src/components/console/model');
-  const { useConfigStore, flushConfigWrites } = await import('../../src/lib/store/configStore');
-  globalThis.fetch = (async (url: string, init: RequestInit) => save(new Request('http://localhost' + url, init) as never, { params: Promise.resolve({ path: url.slice('/api/config/'.length).split('/') }) })) as unknown as typeof fetch;
-  const captures: { name: string; commands: string[] }[] = [];
-  async function capture(name: string, selected?: string[]) {
-    await flushConfigWrites();
-    const response = await preview(); assert.equal(response.status, 200);
-    const rows = reviewRows((await response.json()).commands);
-    const keys = rows.filter(row => !selected || selected.includes(row.key));
-    const commands = selectedReviewCommands(rows, new Set(keys.map(row => row.id)));
-    assert.equal((await apply(request({ commands, wipeDatabase: !selected }))).status, 200);
-    captures.push({ name, commands: sent.at(-1)! });
-    return rows;
-  }
-  const rows = await capture('migrated-all');
-  const contents = (commands: string[]) => reviewRows(commands.slice(1)).map(row => `${row.category}/${row.key}/${row.value}`).sort();
-  assert.deepEqual(contents(captures[0].commands), contents(automatic[0]), 'manual saved review and real migrated startup snapshot agree regardless of key order');
-  captures.unshift({ name: 'automatic-migrated-startup', commands: automatic[0] });
-  assert.equal(rows.filter(row => PARRY_TRANSFORM_KEYS.includes(row.key as never) && row.category === 'Parry').length, 6);
-  const geometry = ['ForwardParryLength', 'ForwardParryHalfWidth', 'EllipseBubbleRadius', 'EllipseBubbleLength', 'EllipseBubbleMaxHeightDiff'];
-  assert.equal(rows.filter(row => geometry.includes(row.key)).length, 5);
-  // Load the actual canonical saved state before exercising the store's edit path.
-  const store = useConfigStore.getState();
-  for (const [key, value] of Object.entries({ ...transforms, ...parry })) store.setValue('Character', 'Parry', key, value as never);
-  for (const [key, value] of Object.entries(movement)) store.setValue('Character', 'Movement', key, value);
-  store.setValue('Character', 'Parry', 'ForwardParryLength', 0);
-  store.setValue('Character', 'Parry', 'ForwardParryHalfWidth', 0);
-  store.setValue('Character', 'Movement', 'EllipseBubbleRadius', 60);
-  store.setValue('Character', 'Movement', 'EllipseBubbleLength', 0);
-  store.setValue('Character', 'Movement', 'EllipseBubbleMaxHeightDiff', 0);
-  await capture('selected-all-five-update', geometry);
-  await capture('updated-all');
-  store.removeValue('Character', 'Parry', 'ForwardParryHalfWidth');
-  store.removeValue('Character', 'Movement', 'EllipseBubbleLength');
-  await capture('remove-width-and-length');
-  store.setValue('Character', 'Parry', 'ForwardParryHalfWidth', 100);
-  store.setValue('Character', 'Parry', 'ForwardParryLength', 50);
-  for (const [key, value] of Object.entries(movement)) store.setValue('Character', 'Movement', key, value);
-  await capture('reapply-all');
-  store.setValue('Character', 'Movement', 'EllipseBubbleRadius', 500);
-  await capture('horse-large');
-  assert.equal((await apply(request({ commands: [], wipeDatabase: true }))).status, 200);
-  captures.push({ name: 'wipe', commands: sent.at(-1)! });
-  if (process.env.EZ_GEOMETRY_COMBINED_CAPTURE) await writeFile(process.env.EZ_GEOMETRY_COMBINED_CAPTURE, JSON.stringify({ boundary: 'Actual startup migration/runtime/snapshot, saved store edits, review/selection and acknowledged apply; external listener/transport mocked', originalCombat: transforms, startup: automatic[0], captures }, null, 2));
-  console.log('PASS combined migration/save/review/apply, all five dimensions, partial removal and wipe');
-} finally {
-  globalThis.fetch = originalFetch;
-  await stop?.();
-  const target = resolve(root); assert(target.startsWith(resolve(tmpdir()) + sep) && target.split(sep).at(-1)?.startsWith('ezconfig-geometry-combined-'));
-  await rm(target, { recursive: true, force: true });
-}
+  await storeUnvalidated('Character', 'Combat', { ...transforms, CanJumpKick: true });
+  await storeUnvalidated('Character', 'Parry', parry);
+  await storeUnvalidated('Character', 'Movement', movement);
+  await storeUnvalidated('Character', 'DebugTools', { AllowVisualizeBlockCollider: false });
+  try {
+    await registerServerStartup({ NEXT_RUNTIME: 'nodejs', RCON_AUTO_SYNC_ENABLED: 'true', DATABASES_PATH: process.env.DATABASES_PATH, PRESETS_PATH: process.env.PRESETS_PATH, RCON_HOST: '127.0.0.1', RCON_PORT: '17947', RCON_PASSWORD: 'isolated-placeholder', RCON_AUTO_SYNC_OWNER_PORT: String(ownershipPort) });
+    const deadline = Date.now() + 2000;
+    while (!synced().length) { assert(Date.now() < deadline, 'the startup sync delivers its snapshot'); await Bun.sleep(5); }
+    const [startup, ...later] = synced();
+    assert.deepEqual(later, []);
+    assert.equal(startup[0], WIPE);
+    for (const key of PARRY_TRANSFORM_KEYS) {
+      assert.equal(await saved('Character', 'Combat', key), undefined);
+      assert.deepEqual(await saved('Character', 'Parry', key), transforms[key]);
+    }
+    assert.equal(await saved('Character', 'Combat', 'CanJumpKick'), true);
 
+    const captures = [{ name: 'automatic-migrated-startup', commands: startup }];
+    const capture = async (name: string) => {
+      const commands = await apply(name);
+      captures.push({ name, commands });
+      return commands;
+    };
+    const migrated = await capture('migrated-all');
+    assert.deepEqual(contents(migrated), contents(startup), 'manual Apply and real migrated startup snapshot agree regardless of key order');
+    assert.deepEqual(categoryEntries(migrated, 'Character', 'Combat'), { CanJumpKick: 'True' });
+    const parrySent = categoryEntries(migrated, 'Character', 'Parry')!;
+    assert.equal(PARRY_TRANSFORM_KEYS.filter(key => Object.hasOwn(parrySent, key)).length, 6);
+    assert.deepEqual(dimensions(migrated), { ForwardParryLength: '50', ForwardParryHalfWidth: '100', EllipseBubbleRadius: '220', EllipseBubbleLength: '200', EllipseBubbleMaxHeightDiff: '150' });
+    // Load the actual canonical saved state through the editor before exercising its edits.
+    for (const [key, value] of Object.entries({ ...transforms, ...parry })) set('Character', 'Parry', key, value);
+    for (const [key, value] of Object.entries(movement)) set('Character', 'Movement', key, value);
+    set('Character', 'Parry', 'ForwardParryLength', 0);
+    set('Character', 'Parry', 'ForwardParryHalfWidth', 0);
+    set('Character', 'Movement', 'EllipseBubbleRadius', 60);
+    set('Character', 'Movement', 'EllipseBubbleLength', 0);
+    set('Character', 'Movement', 'EllipseBubbleMaxHeightDiff', 0);
+    assert.deepEqual(dimensions(await capture('updated-all')),
+      { ForwardParryLength: '0', ForwardParryHalfWidth: '0', EllipseBubbleRadius: '60', EllipseBubbleLength: '0', EllipseBubbleMaxHeightDiff: '0' });
+    reset('Character', 'Parry', 'ForwardParryHalfWidth');
+    reset('Character', 'Movement', 'EllipseBubbleLength');
+    assert.deepEqual(dimensions(await capture('remove-width-and-length')),
+      { ForwardParryLength: '0', EllipseBubbleRadius: '60', EllipseBubbleMaxHeightDiff: '0' });
+    set('Character', 'Parry', 'ForwardParryHalfWidth', 100);
+    set('Character', 'Parry', 'ForwardParryLength', 50);
+    for (const [key, value] of Object.entries(movement)) set('Character', 'Movement', key, value);
+    assert.deepEqual(contents(await capture('reapply-all')), contents(migrated), 'the original values restore the migrated configuration');
+    set('Character', 'Movement', 'EllipseBubbleRadius', 500);
+    assert.deepEqual(dimensions(await capture('horse-large')), { ...dimensions(migrated), EllipseBubbleRadius: '500' });
+    // Every saved key back at its game default: Apply delivers the wipe alone.
+    for (const key of Object.keys({ ...transforms, ...parry })) reset('Character', 'Parry', key);
+    for (const key of Object.keys(movement)) reset('Character', 'Movement', key);
+    reset('Character', 'Combat', 'CanJumpKick');
+    reset('Character', 'DebugTools', 'AllowVisualizeBlockCollider');
+    assert.deepEqual(await capture('wipe'), [WIPE]);
+    if (process.env.EZ_GEOMETRY_COMBINED_CAPTURE) await writeFile(process.env.EZ_GEOMETRY_COMBINED_CAPTURE, JSON.stringify({ boundary: 'Actual startup migration/runtime/snapshot, saved editor edits and Apply of the whole configuration after a wipe; external listener/transport mocked', originalCombat: transforms, startup, captures }, null, 2));
+  } finally {
+    await stopRegisteredAutomaticSync();
+  }
+});
+console.log('PASS combined migration/save/Apply, all five dimensions, partial removal and wipe');
