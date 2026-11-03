@@ -1,0 +1,52 @@
+# /etc/caddy/Caddyfile on the platform instance, installed by provision.sh.
+# PUBLIC_HOSTNAME, PLATFORM_HOSTNAME and ACME_EMAIL come from
+# /etc/ezconfig-platform/caddy.env, which the caddy.service drop-in loads
+# (caddy.service.conf). Both hostnames reach the same app:
+# - PUBLIC_HOSTNAME is the host of the app's PUBLIC_URL, where people sign in;
+# - PLATFORM_HOSTNAME is the URL built into the mod, which game servers poll.
+#
+# Caddy gets and renews a Let's Encrypt certificate for each hostname and
+# redirects HTTP to HTTPS by itself. It writes no access log: no site has a
+# `log` directive, so only Caddy's own messages reach the journal.
+{
+	email {$ACME_EMAIL}
+	# Its errors for a request (the app down, say) keep the method, host and
+	# status, without who sent it: the platform's logs hold no IP addresses or
+	# secrets, and a URI can carry a sign-in code.
+	log default {
+		format filter {
+			request>remote_ip delete
+			request>remote_port delete
+			request>client_ip delete
+			request>headers delete
+			request>uri delete
+		}
+	}
+	servers {
+		# Polls are held for 50 s (the proof route, 120 s), so a response may be
+		# written long after its request; the game's HTTP client gives up at 180 s.
+		timeouts {
+			read_header 10s
+			read_body 30s
+			write 180s
+			idle 5m
+		}
+	}
+}
+
+{$PUBLIC_HOSTNAME}, {$PLATFORM_HOSTNAME} {
+	header Strict-Transport-Security "max-age=31536000"
+
+	# Instance-only routes, such as Litestream's heartbeat. The app refuses them
+	# from outside too.
+	@internal path /internal /internal/*
+	respond @internal 403
+
+	reverse_proxy 127.0.0.1:3000 {
+		transport http {
+			response_header_timeout 180s
+			read_timeout 180s
+			write_timeout 180s
+		}
+	}
+}
