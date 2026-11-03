@@ -46,7 +46,7 @@ export interface FeatureReview {
   /** The saved value once the editor's saves finish; undefined at the game default. */
   saved(database: string, category: string, key: string): Promise<ConfigValue | undefined>;
   /** The value the editor shows, which an edit it refuses leaves as it was; undefined at the game default. */
-  editorValue(database: string, category: string, key: string): ConfigValue | undefined;
+  editorValue(database: string, category: string, key: string): ConfigValue | null | undefined;
   /** Send a save past the editor's own checks, as a hand-made request could; resolves to its status. */
   saveUnchecked(database: string, category: string, entries: Record<string, unknown>): Promise<number>;
   /** Store values without validation, as an older schema could have saved them. */
