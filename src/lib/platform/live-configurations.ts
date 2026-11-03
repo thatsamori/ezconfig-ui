@@ -24,7 +24,10 @@
  *   reports none.
  * - Its state (Pending, Confirmed or Failed) is computed from the game
  *   server's last report, never stored.
- * - Discard changes resets the Draft to the Live configuration.
+ * - Discard changes resets the Draft to the Live configuration, origin
+ *   included.
+ * - Apply copies the Draft's origin (a Ruleset version, or none) with its
+ *   values. The page shows each origin and whether it is modified (origins.ts).
  *
  * Nothing here logs: the routes log Apply and each delivery, by id only.
  */
@@ -35,6 +38,7 @@ import { documentErrors, documentFields, type DocumentField, type FieldError, ty
 import type { ConfigValue } from '@/lib/database/types';
 import { discardDraft, readDraft, type Draft, type DraftWrite } from './drafts';
 import type { GameServer, GameServerView } from './game-servers';
+import { originOf } from './origins';
 import type { ProcessingResult, UnknownKey } from './poll-exchange';
 import { answerHeldPoll, type PollAnswer } from './polls';
 import { platformStore } from './storage';
@@ -45,6 +49,8 @@ export interface LiveConfiguration {
   id: string;
   document: ValuesDocument;
   appliedAt: number;
+  /** The Draft's origin when it was applied: a Ruleset version's id, or null for none. */
+  originId: number | null;
 }
 
 /** One value an Apply changes. `live` is absent for a key the Draft adds; `draft` for a key it resets to game default. */
@@ -79,11 +85,11 @@ export type ApplyResult =
   | { ok: false; reason: 'stale'; review: ApplyReview }
   | { ok: false; reason: 'invalid'; errors: FieldError[] };
 
-type Row = { game_server_id: number; id: string; overrides: string; applied_at: number };
-const liveConfiguration = (row: Row): LiveConfiguration => ({ gameServerId: row.game_server_id, id: row.id, document: JSON.parse(row.overrides), appliedAt: row.applied_at });
+type Row = { game_server_id: number; id: string; overrides: string; applied_at: number; origin_id: number | null };
+const liveConfiguration = (row: Row): LiveConfiguration => ({ gameServerId: row.game_server_id, id: row.id, document: JSON.parse(row.overrides), appliedAt: row.applied_at, originId: row.origin_id });
 
 export function readLiveConfiguration(gameServerId: number): LiveConfiguration | undefined {
-  const row = platformStore().get<Row>('SELECT game_server_id, id, overrides, applied_at FROM live_configurations WHERE game_server_id = ?', gameServerId);
+  const row = platformStore().get<Row>('SELECT game_server_id, id, overrides, applied_at, origin_id FROM live_configurations WHERE game_server_id = ?', gameServerId);
   return row && liveConfiguration(row);
 }
 
@@ -156,14 +162,17 @@ export function liveConfigurationState(liveConfigurationId: string, server: Pick
  * What the game server's page shows: the Live configuration with its state
  * (null before the first Apply), and whether the Draft has Unapplied changes:
  * it differs from the Live configuration, or, before the first Apply, sets
- * any value.
+ * any value. Also each one's origin, and whether it is modified from it.
  */
-export function liveConfigurationView(server: GameServer): Pick<GameServerView, 'liveConfiguration' | 'unappliedChanges'> {
+export function liveConfigurationView(server: GameServer): Pick<GameServerView, 'liveConfiguration' | 'unappliedChanges' | 'draftOrigin' | 'liveOrigin'> {
   const live = readLiveConfiguration(server.id);
-  const { added, changed, reset } = valueChanges(readDraft(server.id)?.document ?? {}, live?.document ?? {});
+  const draft = readDraft(server.id);
+  const { added, changed, reset } = valueChanges(draft?.document ?? {}, live?.document ?? {});
   return {
     liveConfiguration: live ? { id: live.id, appliedAt: live.appliedAt, ...liveConfigurationState(live.id, server) } : null,
     unappliedChanges: added.length + changed.length + reset.length > 0,
+    draftOrigin: draft ? originOf(draft.originId, draft.document) : null,
+    liveOrigin: live ? originOf(live.originId, live.document) : null,
   };
 }
 
@@ -183,9 +192,9 @@ export function applyDraft(gameServerId: number, base: { revision: number; liveC
     if (draft.revision !== base.revision || (current?.id ?? null) !== base.liveConfigurationId) return { ok: false, reason: 'stale', review: review(draft, current) };
     const errors = applyErrors(draft.document);
     if (errors.length) return { ok: false, reason: 'invalid', errors };
-    const applied: LiveConfiguration = { gameServerId, id: randomUUID(), document: draft.document, appliedAt: now };
+    const applied: LiveConfiguration = { gameServerId, id: randomUUID(), document: draft.document, appliedAt: now, originId: draft.originId };
     store.run('DELETE FROM live_configurations WHERE game_server_id = ?', gameServerId);
-    store.run('INSERT INTO live_configurations (game_server_id, id, overrides, applied_at) VALUES (?, ?, ?, ?)', gameServerId, applied.id, JSON.stringify(applied.document), now);
+    store.run('INSERT INTO live_configurations (game_server_id, id, overrides, applied_at, origin_id) VALUES (?, ?, ?, ?, ?)', gameServerId, applied.id, JSON.stringify(applied.document), now, applied.originId);
     return { ok: true, liveConfiguration: applied };
   });
   // Only once it is committed: a game server waiting in its held poll gets it within one round trip.
@@ -210,11 +219,11 @@ export function pendingDelivery(gameServerId: number, processedId: string | null
 }
 
 /**
- * Discard changes: the Draft becomes the Live configuration's values, if it is
- * still at `baseRevision`. Undefined when the game server has no Draft, or no
- * Live configuration to discard to.
+ * Discard changes: the Draft becomes the Live configuration's values and
+ * origin, if it is still at `baseRevision`. Undefined when the game server has
+ * no Draft, or no Live configuration to discard to.
  */
 export function discardChanges(gameServerId: number, baseRevision: number, now = Date.now()): DraftWrite | undefined {
   const live = readLiveConfiguration(gameServerId);
-  return live && discardDraft(gameServerId, baseRevision, live.document, now);
+  return live && discardDraft(gameServerId, baseRevision, live, now);
 }

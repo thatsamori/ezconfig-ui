@@ -400,19 +400,8 @@ input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-app
 .standalone-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
 .standalone-heading > div:first-child { flex: 1; }
 .preset-section-title { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #9a9ba1; font-weight: 500; }
-.preset-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 12px; }
-.preset-card { min-height: 160px; border-radius: 14px; padding: 18px; gap: 16px; border-color: rgba(255,255,255,.06); box-shadow: none; }
-.preset-card [data-slot=card-header], .preset-card [data-slot=card-content] { padding: 0; }
-.preset-card [data-slot=card-title] { display: flex; align-items: center; gap: 10px; font-size: 14.5px; font-weight: 600; }
-.preset-card [data-slot=card-description] { font-size: 13px; margin-top: 4px; }
 .preset-icon { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; color: #06120b; background: linear-gradient(135deg,#5fcf8c,#3a9c63); }
-.presets-page > div:last-child .preset-icon { color: #9a9ba1; background: #26272b; }
 .preset-meta { color: #6b6c72; font-size: 12px; margin-top: 6px; }
-.preset-card [data-slot=card-content] { margin-top: auto; }
-.preset-card button { height: 32px; border-radius: 8px; font-size: 12px; }
-.preset-card .preset-load { background: #f2f2f3; color: #0f1012; font-weight: 600; }
-.preset-card .preset-delete { color: #e5484d; margin-left: auto; }
-.preset-card .preset-delete:hover { background: rgba(229,72,77,.1); }
 .users-page { max-width: 896px; }
 .user-list { display: flex; flex-direction: column; gap: 10px; }
 .user-row { display: flex; align-items: center; gap: 12px; background: #16171a; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 14px 18px; }
@@ -433,7 +422,7 @@ input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-app
 body { -webkit-font-smoothing: antialiased; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: #26272b; border-radius: 99px; border: 2px solid #0f1012; }
-@media (max-width: 900px) { .standalone-heading { flex-wrap: wrap; } .standalone-heading .preset-page-heading { flex-basis: 100%; } .user-row { flex-wrap: wrap; } }
+@media (max-width: 900px) { .standalone-heading { flex-wrap: wrap; } .user-row { flex-wrap: wrap; } }
 /* Tailwind 4 uses individual translate properties in addition to transform. */
 [data-slot=dialog-content].console-sheet, [data-slot=switch-thumb] { translate: none; }
 .sweep-row [data-slot=checkbox]:disabled { border: 1px dashed rgba(224,168,60,.6); opacity: 1; }
@@ -531,6 +520,43 @@ body { -webkit-font-smoothing: antialiased; }
 .draft-entry .live-failed p, .draft-entry .live-ignored p { color: #d4d4d8; margin-top: 4px; }
 .draft-entry .live-failed .live-error { color: #f2f2f3; font-family: var(--font-mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .live-ignored ul { margin-top: 4px; color: #d4d4d8; max-height: 9em; overflow-y: auto; overflow-wrap: anywhere; }
+.draft-entry .origin-state { color: #9a9ba1; margin-top: 4px; }
+.draft-entry .live-failed + .origin-state, .draft-entry .live-ignored + .origin-state { margin-top: 10px; }
+.origin-label strong { color: #d4d4d8; font-weight: 600; }
+.modified-tag, .unmodified-tag { margin-left: 8px; font-size: 12px; font-weight: 500; }
+.modified-tag { color: #e0a83c; }
+.unmodified-tag { color: #6b6c72; }
+.bar-origin { display: flex; gap: 4px; font-size: 12.5px; }
+/* In the narrow bar the name gives way first, so Modified stays readable */
+.bar-origin .origin-label { display: flex; min-width: 0; }
+.bar-origin .origin-name { overflow: hidden; text-overflow: ellipsis; }
+.bar-origin .modified-tag, .bar-origin .unmodified-tag { flex-shrink: 0; }
+.ruleset-list { display: grid; gap: 12px; max-width: 720px; }
+.ruleset-card { background: #16171a; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 14px 18px; }
+.ruleset-card-heading { display: flex; align-items: center; gap: 12px; }
+.ruleset-card-heading h2 { font-size: 14.5px; font-weight: 600; }
+.ruleset-card-heading .preset-meta { margin-top: 2px; }
+.ruleset-actions { display: flex; gap: 8px; margin-left: auto; }
+.ruleset-actions button { height: 32px; font-size: 12px; }
+.ruleset-version-list { margin-top: 12px; border-top: 1px solid rgba(255,255,255,.06); }
+.ruleset-version-list li { display: flex; align-items: baseline; gap: 12px; padding: 8px 0; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,.04); }
+.ruleset-version-list li:last-child { border-bottom: 0; }
+.ruleset-version-list strong { font-weight: 600; white-space: nowrap; }
+.ruleset-version-description { color: #d4d4d8; flex: 1; min-width: 0; overflow-wrap: anywhere; white-space: pre-line; }
+.ruleset-version-description.none { color: #6b6c72; }
+.ruleset-version-list time { color: #6b6c72; font-size: 12px; white-space: nowrap; }
+.ruleset-dialog form { display: grid; gap: 14px; }
+.ruleset-choices { display: grid; gap: 8px; min-width: 0; }
+.ruleset-versions { max-height: 50vh; overflow-y: auto; gap: 14px; }
+.ruleset-group { display: grid; gap: 6px; }
+.ruleset-group h4 { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #9a9ba1; font-weight: 500; }
+.ruleset-choice { display: flex; align-items: baseline; gap: 10px; font-size: 13px; cursor: pointer; }
+.ruleset-choice input { accent-color: #5fcf8c; }
+.ruleset-choice small { color: #6b6c72; font-size: 12px; }
+.ruleset-description { display: grid; gap: 6px; font-size: 13px; }
+.ruleset-description small { color: #6b6c72; }
+.dialog-error { color: #e5484d; font-size: 12.5px; }
+@media (max-width: 560px) { .ruleset-card-heading { flex-wrap: wrap; } .ruleset-actions { margin-left: 0; width: 100%; } .ruleset-version-list li { flex-wrap: wrap; } }
 .draft-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .apply-review[data-slot=dialog-content] { max-width: min(640px, calc(100% - 2rem)); }
 .apply-review code { font-family: var(--font-mono); font-size: 12px; background: #26272b; border-radius: 5px; padding: 1px 5px; }

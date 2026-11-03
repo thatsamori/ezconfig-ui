@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent, type ReactNode, type RefObject } from
 import { ArrowLeft, Check, CircleX, Copy, Server, Trash2, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { relativeTime } from '@/components/console/model';
+import { OriginLabel } from '@/components/rulesets';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
@@ -31,7 +32,8 @@ GameServerKey=${gameServerKey}`;
  * Draft in the editor; `initialOpenId` opens on a game server's page. The
  * list and the page show the Live configuration's state (Pending, Confirmed
  * or Failed) apart from the connection status; the page also shows Unapplied
- * changes, and Applies the Draft after a review, or discards its changes.
+ * changes, each one's origin and whether it is modified from it, and Applies
+ * the Draft after a review, or discards its changes.
  */
 export function GameServersTab({ initialOpenId, onEditDraft }: { initialOpenId?: number; onEditDraft?: (server: { id: number; name: string }) => void } = {}) {
   const [openId, setOpenId] = useState<number | null>(initialOpenId ?? null);
@@ -175,7 +177,8 @@ async function loadReview(id: number): Promise<ApplyReview | undefined> {
 
 /**
  * The Draft beside the Live configuration: none yet, or its state; Unapplied
- * changes; Edit Draft, Discard changes and Apply. Apply
+ * changes; each one's origin, modified or not; Edit Draft, Discard changes and
+ * Apply. Apply
  * opens the review first, and is disabled, saying why, unless the game server
  * is Connected and on the Supported build.
  */
@@ -209,6 +212,7 @@ function DraftSection({ server, onEditDraft, onChanged }: { server: GameServerVi
       <h3>Draft{server.unappliedChanges && <span className="unapplied-tag">Unapplied changes</span>}</h3>
       <p>Edit Character and Weapon config here. The Draft saves as you edit; nothing reaches the game server until you Apply.</p>
       {live ? <LiveConfigurationState live={live} /> : <p className="live-state">Live configuration: <strong>none yet</strong>. The game server runs its own saved EZConfig values until the first Apply.</p>}
+      <p className="origin-state">Draft origin: {server.draftOrigin ? <OriginLabel origin={server.draftOrigin} /> : 'none'}{live && <> · Live origin: {server.liveOrigin ? <OriginLabel origin={server.liveOrigin} /> : 'none'}</>}</p>
     </div>
     <div className="draft-actions">
       {onEditDraft && <button className="outline-button" onClick={() => onEditDraft({ id: server.id, name: server.name })}>Edit Draft</button>}

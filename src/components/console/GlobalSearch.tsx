@@ -101,7 +101,7 @@ export function GlobalSearch({ weapon, onSelect }: {
       <div className="global-search-heading"><strong>{query.trim() ? 'Search results' : 'Go to…'}</strong><span>Entire workspace</span></div>
       <div className="global-search-results" role="listbox" aria-label="Search results" id={`${id}-results`} ref={list}>
         {results.map((result, index) => {
-          const Icon = result.tab === 'weapons' ? Sword : result.tab === 'presets' ? Bookmark : Settings2;
+          const Icon = result.tab === 'weapons' ? Sword : result.tab === 'rulesets' ? Bookmark : Settings2;
           return <div role="option" id={`${id}-${index}`} key={result.id} aria-selected={activeIndex === index}
             className="global-search-result" onPointerMove={() => setActive(index)}
             onMouseDown={event => event.preventDefault()} onClick={() => choose(result)}>

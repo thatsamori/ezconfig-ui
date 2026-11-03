@@ -47,7 +47,7 @@ const id = await register(session, 'Duel EU');
 
 switch (process.argv[2]) {
   case 'load-and-save': {
-    assert.deepEqual(await loaded(session, id), { values: { character: {}, weapons: {} }, dropped: 0, revision: 0, savedAt: null }, 'a new Draft is empty');
+    assert.deepEqual(await loaded(session, id), { values: { character: {}, weapons: {} }, dropped: 0, revision: 0, savedAt: null, origin: null }, 'a new Draft is empty');
     const document = {
       Character: { MaxWalkSpeed: 450, CanDodge: false, ForwardParryLength: 50 },
       Weapon: { ArmingSword: { ParryTurnCap: { x: 375, y: 262.5 }, Strike: { Windup: 0.5 }, AltStab: { Windup: 0.45, Damage: [50, 45, 40] } } },
@@ -64,7 +64,7 @@ switch (process.argv[2]) {
         character: { Movement: { MaxWalkSpeed: 450, CanDodge: false }, Parry: { ForwardParryLength: 50 } },
         weapons: { ArmingSword: { General: { ParryTurnCap: { x: 375, y: 262.5 } }, Strike: { Windup: 0.5 }, AltStab: { Windup: 0.45, Damage: [50, 45, 40] } } },
       },
-      dropped: 0, revision: 1, savedAt: saved.body.data!.savedAt,
+      dropped: 0, revision: 1, savedAt: saved.body.data!.savedAt, origin: null,
     }, 'loading places each value under its key\'s current category');
     // A reset key is not in the next whole document.
     const next = await save(session, id, 1, { Character: { CanDodge: false }, Weapon: { ArmingSword: { Strike: { Windup: 0.55 } } } });
@@ -155,7 +155,7 @@ switch (process.argv[2]) {
     const done = await reset(session, id, 1);
     assert.equal(done.status, 200);
     assert.equal(done.cache, 'no-store');
-    assert.deepEqual({ ...done.body.data!, savedAt: undefined }, { values: { character: {}, weapons: {} }, dropped: 0, revision: 2, savedAt: undefined });
+    assert.deepEqual({ ...done.body.data!, savedAt: undefined }, { values: { character: {}, weapons: {} }, dropped: 0, revision: 2, savedAt: undefined, origin: null });
     assert.deepEqual({ overrides: stored(id).overrides, revision: stored(id).revision }, { overrides: '{}', revision: 2 }, 'Reset to game defaults empties the Draft and raises the revision');
     assert.deepEqual(commandBatch(JSON.parse(stored(id).overrides)), ['string ezconfig WipeDatabases']);
     for (const revision of [undefined, 'two']) assert.deepEqual(await reset(session, id, revision), { status: 400, cache: 'no-store', body: { success: false, error: 'Send the revision the reset is based on' } });

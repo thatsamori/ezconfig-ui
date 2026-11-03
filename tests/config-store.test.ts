@@ -4,7 +4,7 @@ const originalFetch = globalThis.fetch;
 afterEach(() => {
   globalThis.fetch = originalFetch;
 });
-type Call = { method: string; url: string; body?: { revision: number; document?: unknown } };
+type Call = { method: string; url: string; body?: { revision: number; document?: unknown } & Record<string, unknown> };
 type View = { values: DraftValues; revision: number; savedAt: number | null; dropped: number };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 const empty = (revision = 3): View => ({ values: { character: {}, weapons: {} }, revision, savedAt: null, dropped: 0 });
@@ -193,16 +193,58 @@ test("a refresh that finds another tab's save names the edits here that were ref
   await store.refreshDraft();
   expect(useConfigStore.getState()).toMatchObject({ values: theirs(4).values, draft: { revision: 4 }, saveState: 'saved', fieldErrors: {}, unsaved: [{ database: 'Axe', category: 'Strike', key: 'Windup', value: 'slow' }] });
 });
-test('an invalid preset fails before the Draft is replaced', async () => {
-  const calls = serve(saved);
+const origin = { rulesetId: 2, rulesetName: 'Competitive', versionId: 11, number: 3, modified: false };
+test('Save as Ruleset version saves the edits first, sends the revision, and takes the new version as the origin', async () => {
+  const calls = serve(call => call.url.endsWith('/save-version')
+    ? json({ success: true, data: { ruleset: { id: 2, name: 'Competitive' }, version: { id: 11, number: 3, description: 'Faster', savedAt: 5 }, draft: { ...empty(call.body!.revision + 1), values: { character: {}, weapons: { Axe: { Strike: { Windup: 0.3 } } } }, savedAt: 5, origin } } }, 201)
+    : saved(call));
   const store = useConfigStore.getState();
   await store.openDraft(7);
   store.setValue('Axe', 'Strike', 'Windup', 0.3);
-  await flushConfigWrites();
-  const previous = useConfigStore.getState().values;
-  await expect(store.loadPreset({ character: { Camera: { CustomFOV: true, CustomFOVMax: 120.5 } }, weapons: {} })).rejects.toThrow('whole number');
-  expect(useConfigStore.getState().values).toBe(previous);
-  expect(calls).toHaveLength(1);
+  const result = await store.saveRulesetVersion({ rulesetId: 2 }, 'Faster');
+  expect(result).toEqual({ ruleset: { id: 2, name: 'Competitive' }, version: { id: 11, number: 3, description: 'Faster', savedAt: 5 } });
+  expect(calls.map(call => [call.url, call.body])).toEqual([
+    ['/api/game-servers/7/draft', { revision: 3, document: { Weapon: { Axe: { Strike: { Windup: 0.3 } } } } }],
+    ['/api/game-servers/7/draft/save-version', { revision: 4, rulesetId: 2, description: 'Faster' }],
+  ]);
+  expect(useConfigStore.getState()).toMatchObject({ draft: { revision: 5, origin }, saveState: 'saved' });
+});
+test('loading a Ruleset version replaces the whole Draft with the revision checked, and names the loaded values this build refuses', async () => {
+  const loadedValues = { character: { Camera: { CustomFOV: true, CustomFOVMax: 120.5 } }, weapons: {} };
+  const calls = serve(call => call.url.endsWith('/load')
+    ? json({ success: true, data: { draft: { ...empty(call.body!.revision + 1), values: loadedValues, origin }, dropped: 2, errors: [{ database: 'Character', category: 'Camera', key: 'CustomFOVMax', error: 'CustomFOVMax must be a whole number' }] } })
+    : saved(call));
+  const store = useConfigStore.getState();
+  await store.openDraft(7);
+  store.setValue('Axe', 'Strike', 'Windup', 0.3);
+  expect(await store.loadRulesetVersion(11)).toEqual({ dropped: 2, errors: [{ database: 'Character', category: 'Camera', key: 'CustomFOVMax', error: 'CustomFOVMax must be a whole number' }] });
+  expect(calls.map(call => [call.url, call.body])).toEqual([
+    ['/api/game-servers/7/draft', { revision: 3, document: { Weapon: { Axe: { Strike: { Windup: 0.3 } } } } }],
+    ['/api/game-servers/7/draft/load', { revision: 4, versionId: 11 }],
+  ]);
+  expect(useConfigStore.getState()).toMatchObject({ values: loadedValues, draft: { revision: 5, origin }, fieldErrors: { [fieldName('Character', 'Camera', 'CustomFOVMax')]: 'CustomFOVMax must be a whole number' } });
+});
+test('a stale Ruleset load or save takes the current Draft, names the lost edits, and changes nothing', async () => {
+  const calls = serve(call => call.url.endsWith('/draft') ? saved(call) : stale(theirs(9)));
+  const store = useConfigStore.getState();
+  await store.openDraft(7);
+  await expect(store.loadRulesetVersion(11)).rejects.toThrow('Not loaded: the Draft changed in another tab');
+  expect(useConfigStore.getState()).toMatchObject({ values: theirs(9).values, draft: { revision: 9 }, unsaved: [] });
+  await expect(store.saveRulesetVersion({ name: 'Duel' }, '')).rejects.toThrow('Not saved as a Ruleset version');
+  expect(calls.map(call => [call.url, call.body])).toEqual([
+    ['/api/game-servers/7/draft/load', { revision: 3, versionId: 11 }],
+    ['/api/game-servers/7/draft/save-version', { revision: 9, name: 'Duel', description: '' }],
+  ]);
+});
+test("a refresh at the same revision takes the origin a Ruleset's rename or delete changed", async () => {
+  let current: View & { origin?: typeof origin | null } = { ...empty(), origin };
+  serve(saved, () => current);
+  const store = useConfigStore.getState();
+  await store.openDraft(7);
+  expect(useConfigStore.getState().draft?.origin).toEqual(origin);
+  current = { ...empty(), origin: null };
+  await store.refreshDraft();
+  expect(useConfigStore.getState().draft).toMatchObject({ revision: 3, origin: null });
 });
 test('Reset to game defaults sends the revision and opens the emptied Draft', async () => {
   const calls = serve(call => call.url.endsWith('/reset')

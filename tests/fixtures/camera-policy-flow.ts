@@ -1,17 +1,16 @@
-/** Real store, Draft and preset routes, startup and RCON sender against a local TCP fixture.
+/** Real store, Draft and Ruleset routes, startup and RCON sender against a local TCP fixture.
  * The fixture acknowledges known-good cases; native parser/camera proof is
  * intentionally separate and uses the retained command capture.
  * The editor and Apply part is camera-policy-review.ts, on the feature review
- * harness. This keeps the Draft route's refusal of hand-made input, presets
- * (until Rulesets replaces them) and automatic startup sync, which delivers
- * the self-hosted files until online-platform#41.
+ * harness. This keeps the Draft route's refusal of hand-made input, saving and
+ * loading Ruleset versions (online-platform#35), and automatic startup sync,
+ * which delivers the self-hosted files until online-platform#41.
  */
 import assert from 'node:assert/strict';
 import { createServer, type Socket } from 'node:net';
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
-import JSZip from 'jszip';
 import { signInForTest, type TestSession } from '../helpers/platform-session';
 
 const root = await mkdtemp(join(tmpdir(), 'ezconfig-camera-'));
@@ -73,10 +72,11 @@ try {
   session = await signInForTest();
   const { POST: register } = await import('../../src/app/api/game-servers/route');
   const { GET: read, PUT: save } = await import('../../src/app/api/game-servers/[id]/draft/route');
-  const { POST: savePreset } = await import('../../src/app/api/presets/user/route');
-  const { POST: importPreset } = await import('../../src/app/api/presets/import/route');
-  const { loadUserPresetData } = await import('../../src/lib/presets/service');
+  const { POST: saveVersion } = await import('../../src/app/api/game-servers/[id]/draft/save-version/route');
+  const { POST: loadVersion } = await import('../../src/app/api/game-servers/[id]/draft/load/route');
   const { readDraft } = await import('../../src/lib/platform/drafts');
+  const { applyReview } = await import('../../src/lib/platform/live-configurations');
+  const { platformStore } = await import('../../src/lib/platform/storage');
   const { commandBatch } = await import('../../src/lib/config/encodeValues');
   const { useConfigStore, flushConfigWrites } = await import('../../src/lib/store/configStore');
   const registered = await register(session.request('/api/game-servers', json('POST', { name: 'Camera' })));
@@ -84,12 +84,12 @@ try {
   const gameServerId: number = (await registered.json()).data.gameServer.id;
   const draftUrl = `/api/game-servers/${gameServerId}/draft`;
   const at = { params: Promise.resolve({ id: String(gameServerId) }) };
-  let writes = 0;
   globalThis.fetch = (async (url: string, init: RequestInit = {}) => {
     const method = init.method ?? 'GET';
     if (url === draftUrl && method === 'GET') return read(session!.request(url, init), at);
-    writes++;
     if (url === draftUrl && method === 'PUT') return save(session!.request(url, init), at);
+    if (url === `${draftUrl}/save-version` && method === 'POST') return saveVersion(session!.request(url, init), at);
+    if (url === `${draftUrl}/load` && method === 'POST') return loadVersion(session!.request(url, init), at);
     assert.fail(`the fixture does not serve ${method} ${url}`);
   }) as unknown as typeof fetch;
   const store = useConfigStore.getState();
@@ -113,26 +113,31 @@ try {
   assert.equal(readDraft(gameServerId)!.revision, revision);
   assert.deepEqual(await camera(), { CustomFOVMax: 179, CustomFOV: false });
 
-  assert.equal((await savePreset(session.request('/api/presets/user', json('POST', { name: 'camera', title: 'Camera', description: 'Fixture', gameServerId })) as never)).status, 200);
-  const preset = await loadUserPresetData('camera'); assert.deepEqual(preset.character.Camera, { CustomFOVMax: 179, CustomFOV: false });
-  const writesBeforePreset = writes;
-  await assert.rejects(store.loadPreset({ character: { Camera: { CustomFOV: true, CustomFOVMax: 120.5 } }, weapons: {} }), /whole/);
-  assert.equal(writes, writesBeforePreset, 'Invalid preset must fail before the Draft is replaced');
-  await store.loadPreset(preset);
+  // Saving the Draft as a Ruleset version, and loading it back over a changed Draft.
+  const { ruleset, version } = await store.saveRulesetVersion({ name: 'Camera' }, 'Fixture');
+  assert.equal(version.number, 1);
+  assert.equal(readDraft(gameServerId)!.originId, version.id, 'the saved version is the origin');
+  store.setValue('Character', 'Camera', 'CustomFOVMax', 150);
+  await assertSaved({ CustomFOVMax: 150, CustomFOV: false }, 'string ezconfig Character Camera {"CustomFOVMax":"150","CustomFOV":"False"}');
+  assert.deepEqual(await store.loadRulesetVersion(version.id), { dropped: 0, errors: [] });
   await assertSaved({ CustomFOVMax: 179, CustomFOV: false }, 'string ezconfig Character Camera {"CustomFOVMax":"179","CustomFOV":"False"}');
+  // A version holding values the camera policy refuses (as one saved under an older schema would) loads, names
+  // them, and blocks Apply; the next save is refused until they are fixed.
+  const storedVersion = (overrides: string) => platformStore().get<{ id: number }>(
+    "INSERT INTO ruleset_versions (ruleset_id, number, description, overrides, saved_at) VALUES (?, (SELECT MAX(number) + 1 FROM ruleset_versions WHERE ruleset_id = ?), NULL, ?, 0) RETURNING id",
+    ruleset.id, ruleset.id, overrides,
+  )!.id;
   for (const value of [120.5, '120']) {
-    const zip = new JSZip(); zip.file('manifest.json', JSON.stringify({ title: 'Bad camera', description: '' })); zip.file('Character/Camera.json', JSON.stringify({ CustomFOV: true, CustomFOVMax: value }));
-    const form = new FormData(); form.append('name', 'invalid-camera'); form.append('file', new File([await zip.generateAsync({ type: 'arraybuffer' })], 'camera.zip'));
-    assert.equal((await importPreset(session!.request('/api/presets/import', { method: 'POST', body: form }) as never)).status, 400);
-    await assert.rejects(stat(join(process.env.PRESETS_PATH!, 'User', 'invalid-camera')));
+    const loaded = await store.loadRulesetVersion(storedVersion(JSON.stringify({ Character: { CustomFOV: true, CustomFOVMax: value } })));
+    assert.deepEqual(loaded.errors.map(error => [error.category, error.key]), [['Camera', 'CustomFOVMax']], JSON.stringify(value));
+    assert.deepEqual(await camera(), { CustomFOV: true, CustomFOVMax: value });
+    assert.deepEqual(applyReview(gameServerId)!.errors.map(error => error.key), ['CustomFOVMax'], 'Apply blocks on the refused value');
+    store.setValue('Character', 'Camera', 'CustomFOV', false);
+    await assert.rejects(flushConfigWrites(), /Not saved: CustomFOVMax/);
   }
-  const validZip = new JSZip();
-  validZip.file('manifest.json', JSON.stringify({ title: 'Imported camera', description: '' }));
-  validZip.file('Character/Camera.json', '{"CustomFOV":true,"CustomFOVMax":1.2e2}');
-  const validForm = new FormData(); validForm.append('name', 'imported-camera');
-  validForm.append('file', new File([await validZip.generateAsync({ type: 'arraybuffer' })], 'camera.zip'));
-  assert.equal((await importPreset(session!.request('/api/presets/import', { method: 'POST', body: validForm }) as never)).status, 200);
-  await store.loadPreset(await loadUserPresetData('imported-camera'));
+  store.setValue('Character', 'Camera', 'CustomFOVMax', 135);
+  await assertSaved({ CustomFOV: false, CustomFOVMax: 135 }, 'string ezconfig Character Camera {"CustomFOV":"False","CustomFOVMax":"135"}');
+  assert.deepEqual(await store.loadRulesetVersion(storedVersion('{"Character":{"CustomFOV":true,"CustomFOVMax":1.2e2}}')), { dropped: 0, errors: [] });
   await assertSaved({ CustomFOV: true, CustomFOVMax: 120 }, 'string ezconfig Character Camera {"CustomFOV":"True","CustomFOVMax":"120"}');
 
   // Automatic sync delivers the self-hosted files, which the Draft does not write.
@@ -163,7 +168,7 @@ try {
   if (process.env.EZ_CAMERA_CAPTURE_PATH) await writeFile(process.env.EZ_CAMERA_CAPTURE_PATH, JSON.stringify({
     boundary: 'Actual startup and sync listener with the acknowledged RCON sender over local TCP, delivering the self-hosted files. Server replies are controlled fixture acknowledgments; no native parser/camera claim.', captures,
   }, null, 2));
-  console.log(`PASS Camera policy: ${captures.length} real TCP RCON batches; refused hand-made input, preset safety, startup/requestupdate and strict storage.`);
+  console.log(`PASS Camera policy: ${captures.length} real TCP RCON batches; refused hand-made input, Ruleset versions, startup/requestupdate and strict storage.`);
 } finally {
   globalThis.fetch = originalFetch; await stopSync?.(); session?.close();
   for (const socket of sockets) socket.destroy();

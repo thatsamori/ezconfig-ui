@@ -7,8 +7,10 @@
  * Rules (what is logged at all is in the spec's Logging section; never routine polls):
  * - Name the event with a fixed string, never one built from input.
  * - A line names platform ids only: game server, user, Live configuration,
- *   Invite (its id, never its code), Note (its id, never its body); plus
- *   `count`, a number (how many polls had an unknown key in an hour), and
+ *   Invite (its id, never its code), Note (its id, never its body), Ruleset
+ *   and Ruleset version (their ids, never names or values); plus `count`, a
+ *   number (how many polls had an unknown key in an hour, how many versions
+ *   a deleted Ruleset had), and
  *   `buildStamp`, kept only in its
  *   `YYYYMMDD-HHMMSS` form (a poll may report any text). Any other field
  *   passed in is dropped.
@@ -34,7 +36,7 @@ type PlatformId = string | number;
 type ProblemLevel = 'warn' | 'error';
 type Level = 'info' | ProblemLevel;
 
-const ID_FIELDS = ['userId', 'gameServerId', 'liveConfigurationId', 'inviteId', 'noteId'] as const;
+const ID_FIELDS = ['userId', 'gameServerId', 'liveConfigurationId', 'inviteId', 'noteId', 'rulesetId', 'rulesetVersionId'] as const;
 const COUNT_FIELDS = ['count'] as const;
 const BUILD_STAMP = /^\d{8}-\d{6}$/;
 export type LogIds = Partial<Record<(typeof ID_FIELDS)[number], PlatformId> & Record<(typeof COUNT_FIELDS)[number], number> & { buildStamp: string | null }>;

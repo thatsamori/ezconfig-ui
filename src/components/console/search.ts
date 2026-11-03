@@ -7,7 +7,7 @@ export interface SearchDestination {
   id: string;
   label: string;
   path: string;
-  tab: 'character' | 'weapons' | 'presets';
+  tab: 'character' | 'weapons' | 'rulesets';
   weapon?: string;
   group?: string;
   configKey?: string;
@@ -17,7 +17,7 @@ const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '
 const destinations: SearchDestination[] = [
   { id: 'character', label: 'Character', path: 'Page', tab: 'character' },
   { id: 'weapons', label: 'Weapons', path: 'Page', tab: 'weapons' },
-  { id: 'presets', label: 'Presets', path: 'Page', tab: 'presets' },
+  { id: 'rulesets', label: 'Rulesets', path: 'Page', tab: 'rulesets' },
 ];
 
 for (const group of Object.values(CharacterConfigGroupName)) {

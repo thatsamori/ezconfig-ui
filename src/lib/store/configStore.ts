@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
-import type { PresetData } from '@/lib/presets/types';
-import { assertCameraPolicy } from '@/lib/config/cameraPolicyValidation';
 import { valuesDocument, type FieldError } from '@/lib/config/valuesDocument';
 import { getSchemaForCategory, validateConfigEntry } from '@/lib/database/validation';
+import type { Origin } from '@/lib/platform/origins';
+import type { RulesetVersionSummary } from '@/lib/platform/rulesets';
 
 // Config values can be various types from the schema
 // null in an edit is Reset: the key is removed (back to the game default)
@@ -25,10 +25,15 @@ export interface OpenDraft {
   dropped: number;
   /** The values at `revision`, as this tab last loaded or saved them: what its edits are measured against. */
   base: DraftValues;
+  /** The Ruleset version the Draft was last loaded from or saved as, modified or not as of the last answer; null for none. */
+  origin: Origin | null;
 }
 
-/** The Draft as the platform sends it: on load, after a reset, and with a stale write's refusal. */
-type DraftView = { values: DraftValues; revision: number; savedAt: number | null; dropped: number };
+/** The Draft as the platform sends it: on load, after a reset or a Ruleset write, and with a stale write's refusal. */
+type DraftView = { values: DraftValues; revision: number; savedAt: number | null; dropped: number; origin: Origin | null };
+
+/** Where Save as Ruleset version puts the Draft: the next version of a Ruleset, or version 1 of a new one. */
+export type VersionTarget = { rulesetId: number } | { name: string };
 
 export type ValueChange = { database: string; category: string; key: string; value: ConfigValue };
 
@@ -56,8 +61,14 @@ export interface ConfigState {
   getValue: (database: string, category: string, key: string) => ConfigValue | undefined;
   /** Retry a save that did not reach the server. */
   retrySave: () => void;
-  /** Replace the whole Draft with a preset's values. */
-  loadPreset: (presetData: PresetData) => Promise<void>;
+  /** Save the Draft, once its edits are saved, as a Ruleset version, which becomes its origin; with its revision checked. */
+  saveRulesetVersion: (target: VersionTarget, description: string) => Promise<{ ruleset: { id: number; name: string }; version: RulesetVersionSummary }>;
+  /**
+   * Replace the whole Draft with a Ruleset version's values, with its revision
+   * checked: `dropped` counts the values this build has no place for, `errors`
+   * the loaded values it refuses.
+   */
+  loadRulesetVersion: (versionId: number) => Promise<{ dropped: number; errors: FieldError[] }>;
   /** Empty the Draft, with its revision checked. */
   resetToGameDefaults: () => Promise<void>;
   /**
@@ -111,6 +122,9 @@ function lostEdits(base: DraftValues, values: DraftValues, current: DraftValues)
     .map(name => after.get(name) ?? { ...before.get(name)!, value: null });
 }
 
+/** The open Draft as the platform sent it. */
+const opened = (gameServerId: number, { values, revision, savedAt, dropped, origin }: DraftView): OpenDraft => ({ gameServerId, revision, savedAt, dropped, base: values, origin });
+
 /**
  * Take the Draft as the platform has it now, in place of this tab's. The edits
  * here it does not have are named until dismissed, and returned. There is no
@@ -123,7 +137,7 @@ function adopt(gameServerId: number, view: DraftView): ValueChange[] {
   pending = false;
   useConfigStore.setState({
     values: view.values,
-    draft: { gameServerId, revision: view.revision, savedAt: view.savedAt, dropped: view.dropped, base: view.values },
+    draft: opened(gameServerId, view),
     saveState: 'saved', saveError: '', fieldErrors: {},
     unsaved: [...lost, ...unsaved.filter(edit => !names.has(fieldName(edit.database, edit.category, edit.key)))],
   });
@@ -159,7 +173,7 @@ async function runSaves() {
     if (!draft) return;
     useConfigStore.setState({ saveState: 'saving' });
     let status = 0;
-    let body: { error?: string; details?: FieldError[]; data?: { revision: number; savedAt: number | null } | DraftView } = {};
+    let body: { error?: string; details?: FieldError[]; data?: { revision: number; savedAt: number | null; origin: Origin | null } | DraftView } = {};
     try {
       const response = await fetch(`/api/game-servers/${draft.gameServerId}/draft`, {
         method: 'PUT',
@@ -174,7 +188,7 @@ async function runSaves() {
     if (useConfigStore.getState().draft?.gameServerId !== draft.gameServerId) return;
     if (status === 200 && body.data) {
       useConfigStore.setState(state => ({
-        draft: state.draft && { ...state.draft, revision: body.data!.revision, savedAt: body.data!.savedAt, base: values },
+        draft: state.draft && { ...state.draft, revision: body.data!.revision, savedAt: body.data!.savedAt, origin: body.data!.origin, base: values },
         saveState: pending ? 'saving' : 'saved', saveError: '', fieldErrors: {},
       }));
     } else if (status === 400 && body.details?.length) {
@@ -207,6 +221,30 @@ async function settled() {
   while (saving) await saving.catch(() => {});
 }
 
+/**
+ * One of the Draft writes beside auto-save (Reset, the Ruleset writes), with
+ * the revision checked: the answer's data. On a stale rejection the tab takes
+ * the current Draft, naming its lost edits, and this throws `stale`. Undefined
+ * when another Draft was opened meanwhile.
+ */
+async function draftWrite<T>(gameServerId: number, path: string, body: Record<string, unknown>, verb: string, stale: string): Promise<T | undefined> {
+  const response = await fetch(`/api/game-servers/${gameServerId}/draft/${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).catch(() => {
+    throw new Error(`Could not reach the platform to ${verb}`);
+  });
+  const answer = await response.json().catch(() => ({})) as { error?: string; data?: T | DraftView };
+  if (useConfigStore.getState().draft?.gameServerId !== gameServerId) return undefined;
+  if (response.status === 409 && answer.data && typeof answer.data === 'object' && 'values' in answer.data) {
+    adopt(gameServerId, answer.data as DraftView);
+    throw new Error(stale);
+  }
+  if (!response.ok || !answer.data) throw new Error(answer.error || `Could not ${verb} (${response.status})`);
+  return answer.data as T;
+}
+
 export const useConfigStore = create<ConfigState>()((set, get) => ({
   values: emptyValues(),
   draft: null,
@@ -231,8 +269,7 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
         set({ loading: false, loadError: body.error || `Could not load the Draft (${response.status})` });
         return;
       }
-      const { values, revision, savedAt, dropped } = body.data;
-      set({ values, draft: { gameServerId, revision, savedAt, dropped, base: values }, loading: false });
+      set({ values: body.data.values, draft: opened(gameServerId, body.data), loading: false });
     } catch {
       if (token === opening) set({ loading: false, loadError: 'Could not reach the platform to load the Draft' });
     }
@@ -271,35 +308,44 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
 
   retrySave: requestSave,
 
-  loadPreset: async (presetData) => {
-    assertCameraPolicy(presetData.character.Camera);
-    if (!get().draft) throw new Error('Open a game server to load a preset into its Draft');
-    await settled();
-    set({ values: { character: structuredClone(presetData.character), weapons: structuredClone(presetData.weapons) } });
-    requestSave();
+  saveRulesetVersion: async (target, description) => {
+    if (!get().draft) throw new Error('Open a game server to save its Draft as a Ruleset version');
+    // The version holds the Draft as the editor shows it: every edit is saved first.
     await flushConfigWrites();
+    const { draft } = get();
+    if (!draft) throw new Error('The Draft was closed');
+    const saved = await draftWrite<{ ruleset: { id: number; name: string }; version: RulesetVersionSummary; draft: DraftView }>(
+      draft.gameServerId, 'save-version', { revision: draft.revision, ...target, description }, 'save the Ruleset version',
+      'Not saved as a Ruleset version: the Draft changed in another tab. The editor now shows it; save again to keep it.',
+    );
+    if (!saved) throw new Error('Another Draft was opened meanwhile');
+    set({ values: saved.draft.values, draft: opened(draft.gameServerId, saved.draft), saveState: 'saved', saveError: '', fieldErrors: {} });
+    return { ruleset: saved.ruleset, version: saved.version };
+  },
+
+  loadRulesetVersion: async (versionId) => {
+    await settled();
+    const { draft } = get();
+    if (!draft) throw new Error('Open a game server to load a Ruleset version into its Draft');
+    const loaded = await draftWrite<{ draft: DraftView; dropped: number; errors: FieldError[] }>(
+      draft.gameServerId, 'load', { revision: draft.revision, versionId }, 'load the Ruleset version',
+      'Not loaded: the Draft changed in another tab. The editor now shows it; load the version again to replace it.',
+    );
+    if (!loaded) throw new Error('Another Draft was opened meanwhile');
+    // The loaded values this build refuses are named where they show, as a refused save names them.
+    const fieldErrors = Object.fromEntries(loaded.errors.map(error => [fieldName(error.database, error.category, error.key), error.error]));
+    set({ values: loaded.draft.values, draft: opened(draft.gameServerId, loaded.draft), saveState: 'saved', saveError: '', fieldErrors });
+    return { dropped: loaded.dropped, errors: loaded.errors };
   },
 
   resetToGameDefaults: async () => {
     await settled();
     const { draft } = get();
     if (!draft) return;
-    const response = await fetch(`/api/game-servers/${draft.gameServerId}/draft/reset`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ revision: draft.revision }),
-    }).catch(() => {
-      throw new Error('Could not reach the platform to reset the Draft');
-    });
-    const body = await response.json().catch(() => ({})) as { error?: string; data?: DraftView };
-    if (get().draft?.gameServerId !== draft.gameServerId) return;
-    if (response.status === 409 && body.data) {
-      adopt(draft.gameServerId, body.data);
-      throw new Error('Not reset: the Draft changed in another tab. The editor now shows it; reset again to empty it.');
-    }
-    if (!response.ok || !body.data) throw new Error(body.error || `Could not reset the Draft (${response.status})`);
-    const { values, revision, savedAt, dropped } = body.data;
-    set({ values, draft: { gameServerId: draft.gameServerId, revision, savedAt, dropped, base: values }, saveState: 'saved', saveError: '', fieldErrors: {} });
+    const reset = await draftWrite<DraftView>(draft.gameServerId, 'reset', { revision: draft.revision }, 'reset the Draft',
+      'Not reset: the Draft changed in another tab. The editor now shows it; reset again to empty it.');
+    if (!reset) return;
+    set({ values: reset.values, draft: opened(draft.gameServerId, reset), saveState: 'saved', saveError: '', fieldErrors: {} });
   },
 
   refreshDraft: async (typing = () => false) => {
@@ -312,8 +358,10 @@ export const useConfigStore = create<ConfigState>()((set, get) => ({
       const body = await response.json().catch(() => ({})) as { data?: DraftView };
       // Taken only when it is newer than the tab's revision, and nothing here started saving or typing meanwhile.
       const current = get().draft;
-      if (token !== opening || saving || typing() || !body.data || !current || body.data.revision <= current.revision) return;
-      adopt(draft.gameServerId, body.data);
+      if (token !== opening || saving || typing() || !body.data || !current) return;
+      if (body.data.revision > current.revision) adopt(draft.gameServerId, body.data);
+      // A Ruleset renamed or deleted elsewhere changes the origin without a Draft write.
+      else if (body.data.revision === current.revision && JSON.stringify(body.data.origin) !== JSON.stringify(current.origin)) set({ draft: { ...current, origin: body.data.origin } });
     } catch {
       // The next refresh tries again; a save that cannot reach the platform says so.
     } finally {

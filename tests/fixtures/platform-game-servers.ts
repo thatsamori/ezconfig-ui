@@ -152,7 +152,7 @@ const scenarios: Record<string, () => Promise<void>> = {
     assert.equal(key.length, 51);
     assert.equal(Buffer.from(key.slice('ezc_gsk_'.length), 'base64url').length, 32, '32 random bytes');
     assert.deepEqual(gameServer, { id: gameServer.id, name: 'Duel EU', keyLast4: key.slice(-4), registeredAt: T0, connection: { state: 'never-connected' }, sharedKey: false, lastReport: null, needsUpdating: null,
-      liveConfiguration: null, unappliedChanges: false, applyBlocked: 'never-connected',
+      liveConfiguration: null, unappliedChanges: false, draftOrigin: null, liveOrigin: null, applyBlocked: 'never-connected',
     });
 
     // Unique per owner, ignoring case (and around the name).
@@ -191,7 +191,7 @@ const scenarios: Record<string, () => Promise<void>> = {
     // Each has an empty Draft. (Read from the table until the Draft has routes, online-platform#30.)
     const drafts = platformStore().all<Record<string, unknown>>('SELECT * FROM drafts ORDER BY game_server_id');
     assert.equal(drafts.length, 4);
-    for (const draft of drafts) assert.deepEqual({ ...draft, game_server_id: 0 }, { game_server_id: 0, overrides: '{}', revision: 0, saved_at: null });
+    for (const draft of drafts) assert.deepEqual({ ...draft, game_server_id: 0 }, { game_server_id: 0, overrides: '{}', revision: 0, saved_at: null, origin_id: null });
 
     // At rest: only each key's hash and last 4 characters.
     const stored = platformStore().all<{ key_hash: string; key_last4: string }>('SELECT key_hash, key_last4 FROM game_servers ORDER BY id');
