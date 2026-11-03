@@ -7,9 +7,8 @@ import { AccountMenu, AuthGate } from '@/components/auth';
 import { Logo } from '@/components/Logo';
 import { InvitesPage, ServerOwnersPage, StatusPage, SupportedBuildPage } from '@/components/operator';
 import { GameServersTab } from '@/components/game-servers';
-import { LoadVersionDialog, OriginLabel, RulesetsTab, SaveVersionDialog } from '@/components/rulesets';
+import { RulesetsTab } from '@/components/rulesets';
 import { NotesDialog } from '@/components/notes';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { useConfigStore, flushConfigWrites, fieldName, editName, type ConfigState } from '@/lib/store/configStore';
 import { useSessionStore } from '@/lib/store';
@@ -18,6 +17,7 @@ import { CHARACTER_CONFIG_OPTIONS, CharacterConfigGroupName } from '@/lib/config
 import { supportsWeapon, type ConfigEntry } from '@/lib/config/types';
 import { useNotes } from '@/lib/hooks';
 import { ValueEditor } from './ValueEditor';
+import { DraftBar, overridesText } from './DraftBar';
 import { SweepPanel } from './SweepPanel';
 import { GlobalSearch } from './GlobalSearch';
 import type { SearchDestination } from './search';
@@ -89,7 +89,7 @@ function SaveStatus() {
   if (!draft) return null;
   const them = draft.dropped === 1 ? 'it' : 'them';
   const hidden = draft.dropped ? ` · ${draft.dropped} stored value${draft.dropped === 1 ? ' is' : 's are'} not shown: this build has no key or weapon for ${them}. Saves keep ${them}.` : '';
-  return <p className="config-sync-status" role="status">{saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? draft.savedAt ? <>Saved <time dateTime={new Date(draft.savedAt).toISOString()} title={new Date(draft.savedAt).toLocaleString()}>{new Date(draft.savedAt).toLocaleTimeString()}</time></> : 'No saves yet' : <span className="save-problem">{saveError}</span>}{saveState === 'failed' && <button className="text-button" onClick={retrySave}>Retry</button>}{hidden}</p>;
+  return <p className="config-sync-status" role="status">{saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? draft.savedAt ? <>Draft saved <time dateTime={new Date(draft.savedAt).toISOString()} title={new Date(draft.savedAt).toLocaleString()}>{new Date(draft.savedAt).toLocaleTimeString()}</time></> : 'No saves yet' : <span className="save-problem">{saveError}</span>}{saveState === 'failed' && <button className="text-button" onClick={retrySave}>Retry</button>}{hidden}</p>;
 }
 /** The edits another tab's save left unsaved here, each with the value it set, until the owner dismisses them. */
 function UnsavedEdits() {
@@ -129,8 +129,6 @@ function ConsoleContent() {
   // The game server whose Draft the editor has open, and the game server page to show when going back to it.
   const [editing, setEditing] = useState<{ id: number; name: string } | null>(null);
   const [serverPage, setServerPage] = useState<number | undefined>();
-  const [resetOpen, setResetOpen] = useState(false);
-  const [resetting, setResetting] = useState(false);
   const [weapon, setWeapon] = useState<string>('ArmingSword');
   const [charGroup, setCharGroup] = useState(characterGroups[0]);
   const [groups, setGroups] = useState<string[]>(['Strike']);
@@ -139,7 +137,6 @@ function ConsoleContent() {
   const contentRef = useRef<HTMLElement>(null);
   const [onlyOverrides, setOnlyOverrides] = useState(false);
   const [sweep, setSweep] = useState<ConfigEntry | null>(null);
-  const [rulesetDialog, setRulesetDialog] = useState<'save' | 'load' | null>(null);
   const values = useConfigStore(state => state.values);
   const draft = useConfigStore(state => state.draft);
   const loading = useConfigStore(state => state.loading);
@@ -183,18 +180,6 @@ function ConsoleContent() {
   const showServerPage = () => {
     selectTab('servers');
     setServerPage(editing?.id);
-  };
-  const resetDraft = async () => {
-    setResetting(true);
-    try {
-      await useConfigStore.getState().resetToGameDefaults();
-      toast.success('Draft reset to game defaults');
-    } catch (error) {
-      toast.error((error as Error).message);
-    } finally {
-      setResetting(false);
-      setResetOpen(false);
-    }
   };
   const navigateSearch = (destination: SearchDestination) => {
     selectTab(destination.tab);
@@ -274,17 +259,9 @@ function ConsoleContent() {
       <div className="config-scroll">{loading ? <p className="empty-state">Loading the Draft…</p> : loadError || !draft ? <div className="empty-state" role="alert">{loadError || 'The Draft is not open.'} <button className="outline-button" onClick={reopenDraft}>Retry</button></div> : <div className="config-table" role="table" aria-label={`${title} configuration`} style={{
             '--columns': visibleGroups.length
           } as React.CSSProperties}><div className="config-table-inner"><div className="config-grid table-heading" role="row"><span role="columnheader">Config key</span>{visibleGroups.map(group => <span role="columnheader" key={group}>{isCharacter ? 'Value' : group}{visibleGroups.length > 1 && <button className="icon-button" aria-label={`Hide ${group}`} onClick={() => setGroups(toggleAttackGroup(groups, group))}><X size={12} /></button>}</span>)}<span role="columnheader" className="sr-only">Actions</span></div>{rowSections.map(section => <div role="rowgroup" key={section.title}>{section.title && <div role="row" className="config-section-heading"><div role="cell" aria-colspan={visibleGroups.length + 2}><h2>{section.title}</h2></div></div>}{section.entries.map(entry => <KeyRow key={`${database}/${visibleGroups.join('/')}/${entry.configKey}`} entry={entry} database={database} groups={visibleGroups} values={values} onSweep={setSweep} highlighted={searchDestination?.configKey === entry.configKey && searchDestination.tab === tab && searchDestination.group === visibleGroups[0] && (isCharacter || searchDestination.weapon === weapon)} />)}</div>)}{rows.length === 0 && <p className="empty-state">No keys in this group</p>}</div></div>}</div>
-      <footer className="floating-bar"><span className={`status-dot${total ? ' changed' : ''}`} /><div className="bar-copy"><strong>{total ? `${total} override${total === 1 ? '' : 's'} in the Draft` : 'Everything at game default'}</strong>{total > 0 && <span>across {weaponCount ? `${weaponCount} weapon${weaponCount === 1 ? '' : 's'}` : ''}{countGroups(values.character) ? `${weaponCount ? ' and ' : ''}character` : ''}</span>}{draft?.origin && <span className="bar-origin">from <OriginLabel origin={draft.origin} /></span>}</div><button className="outline-button" disabled={!ready} onClick={() => setRulesetDialog('load')}>Load Ruleset version</button><button className="outline-button" disabled={!ready} onClick={() => setRulesetDialog('save')}>Save as Ruleset version</button><button className="outline-button" disabled={!ready || resetting} onClick={() => setResetOpen(true)}>Reset to game defaults</button></footer></section>
+      {editing && <DraftBar server={editing} overrides={overridesText(total)} onShowServer={showServerPage} />}</section>
     </> : <section className="standalone-page" ref={contentRef}><div className="header-actions standalone-search">{globalSearch}</div>{tab === 'rulesets' ? <RulesetsTab /> : tab === 'servers' ? <GameServersTab initialOpenId={serverPage} onEditDraft={editDraft} /> : tab === 'invites' && operator ? <InvitesPage /> : tab === 'server-owners' && operator ? <ServerOwnersPage /> : tab === 'supported-build' && operator ? <SupportedBuildPage /> : tab === 'status' && operator ? <StatusPage /> : tab === 'character' || tab === 'weapons' ? <div className="game-servers-page"><div className="standalone-heading"><div><h1>{isCharacter ? 'Character' : 'Weapons'}</h1><p className="page-description">The editor works on one game server&apos;s Draft. Open a game server and choose Edit Draft.</p></div></div><button className="primary-button" onClick={() => selectTab('servers')}>Game servers</button></div> : null}</section>}
     {sweep && <SweepPanel entry={sweep} weapon={weapon} groups={groups} onClose={() => setSweep(null)} />}
-    {editing && <AlertDialog open={resetOpen} onOpenChange={open => {
-      if (!resetting) setResetOpen(open);
-    }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Reset {editing.name}&apos;s Draft to game defaults?</AlertDialogTitle><AlertDialogDescription>Removes every value from the Draft{draft?.dropped ? `, including the ${draft.dropped} not shown` : ''}. Nothing reaches the game server until you Apply.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={resetting}>Cancel</AlertDialogCancel><AlertDialogAction disabled={resetting} onClick={event => {
-        event.preventDefault();
-        void resetDraft();
-      }}>{resetting ? 'Resetting…' : 'Reset to game defaults'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}
-    {rulesetDialog === 'save' && <SaveVersionDialog onOpenChange={open => { if (!open) setRulesetDialog(null); }} />}
-    {rulesetDialog === 'load' && editing && <LoadVersionDialog serverName={editing.name} onOpenChange={open => { if (!open) setRulesetDialog(null); }} />}
   </main>;
 }
 export function ConfigConsole() {
