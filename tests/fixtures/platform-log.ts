@@ -7,6 +7,9 @@ const scenarios: Record<string, () => void> = {
     // A caller handing over a whole row by mistake; only the type check stands in its way at compile time.
     const row = { gameServerId: 7, name: 'Duel Yard', keyHash: 'hash-of-key', userId: { username: 'discord-name' } };
     log.info('game-server.registered', row as unknown as LogIds);
+    // A count is a number or nothing.
+    log.info('poll.key-rejected', { count: 3 });
+    log.info('poll.key-rejected', { count: 'ezconfig-count-text' } as unknown as LogIds);
   },
   problems: () => {
     log.error('delivery.failed', Object.assign(new Error('delivery failed'), {
