@@ -91,7 +91,7 @@ switch (scenario) {
     const registered = await answer(await gameServersRoute.POST(ann.request('/api/game-servers', json('POST', { name: 'Duel EU' }))));
     const serverId = (registered.body.data as { gameServer: { id: number } }).gameServer.id;
     const draft = await answer(await draftRoute.GET(ann.request(`/api/game-servers/${serverId}/draft`), params(serverId)));
-    assert.deepEqual(draft.body.data, { values: { character: {}, weapons: {} }, dropped: 0, revision: 0, savedAt: null, origin: null }, 'adding Notes leaves the Draft untouched');
+    assert.deepEqual(draft.body.data, { values: { character: {}, weapons: {} }, dropped: 0, errors: [], revision: 0, savedAt: null, origin: null }, 'adding Notes leaves the Draft untouched');
 
     // What an add refuses: nothing is stored.
     const refusals = [

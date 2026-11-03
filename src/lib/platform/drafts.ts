@@ -23,7 +23,7 @@
  *   the origin that version; Save as Ruleset version keeps the document and
  *   makes the new version the origin.
  */
-import { addField, documentErrors, documentFields, placeValues, type EditorValues, type FieldError, type ValuesDocument } from '@/lib/config/valuesDocument';
+import { addField, documentErrors, documentFields, placeValues, refusedValues, type EditorValues, type FieldError, type ValuesDocument } from '@/lib/config/valuesDocument';
 import { originOf, type Origin } from './origins';
 import { platformStore } from './storage';
 
@@ -36,10 +36,16 @@ export interface Draft {
   originId: number | null;
 }
 
-/** What the editor loads: the values placed under their keys' current categories, how many stored values it cannot show, and the origin. */
+/**
+ * What the editor loads: the values placed under their keys' current
+ * categories, how many stored values it cannot show, the values it shows that
+ * the current schema refuses (online-platform#44: a later deploy may have
+ * tightened a key), and the origin.
+ */
 export interface DraftView {
   values: EditorValues;
   dropped: number;
+  errors: FieldError[];
   revision: number;
   savedAt: number | null;
   origin: Origin | null;
@@ -77,7 +83,7 @@ export function findOwnedDraft(ownerId: number, id: string): Draft | undefined {
 }
 
 export function draftView({ document, revision, savedAt, originId }: Draft): DraftView {
-  return { ...placeValues(document), revision, savedAt, origin: originOf(originId, document) };
+  return { ...placeValues(document), errors: refusedValues(document), revision, savedAt, origin: originOf(originId, document) };
 }
 
 /** A route's 409 body for a stale write: the current Draft, which the tab takes in place of its own. */

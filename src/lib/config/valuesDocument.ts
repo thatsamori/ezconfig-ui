@@ -101,6 +101,16 @@ export function documentErrors(document: unknown): FieldError[] {
   });
 }
 
+/**
+ * The values of a document the current schema refuses, among those it has a
+ * place for: a value with no place is never shown or sent, so it is never
+ * refused. These block Apply, make a Live configuration Blocked, and are
+ * marked in the editor.
+ */
+export function refusedValues(document: unknown): FieldError[] {
+  return documentErrors(document).filter(error => error.category !== undefined);
+}
+
 /** Puts a value at a field's path, making the objects on the way, unless a value is already there or on the way. */
 export function addField(document: ValuesDocument, path: readonly string[], value: unknown): void {
   if (path.includes('__proto__')) return;

@@ -11,7 +11,7 @@
 import { CHARACTER_CONFIG_OPTIONS } from './characterConfigSchema';
 import { CategoryName, WeaponConfigGroupName } from './weaponConfigSchema';
 import { DataType, type ConfigEntry } from './types';
-import { documentErrors, documentFields } from './valuesDocument';
+import { documentFields, refusedValues } from './valuesDocument';
 import { formatValue } from './formatters';
 
 export const WIPE_COMMAND = 'string ezconfig WipeDatabases';
@@ -32,7 +32,7 @@ function wireValue(entry: ConfigEntry, value: unknown): string {
 
 /** One command per non-empty category; throws when the schema refuses a value. */
 export function encodeValues(document: unknown): CategoryCommand[] {
-  const errors = documentErrors(document).filter(error => error.category !== undefined);
+  const errors = refusedValues(document);
   if (errors.length) throw new Error(`The schema refuses ${errors.map(({ database, category, key, error }) => `${database}/${category}/${key}: ${error}`).join('; ')}`);
   const categories = new Map<string, CategoryCommand & { entries: Record<string, string> }>();
   for (const field of documentFields(document)) {
