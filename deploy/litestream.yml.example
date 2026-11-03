@@ -1,0 +1,31 @@
+# Template for /etc/litestream.yml on the platform instance: root:root 0600.
+# Fill in the bucket and its access key on the instance, from the owner's
+# password manager; the filled copy is never committed. Litestream is pinned to
+# 0.5.x, at least 0.5.12, in provision.sh.
+dbs:
+  - path: /var/lib/ezconfig-platform/platform.db # DATABASE_PATH
+    replica:
+      type: s3
+      # The Lightsail bucket (versioning on), in the project's Region.
+      bucket: REPLACE_WITH_BUCKET_NAME
+      path: platform.db
+      region: us-east-2
+      # The bucket's own access key, which reaches only that bucket.
+      access-key-id: REPLACE_WITH_ACCESS_KEY_ID
+      secret-access-key: REPLACE_WITH_SECRET_ACCESS_KEY
+
+# 14 days of point-in-time restore: a snapshot a day, and the snapshots with
+# the compacted files after the oldest one are kept 14 days.
+snapshot:
+  interval: 24h
+  retention: 336h
+
+# Every minute, while the database has synced to the bucket within that minute,
+# Litestream calls the app on loopback. The app records the time for the
+# operator page; Caddy refuses /internal/* from outside.
+heartbeat-url: http://127.0.0.1:3000/internal/backup-heartbeat
+heartbeat-interval: 1m
+
+logging:
+  level: info
+  type: json

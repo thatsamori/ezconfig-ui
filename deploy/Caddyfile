@@ -1,0 +1,37 @@
+# /etc/caddy/Caddyfile on the platform instance, installed by provision.sh.
+# PLATFORM_HOSTNAME and ACME_EMAIL come from /etc/ezconfig-platform/caddy.env,
+# which the caddy.service drop-in loads (caddy.service.conf).
+#
+# Caddy gets and renews the Let's Encrypt certificate for the hostname and
+# redirects HTTP to HTTPS by itself. It writes no access log: no site has a
+# `log` directive, so only Caddy's own messages reach the journal.
+{
+	email {$ACME_EMAIL}
+	servers {
+		# Polls are held for 50 s (the proof route, 120 s), so a response may be
+		# written long after its request; the game's HTTP client gives up at 180 s.
+		timeouts {
+			read_header 10s
+			read_body 30s
+			write 180s
+			idle 5m
+		}
+	}
+}
+
+{$PLATFORM_HOSTNAME} {
+	header Strict-Transport-Security "max-age=31536000"
+
+	# Instance-only routes, such as Litestream's heartbeat. The app refuses them
+	# from outside too.
+	@internal path /internal /internal/*
+	respond @internal 403
+
+	reverse_proxy 127.0.0.1:3000 {
+		transport http {
+			response_header_timeout 180s
+			read_timeout 180s
+			write_timeout 180s
+		}
+	}
+}

@@ -1,0 +1,29 @@
+# /etc/systemd/system/litestream.service, installed by provision.sh.
+# Streams the platform database to the Lightsail bucket. It runs as the app's
+# user, so the files it creates beside the database stay writable by the app.
+# Its config holds the bucket key, so /etc/litestream.yml stays root:root 0600
+# and systemd hands the service a private copy (LoadCredential).
+[Unit]
+Description=Litestream: stream the EZConfig platform database to its bucket
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+# provision.sh creates the config empty; Litestream starts once it is filled.
+ConditionFileNotEmpty=/etc/litestream.yml
+
+[Service]
+Type=simple
+User=ezconfig
+Group=ezconfig
+LoadCredential=litestream.yml:/etc/litestream.yml
+ExecStart=/usr/local/bin/litestream replicate -config %d/litestream.yml
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/ezconfig-platform
+
+[Install]
+WantedBy=multi-user.target
