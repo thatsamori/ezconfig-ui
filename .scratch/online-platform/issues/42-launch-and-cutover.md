@@ -71,3 +71,8 @@ live game server and the live instance are the owner's.
   page, the operator and owner pages from #27, and the Status page. All were
   correct. These were the first browser checks of those pages signed in with
   Discord.
+- 17:30: `main` at `5c6158f` deployed in 51 s, with #44 (Blocked) and #45.
+  There was no migration this time. The app, Litestream, Caddy and the timer
+  are active, and the app logged no errors. `/` answers 200; the session API
+  and a poll with no key answer 401. The releases kept are `5c6158f`,
+  `c1da8be` and one of `a347200`.
