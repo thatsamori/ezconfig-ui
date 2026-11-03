@@ -151,7 +151,9 @@ const scenarios: Record<string, () => Promise<void>> = {
     assert.match(key, KEY);
     assert.equal(key.length, 51);
     assert.equal(Buffer.from(key.slice('ezc_gsk_'.length), 'base64url').length, 32, '32 random bytes');
-    assert.deepEqual(gameServer, { id: gameServer.id, name: 'Duel EU', keyLast4: key.slice(-4), registeredAt: T0, connection: { state: 'never-connected' }, sharedKey: false, lastReport: null, needsUpdating: null });
+    assert.deepEqual(gameServer, { id: gameServer.id, name: 'Duel EU', keyLast4: key.slice(-4), registeredAt: T0, connection: { state: 'never-connected' }, sharedKey: false, lastReport: null, needsUpdating: null,
+      liveConfiguration: null, unappliedChanges: false, applyBlocked: 'never-connected',
+    });
 
     // Unique per owner, ignoring case (and around the name).
     for (const name of ['Duel EU', 'duel eu', '  DUEL eu  ']) {
@@ -386,7 +388,8 @@ const scenarios: Record<string, () => Promise<void>> = {
     assert(rejected.ms < 1_000, `answered after ${rejected.ms} ms`);
     // Not connected at once, though a poll ended just now: shown with last seen, and the new key's last 4 characters.
     const expected: GameServerView = {
-      ...gameServer, keyLast4: secondKey.slice(-4), connection: { state: 'not-connected', lastSeenAt: T0 },
+      ...gameServer, keyLast4: secondKey.slice(-4), connection: { state: 'not-connected', lastSeenAt: T0 }, applyBlocked: 'not-connected',
+      unappliedChanges: true, // its Draft sets values, and nothing has been applied
       lastReport: { buildStamp: '20261102-153000', processed: null },
     };
     assert.deepEqual(regenerated.body.data!.gameServer, expected);

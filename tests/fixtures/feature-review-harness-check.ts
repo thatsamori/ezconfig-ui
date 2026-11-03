@@ -46,7 +46,7 @@ await featureReview('harness-check', async ({ set, reset, saved, editorValue, sa
   // A stored value the schema does not accept refuses Apply; nothing is delivered or captured.
   await storeUnvalidated('Character', 'Stun', { [key]: 1e40 });
   assert.equal(await saved('Character', 'Stun', key), 1e40);
-  await assert.rejects(apply('invalid'), /Apply was refused \(500\)/);
+  await assert.rejects(apply('invalid'), /Apply was refused \(400\)/);
   reset('Character', 'Stun', key);
   assert.deepEqual(await apply('cleared'), [WIPE]);
 }, { capture: process.env.EZ_HARNESS_CHECK_CAPTURE_PATH });

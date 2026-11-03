@@ -7,21 +7,28 @@
  *
  * - A missing or unknown key gets 401 "key-rejected", counted per hour.
  * - A body that breaks the contract gets 400 "bad-request".
- * - Otherwise the poll's report is recorded and the poll is held (50 s) until
- *   it is answered "no-change", or "superseded" by a newer poll, or 401
- *   "key-rejected" when Regenerate key or Delete ends its key.
+ * - Otherwise the poll's report is recorded. A poll on the Supported build
+ *   whose reported processed id is not the game server's Live configuration
+ *   (another id, one the platform does not know, or none) is answered at once
+ *   with the whole Live configuration: "live-configuration". A game server
+ *   with no Live configuration is never sent anything.
+ * - Any other poll is held (50 s) until it is answered "no-change", or
+ *   "superseded" by a newer poll, or 401 "key-rejected" when Regenerate key
+ *   or Delete ends its key, or "live-configuration" when an Apply wakes it.
  * - A poll whose build stamp is not the Supported build when its hold ends
  *   (or none is set) is answered "not-supported-build" instead of
- *   "no-change": such a game server is sent nothing.
+ *   "no-change" or a Live configuration: such a game server is sent nothing.
  *
  * It sits outside `src/app/api/`, whose handlers all require a session: game
  * servers authenticate by key, and send no cookie or Origin. Routine polls are
- * never logged, and the key is never logged or stored.
+ * never logged, and the key is never logged or stored. Each delivery is
+ * logged, by id.
  */
 import { findGameServerByKey, recordPoll } from '@/lib/platform/game-servers';
 import { log } from '@/lib/platform/log';
 import { readBearerKey, readPollReport } from '@/lib/platform/poll-exchange';
-import { countRejectedKey, holdPoll, type PollAnswer } from '@/lib/platform/polls';
+import { pendingDelivery } from '@/lib/platform/live-configurations';
+import { answerAtOnce, countRejectedKey, holdPoll, type PollAnswer } from '@/lib/platform/polls';
 import { isSupportedBuild, logReportedBuild } from '@/lib/platform/supported-build';
 
 const answer = (body: PollAnswer | { answer: 'bad-request'; error: string } | { answer: 'error' }, status = 200) =>
@@ -30,6 +37,11 @@ const answer = (body: PollAnswer | { answer: 'bad-request'; error: string } | { 
 const keyRejected = () => {
   countRejectedKey();
   return answer({ answer: 'key-rejected' }, 401);
+};
+
+const deliver = (gameServerId: number, delivery: Extract<PollAnswer, { answer: 'live-configuration' }>) => {
+  log.info('live-configuration.delivered', { gameServerId, liveConfigurationId: delivery.liveConfigurationId });
+  return answer(delivery);
 };
 
 export async function POST(request: Request) {
@@ -52,9 +64,17 @@ export async function POST(request: Request) {
     }
     logReportedBuild(server, read.report.buildStamp);
     recordPoll(server, read.report);
+    const delivery = isSupportedBuild(read.report.buildStamp) ? pendingDelivery(server.id, read.report.processed?.liveConfigurationId ?? null) : undefined;
+    if (delivery) {
+      answerAtOnce(server.id, read.report.instanceId);
+      return deliver(server.id, delivery);
+    }
     const held = await holdPoll(server.id, read.report.instanceId, request.signal);
     if (held.answer === 'key-rejected') return answer(held, 401);
-    return answer(held.answer === 'no-change' && !isSupportedBuild(read.report.buildStamp) ? { answer: 'not-supported-build' } : held);
+    if (held.answer === 'superseded') return answer(held);
+    // Decided when the hold ends: the Supported build may have changed meanwhile.
+    if (!isSupportedBuild(read.report.buildStamp)) return answer({ answer: 'not-supported-build' });
+    return held.answer === 'live-configuration' ? deliver(server.id, held) : answer(held);
   } catch (error) {
     log.error('poll.failed', error, gameServerId === undefined ? {} : { gameServerId });
     return answer({ answer: 'error' }, 500);

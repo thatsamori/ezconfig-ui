@@ -503,6 +503,30 @@ body { -webkit-font-smoothing: antialiased; }
 .draft-entry h3 { font-size: 14px; font-weight: 600; }
 .draft-entry p { color: #9a9ba1; font-size: 13px; line-height: 1.55; margin-top: 2px; }
 @media (max-width: 560px) { .draft-entry { flex-direction: column; align-items: stretch; } }
+/* The Live configuration, Apply's review and Discard changes on a game server's page */
+.draft-copy { min-width: 0; }
+.draft-entry h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+.unapplied-tag { color: #e0a83c; font-size: 12px; font-weight: 500; }
+.draft-entry .live-state { color: #d4d4d8; margin-top: 8px; }
+.draft-entry .live-state strong { font-weight: 600; }
+.draft-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.apply-review[data-slot=dialog-content] { max-width: min(640px, calc(100% - 2rem)); }
+.apply-review code { font-family: var(--font-mono); font-size: 12px; background: #26272b; border-radius: 5px; padding: 1px 5px; }
+.apply-body { display: flex; flex-direction: column; gap: 16px; max-height: 60vh; overflow-y: auto; font-size: 13px; line-height: 1.55; }
+.apply-changes h4 { color: #9a9ba1; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
+.apply-changes ul, .apply-errors ul { display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,.06); border-radius: 10px; overflow: hidden; }
+.apply-changes li, .apply-errors li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 16px; padding: 8px 12px; background: #16171a; }
+.apply-changes li + li, .apply-errors li + li { border-top: 1px solid rgba(255,255,255,.05); }
+.apply-key { color: #d4d4d8; overflow-wrap: anywhere; }
+.apply-value { color: #f2f2f3; font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+.apply-before { color: #9a9ba1; text-decoration: line-through; }
+.apply-warning { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid rgba(224,168,60,.35); border-radius: 10px; background: rgba(224,168,60,.08); color: #e0a83c; }
+.apply-warning > svg { flex-shrink: 0; margin-top: 3px; }
+.apply-warning p { color: #d4d4d8; }
+.apply-none { color: #d4d4d8; }
+.apply-notice { color: #e0a83c; }
+.apply-errors { display: flex; flex-direction: column; gap: 8px; color: #e5484d; }
+@media (max-width: 560px) { .draft-actions { justify-content: stretch; } .draft-actions button { flex: 1; } }
 /* Regenerate key, Delete and the shared-key warning on a game server's page */
 .link-button { color: #5fcf8c; font: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .link-button:hover { color: #74d99c; }

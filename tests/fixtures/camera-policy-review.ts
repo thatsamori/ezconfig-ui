@@ -49,7 +49,7 @@ await featureReview('camera-policy', async ({ set, reset, saved, editorValue, sa
   // Damaged storage refuses Apply: nothing is delivered, and what is stored is left as it was.
   for (const damaged of [{ CustomFOV: true, CustomFOVMax: 120.5 }, { CustomFOV: 'garbage', CustomFOVMax: 120 }]) {
     await storeUnvalidated('Character', 'Camera', damaged);
-    await assert.rejects(apply(), /Apply was refused \(500\)/);
+    await assert.rejects(apply(), /Apply was refused \(400\)/);
     assert.deepEqual(await camera(), damaged);
   }
 }, { capture: process.env.EZ_CAMERA_REVIEW_CAPTURE_PATH });

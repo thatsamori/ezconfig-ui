@@ -56,6 +56,9 @@ are the contract between this app and the mod.
   whole saves) behind `src/app/api/game-servers/[id]/draft/` and its `reset/`.
   The document's shape and placement are in `src/lib/config/valuesDocument.ts`.
   Its encoder, `src/lib/config/encodeValues.ts`, builds the wipe-then-category batch.
+  Live configurations: `live-configurations.ts` (the review, Apply, delivery
+  and Discard changes) behind `src/app/api/game-servers/[id]/apply/` and
+  `.../draft/discard/`; the poll route delivers from it.
 - `src/proxy.ts` - the Content-Security-Policy, with a fresh nonce per request, on
   every page. Inline script runs only with the nonce, so a new page or component
   adds no inline `<script>` or `on*` handler; the root layout renders per request

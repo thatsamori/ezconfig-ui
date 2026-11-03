@@ -15,9 +15,12 @@
  * - Not connected: shown with last seen;
  * - Never connected: no poll yet.
  * Alongside it, the view says when EZConfig needs updating: the latest poll
- * reported a build that is not the Supported build (supported-build.ts).
+ * reported a build that is not the Supported build (supported-build.ts). It
+ * also shows the Live configuration, whether the Draft has Unapplied changes,
+ * and why Apply is blocked, if it is (live-configurations.ts).
  */
 import { createHash, randomBytes } from 'node:crypto';
+import { liveConfigurationView } from './live-configurations';
 import type { PollReport, ProcessingResult } from './poll-exchange';
 import { endKey, pollActivity } from './polls';
 import { platformStore } from './storage';
@@ -64,7 +67,20 @@ export interface GameServerView {
    * sent. Null before the first poll and while it runs the Supported build.
    */
   needsUpdating: { running: string | null; supported: string | null } | null;
+  /**
+   * The Live configuration, Pending since it was applied (Confirmed and Failed
+   * arrive with online-platform#33). Null until the first Apply: the game
+   * server runs its own saved values.
+   */
+  liveConfiguration: { id: string; appliedAt: number } | null;
+  /** The Draft differs from the Live configuration; before the first Apply, it sets any value. */
+  unappliedChanges: boolean;
+  /** Why Apply is disabled; null while the game server is Connected and on the Supported build. */
+  applyBlocked: ApplyBlocked | null;
 }
+
+/** Apply needs the game server Connected and on the Supported build. */
+export type ApplyBlocked = 'never-connected' | 'not-connected' | 'needs-updating';
 
 type Row = {
   id: number; owner_id: number; name: string; key_last4: string; registered_at: number; last_poll_at: number | null;
@@ -194,12 +210,13 @@ export function countGameServers(now = Date.now()): { registered: number; connec
 
 export function gameServerView(server: GameServer, now = Date.now(), supportedBuild = readSupportedBuild()?.stamp ?? null): GameServerView {
   const outdated = server.lastPollAt !== null && !isSupportedBuild(server.reportedBuildStamp, supportedBuild);
+  const connection = connectionStatus(server, now);
   return {
     id: server.id,
     name: server.name,
     keyLast4: server.keyLast4,
     registeredAt: server.registeredAt,
-    connection: connectionStatus(server, now),
+    connection,
     sharedKey: pollActivity(server.id, now).sharedKey,
     lastReport: server.lastPollAt === null ? null : {
       buildStamp: server.reportedBuildStamp,
@@ -207,5 +224,7 @@ export function gameServerView(server: GameServer, now = Date.now(), supportedBu
         : { liveConfigurationId: server.reportedLiveConfigurationId, result: JSON.parse(server.reportedResult) as ProcessingResult },
     },
     needsUpdating: outdated ? { running: server.reportedBuildStamp, supported: supportedBuild } : null,
+    ...liveConfigurationView(server.id),
+    applyBlocked: connection.state !== 'connected' ? connection.state : outdated ? 'needs-updating' : null,
   };
 }

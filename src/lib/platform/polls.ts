@@ -11,6 +11,8 @@
  * - `answerHeldPoll` answers a held poll early: an Apply wakes it with the new
  *   Live configuration. `endKey` answers it "key rejected" when Regenerate key
  *   or Delete ends the key.
+ * - A poll that gets the Live configuration at once is never held
+ *   (`answerAtOnce`), but it supersedes all the same.
  * - A poll whose game server hangs up while it is held ends at once.
  * - The shared-key warning: when instances that were superseded come back and
  *   supersede in turn 3 times within 5 minutes, more than one server is using
@@ -21,6 +23,7 @@
  * Polls with a missing or unknown key are counted here too, and logged as one
  * count per clock hour.
  */
+import type { CategoryCommand } from '@/lib/config/encodeValues';
 import { log } from './log';
 
 /** What a poll is answered with: the response body, whose `answer` the mod switches on. */
@@ -28,7 +31,8 @@ export type PollAnswer =
   | { answer: 'no-change' }
   | { answer: 'superseded' }
   | { answer: 'key-rejected' }
-  | { answer: 'not-supported-build' };
+  | { answer: 'not-supported-build' }
+  | { answer: 'live-configuration'; liveConfigurationId: string; commands: CategoryCommand[] };
 
 export const POLL_HOLD_MS = 50_000;
 const HOUR_MS = 3_600_000;
@@ -76,15 +80,7 @@ export function setPollHoldMs(ms: number): void {
  * poll already held for that game server.
  */
 export function holdPoll(gameServerId: number, instanceId: string, hangUp?: AbortSignal): Promise<PollAnswer> {
-  const entry = registry.entries.get(gameServerId) ?? {};
-  registry.entries.set(gameServerId, entry);
-  if (entry.held) {
-    const previous = entry.held.instanceId;
-    entry.held.settle({ answer: 'superseded' });
-    log.info('poll.superseded', { gameServerId });
-    if (previous !== instanceId) countSupersede(gameServerId, entry, previous, instanceId, Date.now());
-  }
-  entry.keyEnded = false;
+  const entry = arrive(gameServerId, instanceId);
   return new Promise(resolve => {
     let settled = false;
     const held: HeldPoll = {
@@ -106,6 +102,29 @@ export function holdPoll(gameServerId: number, instanceId: string, hangUp?: Abor
     if (hangUp?.aborted) hungUp();
     else hangUp?.addEventListener('abort', hungUp);
   });
+}
+
+/**
+ * A poll that is answered at once, never held (a delivery): like any newer
+ * poll, it supersedes the one held for its game server, and it counts as a
+ * poll that has just ended.
+ */
+export function answerAtOnce(gameServerId: number, instanceId: string): void {
+  arrive(gameServerId, instanceId).lastEndedAt = Date.now();
+}
+
+/** A new poll from a game server: it supersedes the one held for it, and the key is in use again. */
+function arrive(gameServerId: number, instanceId: string): Entry {
+  const entry = registry.entries.get(gameServerId) ?? {};
+  registry.entries.set(gameServerId, entry);
+  if (entry.held) {
+    const previous = entry.held.instanceId;
+    entry.held.settle({ answer: 'superseded' });
+    log.info('poll.superseded', { gameServerId });
+    if (previous !== instanceId) countSupersede(gameServerId, entry, previous, instanceId, Date.now());
+  }
+  entry.keyEnded = false;
+  return entry;
 }
 
 /** Answers the poll held for a game server, if there is one; true when there was. */

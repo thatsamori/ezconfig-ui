@@ -1,16 +1,17 @@
 # Poll exchange: the platform–mod contract
 
 Status: the platform side is built (online-platform#26, the Supported build
-in #27, and Regenerate key, Delete and the shared-key warning in #28). The mod
-builds its poll loop against this page
+in #27, Regenerate key, Delete and the shared-key warning in #28, and Apply's
+delivery in #32). The mod builds its poll loop against this page
 ([#29](../.scratch/online-platform/issues/29-mod-polls-the-platform.md)).
 The field names, answers and status codes are a published contract, like the
 Game.ini names: change them only together with the mod, and record the change
 here and in the mod's ADR for the poll loop.
 
 The platform side is `src/app/game-server/poll/route.ts`, which reads polls
-with `src/lib/platform/poll-exchange.ts` and holds them in
-`src/lib/platform/polls.ts`.
+with `src/lib/platform/poll-exchange.ts`, holds them in
+`src/lib/platform/polls.ts` and delivers Live configurations from
+`src/lib/platform/live-configurations.ts`.
 
 ## Endpoint
 
@@ -82,6 +83,7 @@ Every response is a JSON object whose `answer` the mod switches on, with
 
 | Status | `answer` | When | Other fields | The mod then |
 |---|---|---|---|---|
+| `200` | `live-configuration` | On the Supported build only. At once, never held: the game server has a Live configuration, and its id is not the reported `processed.liveConfigurationId` (another id, one the platform does not know, or no `processed`). Or, while the poll is held, an Apply makes a new Live configuration. Never before the game server's first Apply. | `liveConfigurationId`, `commands` (below) | processes it, then polls at once with `processed` |
 | `200` | `no-change` | The hold (50 s) ended with nothing to deliver, and `buildStamp` is the Supported build. | none | polls again at once |
 | `200` | `not-supported-build` | The hold (50 s) ended, and `buildStamp` is not the Supported build: another stamp, `""`, or no Supported build is set. Nothing is ever delivered to it. | none | polls again at once |
 | `200` | `superseded` | A newer poll with the same key arrived while this one was held. | none | waits about 10 s, then polls |
@@ -89,13 +91,9 @@ Every response is a JSON object whose `answer` the mod switches on, with
 | `400` | `bad-request` | The key is known but the body breaks this contract. | `error`: which field and why | treats it as a failure: logs `error`, waits about 10 s |
 | `500` | `error` | The platform failed. | none | treats it as a failure: waits about 10 s |
 
-Coming with later slices, and part of the contract now:
+## Delivery: the `live-configuration` answer
 
-| Status | `answer` | Slice | When | Other fields | The mod then |
-|---|---|---|---|---|---|
-| `200` | `live-configuration` | [#32](../.scratch/online-platform/issues/32-apply-a-draft-and-deliver-it.md) | On the Supported build only: the game server's Live configuration differs from the reported `processed.liveConfigurationId` (answered at once), or an Apply wakes the held poll. | `liveConfigurationId`, `commands` | processes it, then polls at once with `processed` |
-
-A `live-configuration` answer:
+A game server is sent its whole Live configuration, never part of one:
 
 ```json
 {
@@ -108,16 +106,46 @@ A `live-configuration` answer:
 }
 ```
 
+- `liveConfigurationId` is a random UUID, new with each Apply, even an Apply
+  that changed nothing. The mod reports it back as
+  `processed.liveConfigurationId` once it has processed the delivery.
 - `commands` holds one entry per non-empty category, grouped with the deploy's
-  schema. `database` is `Character` or a weapon class. `values` is a string:
-  the JSON object text today's `ezconfig <database> <category> <values>`
-  command takes, with values encoded as today's command builder encodes them
-  (`buildCommandForCategory` in `src/lib/database/apply.ts`: every value a string).
+  schema when it is sent (`encodeValues` in `src/lib/config/encodeValues.ts`),
+  Character categories first, then each weapon's, in schema order.
+  `database` is `Character` or a weapon class. `values` is a string: the JSON
+  object text today's `ezconfig <database> <category> <values>` command takes,
+  with values encoded as today's command builder encodes them (every value a
+  string). A value whose key or weapon class this deploy's schema lacks is
+  not sent. An empty Live configuration has no entries: the wipe alone.
 - The mod processes it as today's command batch: wipe first, then one command
   per entry in order. Each command is all-or-nothing. Processing stops at the
   first failed command and keeps what was applied before it.
 - One result covers the whole delivery, reported as `processed` on every later
   poll.
+
+When it is sent:
+
+- Only to a poll whose `buildStamp` is the Supported build. Any other build is
+  sent nothing, whatever it reports.
+- At once, when the reported `processed.liveConfigurationId` is not the Live
+  configuration's: an id from an earlier Apply, one the platform does not know,
+  or no `processed` at all (the mod never finished processing one, or its
+  build stamp changed since). So a delivery cut off by a crash or a map
+  change, or a game server restarted onto a new build, gets it again, and one
+  that already processed it gets nothing more after a restart or map change.
+  A poll answered at once is never held, but it supersedes the held poll like
+  any newer poll.
+- From a held poll, when an Apply makes a new Live configuration: Apply wakes
+  the poll as soon as its transaction commits, so a Connected game server
+  gets it within about one round trip. Whether the poll's build is the
+  Supported build is still decided when it is answered: if it no longer is,
+  it gets `not-supported-build` instead.
+- Never to a game server that has no Live configuration yet (before its
+  first Apply): its polls get `no-change`, so the first poll from a server
+  that already runs EZConfig never wipes the values it has.
+- A game server that is not Connected when an Apply happens gets it at its
+  next poll; nothing expires. A newer Apply replaces the Live configuration,
+  so the newest one is delivered.
 
 Anything else is a failure, and the mod waits about 10 s: no response, a
 timeout, a status not listed here (a proxy's `502` or `504`), a body that is
@@ -183,7 +211,11 @@ not JSON, or an `answer` the mod does not know.
     `buildStamp` when it has the `YYYYMMDD-HHMMSS` form), when a game
     server's first poll, or a poll whose `buildStamp` differs from its last
     one, reports a build that is not the Supported build;
-  - `poll.key-rejected` (info, with `count`), once per clock hour that had any.
+  - `poll.key-rejected` (info, with `count`), once per clock hour that had any;
+  - `live-configuration.delivered` (info, with `gameServerId` and
+    `liveConfigurationId`), for each delivery, at once or from a held poll.
+    The Apply that made it is logged as `live-configuration.applied`, with the
+    server owner's `userId` as well. Neither logs any value.
 
 ## Trying it by hand
 
@@ -200,3 +232,10 @@ The server page shows Connected within 2 s. The command answers
 15 s later. With another `buildStamp`, or before the Supported build is set,
 it answers `{"answer":"not-supported-build"}` after 50 s and the page shows
 EZConfig needs updating.
+
+To see a delivery, edit the Draft, run the command again, and choose Review
+and Apply on the server page while it is held: it answers at once with
+`live-configuration`. Run it again with
+`"processed":{"liveConfigurationId":"<that id>","result":{"success":true,"acceptedValues":1,"changedValues":1,"unknownKeys":[]}}`
+in the body and it is held; without `processed`, it gets the Live
+configuration again at once.
