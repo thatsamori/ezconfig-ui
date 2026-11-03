@@ -113,6 +113,8 @@ if [[ -s $SETTINGS/caddy.env ]]; then
   (set -a && . "$SETTINGS/caddy.env" && caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile)
   systemctl restart caddy
 else
+  # The package starts Caddy with its own welcome page; keep it off until filled.
+  systemctl stop caddy
   echo "Caddy: fill $SETTINGS/caddy.env (.env.example), then run this again."
 fi
 if [[ -s /etc/litestream.yml ]]; then
