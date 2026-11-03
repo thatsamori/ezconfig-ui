@@ -12,7 +12,7 @@ import { CHARACTER_CONFIG_OPTIONS } from './characterConfigSchema';
 import { CategoryName, WeaponConfigGroupName } from './weaponConfigSchema';
 import { DataType, type ConfigEntry } from './types';
 import { documentErrors, documentFields } from './valuesDocument';
-import { formatValue } from '@/lib/rcon/formatters';
+import { formatValue } from './formatters';
 
 export const WIPE_COMMAND = 'string ezconfig WipeDatabases';
 

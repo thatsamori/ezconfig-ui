@@ -1,14 +1,18 @@
-import { DataType } from "@/lib/config/types";
+/**
+ * How each value is written in an EZConfig command: every value is a string
+ * in the category's JSON object (src/lib/config/encodeValues.ts).
+ */
+import { DataType } from "./types";
 
 /**
- * Format a boolean value for RCON commands
+ * Format a boolean value for EZConfig commands
  */
 export function formatBoolean(value: boolean): string {
   return value ? "True" : "False";
 }
 
 /**
- * Format a float value for RCON commands: at least 2 decimal places (the
+ * Format a float value for EZConfig commands: at least 2 decimal places (the
  * historical wire format), up to 4 so that values such as 0.325 or 0.675
  * (ChftpStun parry times) are not rounded on the way to the mod.
  */
@@ -18,7 +22,7 @@ export function formatFloat(value: number): string {
 }
 
 /**
- * Format a Vector value for RCON commands
+ * Format a Vector value for EZConfig commands
  * Store format: { x: number, y: number, z: number }
  * Output format: "X=0.00,Y=0.00,Z=0.00"
  */
@@ -31,7 +35,7 @@ export function formatVector(value: {
 }
 
 /**
- * Format a Vector2D value for RCON commands
+ * Format a Vector2D value for EZConfig commands
  * Store format: { x: number, y: number }
  * Output format: "X=0.00,Y=0.00,Z=0.00" (Z is always 0 for 2D vectors)
  */
@@ -40,8 +44,8 @@ export function formatVector2D(value: { x: number; y: number }): string {
 }
 
 /**
- * Format a FloatArray value for RCON commands
- * The mod's RCON parser expects comma-separated numbers without parentheses.
+ * Format a FloatArray value for EZConfig commands
+ * The mod's command parser expects comma-separated numbers without parentheses.
  * This differs from the parenthesized Game.ini import format.
  * Output format: "0.00,0.00,0.00"; an empty array is an empty string.
  */
@@ -50,7 +54,7 @@ export function formatFloatArray(values: number[]): string {
 }
 
 /**
- * Format a String value for RCON commands
+ * Format a String value for EZConfig commands
  * The choice name is passed through unquoted; the JSON encoding of the
  * command wraps it in one pair of quotes exactly like every other value.
  */
@@ -59,7 +63,7 @@ export function formatString(value: string): string {
 }
 
 /**
- * Format a value based on its data type for RCON commands
+ * Format a value based on its data type for EZConfig commands
  */
 export function formatValue(dataType: DataType, value: unknown): string {
   switch (dataType) {
