@@ -65,7 +65,7 @@ that [Mod polls the platform](29-mod-polls-the-platform.md) builds against.
 pushed). 181 tests pass (175 before, 6 new), typecheck is clean, and lint
 stays at 20.
 
-- Migration `0003-game-servers.sql` adds `game_servers` and `drafts`.
+- Migration `0004-game-servers.sql` (renumbered from 0003 at merge, after #25's `0003-invites.sql`) adds `game_servers` and `drafts`.
   `game_servers` holds the owner, the name and its lower-cased `name_key`
   (unique per owner), the key's SHA-256 hex (unique) and last 4 characters,
   when it was registered and last polled, and the reported build stamp,
