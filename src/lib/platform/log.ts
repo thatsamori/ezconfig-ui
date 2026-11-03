@@ -27,8 +27,8 @@
  *   the list has a backstop.
  *
  * Warnings and errors since process start also feed `readLogHealth()`, for the
- * operator status page. Self-hosted code keeps its `console.*` calls until it
- * is removed.
+ * operator status page. The startup hook's two migration lines still use
+ * `console.*`.
  */
 import { env } from '@/lib/env';
 

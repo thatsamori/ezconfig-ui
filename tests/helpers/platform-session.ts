@@ -1,6 +1,6 @@
 /**
- * A platform session for tests that call the self-hosted routes directly:
- * every one of them needs a signed-in server owner (online-platform#23).
+ * A platform session for tests that call the route handlers directly: every
+ * one outside sign-in needs a signed-in server owner (online-platform#23).
  *
  * Set DATABASE_PATH first (a child fixture puts it in its own temp root; the
  * suite runs with it at a temp file), then `signInForTest()` migrates that
