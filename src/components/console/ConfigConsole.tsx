@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Bookmark, Sword, Search, Check, X, MessageCircle, UserPlus, Server } from 'lucide-react';
+import { Bookmark, Sword, Search, Check, X, MessageCircle, UserPlus, Server, PackageCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { AccountMenu, AuthGate } from '@/components/auth';
 import { Logo } from '@/components/Logo';
-import { InvitesPage } from '@/components/operator';
+import { InvitesPage, SupportedBuildPage } from '@/components/operator';
 import { PresetsTab } from '@/components/presets';
 import { GameServersTab } from '@/components/game-servers';
 import { SavePresetDialog } from '@/components/presets/SavePresetDialog';
@@ -180,6 +180,10 @@ function ConsoleContent() {
         id: 'invites',
         label: 'Invites',
         icon: <UserPlus />
+      }, {
+        id: 'supported-build',
+        label: 'Supported build',
+        icon: <PackageCheck />
       }] : [])].map(item => <button key={item.id} title={item.label} aria-label={item.label} aria-current={tab === item.id ? 'page' : undefined} className={tab === item.id ? 'active' : ''} onClick={() => selectTab(item.id)}>{item.icon}</button>)}<AccountMenu /></nav>
     {configScreen ? <>
       <aside className="config-sidebar"><div className="sidebar-header"><div className="sidebar-title"><h2>{isCharacter ? 'Groups' : 'Weapons'}</h2><span>{isCharacter ? `${countGroups(values.character)} overrides` : `${weaponCount} with overrides`}</span></div><SearchField value={query} onChange={setQuery} placeholder="Filter" />{!isCharacter && <label className="override-filter"><Switch checked={onlyOverrides} onCheckedChange={setOnlyOverrides} /><span>Only with overrides</span></label>}</div><div className="sidebar-list">{items.map(name => <button key={name} className={name === title ? 'selected' : ''} aria-current={name === title ? 'true' : undefined} onClick={() => isCharacter ? setCharGroup(name as CharacterConfigGroupName) : setWeapon(name)}><span>{name}</span>{count(name) > 0 && <b>{count(name)}</b>}</button>)}{!items.length && <p className="empty-state">{onlyOverrides && !isCharacter ? 'No weapons with overrides match' : 'No matches'}</p>}</div></aside>
@@ -193,7 +197,7 @@ function ConsoleContent() {
             '--columns': visibleGroups.length
           } as React.CSSProperties}><div className="config-table-inner"><div className="config-grid table-heading" role="row"><span role="columnheader">Config key</span>{visibleGroups.map(group => <span role="columnheader" key={group}>{isCharacter ? 'Value' : group}{visibleGroups.length > 1 && <button className="icon-button" aria-label={`Hide ${group}`} onClick={() => setGroups(toggleAttackGroup(groups, group))}><X size={12} /></button>}</span>)}<span role="columnheader" className="sr-only">Actions</span></div>{rowSections.map(section => <div role="rowgroup" key={section.title}>{section.title && <div role="row" className="config-section-heading"><div role="cell" aria-colspan={visibleGroups.length + 2}><h2>{section.title}</h2></div></div>}{section.entries.map(entry => <KeyRow key={`${database}/${visibleGroups.join('/')}/${entry.configKey}`} entry={entry} database={database} groups={visibleGroups} values={values} onSweep={setSweep} highlighted={searchDestination?.configKey === entry.configKey && searchDestination.tab === tab && searchDestination.group === visibleGroups[0] && (isCharacter || searchDestination.weapon === weapon)} />)}</div>)}{rows.length === 0 && <p className="empty-state">No keys in this group</p>}</div></div>}</div>
       <footer className="floating-bar"><span className={`status-dot${total ? ' changed' : ''}`} /><div className="bar-copy"><strong>{total ? `${total} unapplied changes` : 'Everything at game default'}</strong>{total > 0 && <span>across {weaponCount ? `${weaponCount} weapon${weaponCount === 1 ? '' : 's'}` : ''}{countGroups(values.character) ? `${weaponCount ? ' and ' : ''}character` : ''}</span>}</div><button className="outline-button" disabled={loading || !!loadError} onClick={() => setPresetOpen(true)}>Save as preset</button><button className="primary-button" disabled={loading || !!loadError} onClick={() => setReviewOpen(true)}>Review &amp; apply</button></footer></section>
-    </> : <section className="standalone-page" ref={contentRef}><div className="header-actions standalone-search">{globalSearch}</div>{tab === 'presets' ? <PresetsTab /> : tab === 'servers' ? <GameServersTab /> : tab === 'invites' && operator ? <InvitesPage /> : null}</section>}
+    </> : <section className="standalone-page" ref={contentRef}><div className="header-actions standalone-search">{globalSearch}</div>{tab === 'presets' ? <PresetsTab /> : tab === 'servers' ? <GameServersTab /> : tab === 'invites' && operator ? <InvitesPage /> : tab === 'supported-build' && operator ? <SupportedBuildPage /> : null}</section>}
     {sweep && <SweepPanel entry={sweep} weapon={weapon} groups={groups} onClose={() => setSweep(null)} />}
     {reviewOpen && <SelectiveApplyDialog open={reviewOpen} onOpenChange={setReviewOpen} onApplyComplete={() => {}} />}
     {presetOpen && <SavePresetDialog open={presetOpen} onOpenChange={setPresetOpen} />}
