@@ -11,14 +11,13 @@ test('all ten base controls coexist with existing features through the editor an
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
 });
 
-test('base parry controls remain independent and use explicit motion-dependent defaults', () => {
+test('base parry controls remain independent, with no seed in the schema', () => {
   expect(BASE_PARRY_CONFIG_OPTIONS.find(entry => entry.configKey === 'ParryUpTime')).toBeDefined();
   for (const entry of BASE_PARRY_CONFIG_OPTIONS) {
     expect(CHARACTER_CONFIG_OPTIONS.Parry).toContain(entry);
     expect(entry.dataType).toBe(DataType.Float);
     expect(entry.gatedBy).toBeUndefined();
     expect(entry.default).toBeUndefined();
-    expect(entry.defaultVariesByMotion).toBe(true);
   }
   expect(validateEntries({ ParryUpTime: 0, ExperimentalParry: false, TrueCombo: false }, 'Character', 'Parry').valid).toBe(true);
   expect(validateEntries({ ParryUpTime: false }, 'Character', 'Parry').valid).toBe(false);

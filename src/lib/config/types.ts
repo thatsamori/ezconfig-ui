@@ -34,10 +34,6 @@ export type ConfigEntry = DefaultMetadata & {
   supportedWeapons?: string[];
   /** With minimum, reject fractional values before native Float rounding. */
   integer?: boolean;
-  /** Stock values differ by motion; Customize must ask for an explicit value. */
-  defaultVariesByMotion?: boolean;
-  /** Customize opens an unsaved numeric draft instead of seeding a default. */
-  requiresExplicitValue?: boolean;
   /**
    * String entries only: the fixed list of choice names the webapp offers.
    * The mod maps a choice name to an asset; the webapp never sends asset paths.

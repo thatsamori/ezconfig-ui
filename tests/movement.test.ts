@@ -4,14 +4,12 @@ import { CHARACTER_CONFIG_OPTIONS } from '../src/lib/config/characterConfigSchem
 import { DataType } from '../src/lib/config/types';
 import { validateEntries } from '../src/lib/database/validation';
 
-test('walking speed is an independent explicit Movement value with an honest game default', () => {
+test('walking speed is an independent Movement value with an honest game default', () => {
   const entry = MOVEMENT_CONFIG_OPTIONS.find(entry => entry.configKey === 'MaxWalkSpeed')!;
   expect(CHARACTER_CONFIG_OPTIONS.Movement).toContain(entry);
   expect(entry.dataType).toBe(DataType.Float);
   expect(entry.gatedBy).toBeUndefined();
   expect(entry.default).toBeUndefined();
-  expect(entry.defaultVariesByMotion).toBeUndefined();
-  expect(entry.requiresExplicitValue).toBe(true);
   expect(entry.documentation).toEndWith('Cswics mod: customMovementSpeedMultiplier.X × 308.');
   for (const value of [0, -100, 450]) {
     expect(validateEntries({ MaxWalkSpeed: value }, 'Character', 'Movement').valid).toBe(true);
@@ -31,8 +29,6 @@ test('crouch and directional controls remain independent through the editor, App
     const entry = CHARACTER_CONFIG_OPTIONS.Movement.find(entry => entry.configKey === key)!;
     expect(entry.dataType).toBe(DataType.Float);
     expect(entry.default).toBeUndefined();
-    expect(entry.defaultVariesByMotion).toBeUndefined();
-    expect(entry.requiresExplicitValue).toBe(true);
     expect(entry.gatedBy).toBeUndefined();
   }
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/movement-crouch-direction-review.ts'], {
@@ -46,14 +42,11 @@ test('sprint controls preserve explicit defaults and independent TimeToMaxSprint
     const entry = CHARACTER_CONFIG_OPTIONS.Movement.find(entry => entry.configKey === key)!;
     expect(entry.dataType).toBe(DataType.Float);
     expect(entry.default).toBeUndefined();
-    expect(entry.defaultVariesByMotion).toBeUndefined();
-    expect(entry.requiresExplicitValue).toBe(true);
     expect(entry.gatedBy).toBeUndefined();
   }
   const existing = CHARACTER_CONFIG_OPTIONS.Movement.find(entry => entry.configKey === 'TimeToMaxSprint')!;
   expect(existing.dataType).toBe(DataType.Float);
   expect(existing.default).toBe(.96);
-  expect(existing.requiresExplicitValue).toBeUndefined();
   const result = Bun.spawnSync([process.execPath, 'run', 'tests/fixtures/movement-sprint-review.ts'], {
     cwd: process.cwd(), stdout: 'pipe', stderr: 'pipe',
   });
@@ -65,8 +58,6 @@ test('equipment subsprint controls retain independent main/alternate saved value
     const entry = CHARACTER_CONFIG_OPTIONS.Movement.find(entry => entry.configKey === key)!;
     expect(entry.dataType).toBe(DataType.Float);
     expect(entry.default).toBeUndefined();
-    expect(entry.defaultVariesByMotion).toBeUndefined();
-    expect(entry.requiresExplicitValue).toBe(true);
     expect(entry.gatedBy).toBeUndefined();
     expect(entry.isFeatureToggle).toBeUndefined();
   }
@@ -76,13 +67,11 @@ test('equipment subsprint controls retain independent main/alternate saved value
   expect({ exitCode: result.exitCode, stderr: result.stderr.toString() }).toEqual({ exitCode: 0, stderr: '' });
 });
 
-test('attack supersprint durations remain explicit independent seconds through the editor and Apply', () => {
+test('attack supersprint durations remain independent seconds through the editor and Apply', () => {
   for (const key of ['AttackSupersprintDuration', 'SecondAttackSupersprintDuration']) {
     const entry = CHARACTER_CONFIG_OPTIONS.Movement.find(entry => entry.configKey === key)!;
     expect(entry.dataType).toBe(DataType.Float);
     expect(entry.default).toBeUndefined();
-    expect(entry.defaultVariesByMotion).toBeUndefined();
-    expect(entry.requiresExplicitValue).toBe(true);
     expect(entry.gatedBy).toBeUndefined();
     expect(entry.isFeatureToggle).toBeUndefined();
     for (const value of [0, -.25, .45]) {

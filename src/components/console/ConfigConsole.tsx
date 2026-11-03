@@ -104,7 +104,7 @@ const DRAFT_REFRESH_MS = 3_000;
 /** True while the owner is typing a value in the editor: a refresh waits rather than replace it. */
 const typingValue = () => {
   const active = document.activeElement;
-  return !!active?.closest('.config-table') && (active.matches('input, select, textarea') || !!active.closest('form'));
+  return !!active?.closest('.config-table') && active.matches('input, select, textarea');
 };
 /** While the editor is showing, fetches its Draft again every few seconds the page is visible, and at once when it is shown again. */
 function useDraftRefresh(showing: boolean) {

@@ -1,4 +1,6 @@
 import { CategoryName, WeaponConfigGroupName } from '@/lib/config/weaponConfigSchema';
+import { constrainedFloatTextError } from '@/lib/config/numericConstraints';
+import type { ConfigEntry, DefaultValue } from '@/lib/config/types';
 import type { ConfigState, ConfigValue } from '@/lib/store/configStore';
 export const weapons = Object.values(CategoryName).sort((a, b) => a.localeCompare(b));
 export const attackGroups = Object.values(WeaponConfigGroupName);
@@ -15,6 +17,20 @@ export function sweepValue(stored: ConfigValue | undefined, mode: SweepMode, val
   if (start === undefined || typeof value !== 'number') return undefined;
   const result = mode === 'multiply' ? start * value : start + value;
   return Number.isFinite(result) ? Number(result.toFixed(6)) : undefined;
+}
+/** Why a Float cell's new value is refused; empty text is no value, so nothing to refuse. */
+export const newValueError = (text: string, entry: ConfigEntry) => text.trim() && entry.minimum !== undefined ? constrainedFloatTextError(text, entry.minimum, entry.maximum, entry.integer) : undefined;
+/**
+ * What leaving a Float cell's new value does: the number to save, 'close' for
+ * nothing to save, or 'refused' to stay open with the message. Enter is
+ * deliberate, so it saves even an unchanged default; blur saves only a change,
+ * because looking at a value must not create an override.
+ */
+export function newValueOutcome(text: string, baseline: DefaultValue | undefined, entry: ConfigEntry, deliberate: boolean): number | 'close' | 'refused' {
+  const value = Number(text);
+  if (!text.trim() || (!deliberate && value === baseline)) return 'close';
+  if (newValueError(text, entry)) return 'refused';
+  return Number.isFinite(value) ? value : 'close';
 }
 export function toggleAttackGroup(current: string[], group: string): string[] {
   if (group === 'General') return ['General'];

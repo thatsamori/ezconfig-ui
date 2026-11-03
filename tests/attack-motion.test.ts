@@ -10,7 +10,6 @@ test('AttackMotion is a Character category with 34 distinct controls and no inve
   expect(new Set(entries.map(entry => entry.configKey)).size).toBe(34);
   for (const entry of entries.filter(entry => entry.dataType === DataType.Float)) {
     expect(entry.default).toBeUndefined();
-    expect(entry.defaultVariesByMotion).toBe(true);
   }
   expect(getSchemaForCategory('Character', 'AttackMotion')?.StrikeMorphWindow).toBeDefined();
 });

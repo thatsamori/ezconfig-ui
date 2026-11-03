@@ -7,8 +7,7 @@ import { DataType, type ConfigEntry } from '@/lib/config/types';
 import type { ConfigValue } from '@/lib/store/configStore';
 import { useDebouncedCallback } from '@/lib/hooks';
 import { SaveIndicator } from '@/components/config/SaveIndicator';
-import { ExplicitFloatOverride } from '@/components/config/ExplicitFloatOverride';
-import { isOverride } from './model';
+import { isOverride, newValueError, newValueOutcome } from './model';
 import { defaultLabel, defaultDetails, resolveDefault } from '@/lib/config/defaults';
 import { constrainedFloatTextError } from '@/lib/config/numericConstraints';
 function NumberField({
@@ -69,26 +68,24 @@ export function ValueEditor({
   const baseline = resolveDefault(entry, database, category).defaultValue;
   const baselineLabel = defaultLabel(entry, database, category);
   const baselineDetails = defaultDetails(entry, database, category);
-  const commitDraft = () => {
-    if (entry.minimum !== undefined && constrainedFloatTextError(draft, entry.minimum, entry.maximum, entry.integer)) return;
-    if (draft.trim() && Number.isFinite(Number(draft))) onChange(Number(draft));
+  const closeDraft = () => {
     setEditing(false);
     setDraft('');
   };
+  const leaveDraft = (deliberate: boolean) => {
+    const outcome = newValueOutcome(draft, baseline, entry, deliberate);
+    if (outcome === 'refused') return;
+    if (outcome !== 'close') onChange(outcome);
+    closeDraft();
+  };
   if (!isOverride(value)) {
-    if (editing && (entry.requiresExplicitValue || entry.defaultVariesByMotion)) return <ExplicitFloatOverride
-      configKey={label}
-      disabled={disabled}
-      onConfirm={next => { onChange(next); setEditing(false); }}
-      onCancel={() => setEditing(false)}
-    />;
-    if (editing) return <input className="new-value" autoFocus aria-label={label} aria-invalid={entry.minimum !== undefined && !!constrainedFloatTextError(draft, entry.minimum, entry.maximum, entry.integer) || undefined} min={entry.minimum} max={entry.maximum} type="number" step={entry.integer ? 1 : 'any'} placeholder="type a value" value={draft} onChange={event => setDraft(event.target.value)} onBlur={commitDraft} onKeyDown={event => {
-      if (event.key === 'Enter') event.currentTarget.blur();
-      if (event.key === 'Escape') {
-        setEditing(false);
-        setDraft('');
-      }
-    }} />;
+    if (editing) {
+      const error = newValueError(draft, entry);
+      return <><input className="new-value" autoFocus aria-label={label} aria-invalid={!!error || undefined} min={entry.minimum} max={entry.maximum} type="number" step={entry.integer ? 1 : 'any'} placeholder="type a value" value={draft} onChange={event => setDraft(event.target.value)} onFocus={event => event.currentTarget.select()} onBlur={() => leaveDraft(false)} onKeyDown={event => {
+        if (event.key === 'Enter') leaveDraft(true);
+        if (event.key === 'Escape') closeDraft();
+      }} />{error && <small className="field-error" role="alert">{error}</small>}</>;
+    }
     return <button className="game-default" disabled={disabled} title={`${baselineDetails}\nCustomize ${label}`} onClick={() => {
       if (entry.dataType === DataType.Float) {
         setDraft(typeof baseline === 'number' ? String(baseline) : '');
