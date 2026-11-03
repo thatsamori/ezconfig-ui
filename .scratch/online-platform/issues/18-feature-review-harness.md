@@ -1,6 +1,6 @@
 # 18: Feature review harness
 
-Status: open
+Status: completed
 Type: task
 Created: 2026-11-02
 Blocked by: None
@@ -32,18 +32,36 @@ changing the fixtures. One fixture moves onto it here, as proof.
 
 ## Acceptance criteria
 
-- [ ] The harness lets a fixture set a value, reset a value to the game
+- [x] The harness lets a fixture set a value, reset a value to the game
       default, read back a saved value, and Apply everything. Apply returns
       the delivered batch as a wipe followed by one command per non-empty
       category.
-- [ ] There is no selective apply: every Apply sends the whole configuration
+- [x] There is no selective apply: every Apply sends the whole configuration
       after a wipe, as the platform will.
-- [ ] Each fixture gets isolated temp storage. Nothing real is touched, and
+- [x] Each fixture gets isolated temp storage. Nothing real is touched, and
       RCON stays mocked.
-- [ ] An option writes the delivered batch to a capture file, so the existing
+- [x] An option writes the delivered batch to a capture file, so the existing
       command-capture hooks used for mod evidence keep working.
-- [ ] The Character movement walk review is moved onto the harness. Its
+- [x] The Character movement walk review is moved onto the harness. Its
       selective-apply assertions are dropped, and its value-format,
       coexistence and reset assertions are kept.
-- [ ] `bun run typecheck` and the full suite pass, and the lint count does not
+- [x] `bun run typecheck` and the full suite pass, and the lint count does not
       rise.
+
+## Comments
+
+2026-11-02: Done on branch `claude/wizardly-kare-690b41` (not pushed).
+
+- The harness is `tests/fixtures/feature-review-harness.ts`, checked by
+  `tests/feature-review-harness.test.ts`. Its interface is `set`, `reset`,
+  `saved`, `apply(stage?)`, `saveUnchecked` and `storeUnvalidated`, plus
+  `categoryEntries` and `categoryCommands` for reading a batch. The capture
+  option writes `{ stage: batch }` once the review passes.
+- The walk review's commit lists the selective-apply assertions it dropped.
+- Not in the harness yet: failure reports, preset loading, bulk weapon edits
+  and the editor's in-memory value. Capture files with richer shapes (stun
+  `cases`, weapon `rearingStages`, frames and wire) are still written by their
+  own fixtures from the batches `apply` returns.
+- Mod-side follow-up: replay scripts that read a `selected` stage need a new
+  stage once [21](21-move-weapon-and-remaining-feature-reviews.md) drops
+  selective apply.
