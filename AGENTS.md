@@ -47,7 +47,8 @@ are the contract between this app and the mod.
   connection status), `polls.ts` (the one in-process registry of held polls) and
   `poll-exchange.ts` (reads a poll against `docs/poll-exchange.md`). The poll
   endpoint, `src/app/game-server/poll/`, sits outside `src/app/api/`: game
-  servers send their key, not a session.
+  servers send their key, not a session. `supported-build.ts` is the one
+  build stamp anything is sent to, set at `src/app/api/operator/supported-build/`.
 - `src/proxy.ts` - the Content-Security-Policy, with a fresh nonce per request, on
   every page. Inline script runs only with the nonce, so a new page or component
   adds no inline `<script>` or `on*` handler; the root layout renders per request
