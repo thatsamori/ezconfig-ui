@@ -510,6 +510,10 @@ body { -webkit-font-smoothing: antialiased; }
 .crumb-link { color: #d4d4d8; text-decoration: underline; text-underline-offset: 2px; }
 .crumb-link:hover { color: #f2f2f3; }
 .field-error { display: block; color: #e5484d; font-size: 11px; line-height: 1.4; margin-top: 3px; overflow-wrap: anywhere; }
+/* A number field's message goes under the field and its Reset, which keep their row. */
+.value-editor:has(> .number-field > .field-error) { flex-wrap: wrap; }
+.value-editor > .number-field:has(> .field-error) { display: contents; }
+.value-editor > .number-field > .field-error { order: 1; flex-basis: 100%; margin-top: 0; }
 .save-problem { color: #e0a83c; }
 .unsaved-edits { margin-top: 10px; padding: 10px 12px; background: rgba(224,168,60,.07); border: 1px solid rgba(224,168,60,.25); border-radius: 9px; font-size: 12px; line-height: 1.5; color: #d4d4d8; overflow-wrap: anywhere; }
 .unsaved-edits ul { margin: 6px 0; padding-left: 18px; list-style: disc; max-height: 9em; overflow-y: auto; }
