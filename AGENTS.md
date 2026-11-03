@@ -77,7 +77,9 @@ are the contract between this app and the mod.
   `tests/helpers/`: `runPlatformFixture`/`withPlatformDatabase` (child fixtures
   on a fresh, migrated platform database) and `signInForTest` (a session for
   tests that call routes directly; the feature review harness uses it).
-- `scripts/` - init-db, defaults export/import, parry migration CLI.
+- `scripts/` - init-db, defaults export/import, parry migration CLI, and the
+  one-time import (`import-self-hosted.ts`, online-platform#40; deleted after
+  the owner's import, #42).
 - `docs/` - see index below; `docs/design/`, `docs/archive/` are reference only.
 - `deploy/` - the platform instance's units, Caddyfile, Litestream template and
   provisioning; `scripts/deploy.ts` (`bun run deploy <commit>`) runs
