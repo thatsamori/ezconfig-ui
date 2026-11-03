@@ -98,6 +98,13 @@ One immutable, numbered set of Character and Weapon config values within a
 Ruleset.
 _Avoid_: mod version, snapshot, revision
 
+**Ruleset file**:
+One Ruleset version as a file, with the Ruleset's name and the version's
+description and values, which its owner exports and sends to someone. Importing
+one makes version 1 of a new Ruleset of the importer's. The Ruleset itself stays
+private on the platform.
+_Avoid_: share link, shared Ruleset, preset file, backup
+
 **Origin**:
 The Ruleset version a Draft or Live configuration was last loaded from or
 saved as. A configuration whose values differ from its origin's is modified.

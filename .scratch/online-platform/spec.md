@@ -58,7 +58,8 @@ self-hosted mode is removed.
   then Confirmed or Failed, based on what the server reports.
 - **Rulesets.** Ruleset versions are immutable, numbered sets of values. A
   Draft is saved as a new version, and a version is loaded into any of the
-  owner's Drafts.
+  owner's Drafts. A version can be exported as a file, for its owner to send to
+  someone, who imports it as a new Ruleset of their own.
 - **Notes.** Notes are global comments on config keys, readable by every
   server owner. Their HTML is sanitized when saved.
 - **Supported build.** The platform operator sets the one Supported build.
@@ -157,6 +158,8 @@ self-hosted mode is removed.
 65. As a server owner, I want to rename a Ruleset, with names unique among my Rulesets ignoring case, so that I can keep them organised.
 66. As a server owner, I want to delete a Ruleset with all its versions, clearing every origin that pointed into it while the values stay, so that I can remove rulesets I no longer use.
 67. As a server owner, I want my Rulesets to be private to me, so that my work is not shared without my say.
+67a. As a server owner, I want to export any Ruleset version as a file, holding only its name, description and values, so that I can send it to someone directly.
+67b. As a server owner, I want to import a Ruleset file someone sent me as a new Ruleset of my own, after seeing its name, how many values it holds and which would be dropped, so that I can use it without it reaching any Draft or game server until I say so.
 
 ### Notes
 
@@ -470,7 +473,23 @@ category commands.
 - Loading a version copies its values over the whole Draft and makes that
   version the origin. The response reports how many values were dropped.
 - Rulesets can be renamed and deleted. A single version is never deleted.
-  Rulesets belong to their owner and are never shared.
+  Rulesets belong to their owner and stay private on the platform: another
+  owner never sees them. A Ruleset file is something the owner chooses to send.
+- **Ruleset files** (`online-platform#54`):
+  - Exporting a Ruleset version downloads a JSON file holding a format marker,
+    a format version, the Ruleset's name, the version's description and its
+    values document as stored. It holds no owner, ids, Notes or Game server keys.
+  - Importing shows the file's name, how many values it holds and any that would
+    be dropped. Confirming makes version 1 of a new Ruleset, in one transaction,
+    and changes no Draft, Live configuration or game server. A taken name,
+    ignoring case, can be changed.
+  - The file is input from outside. A file over the size limit, or that isn't
+    the format, is refused, as is one whose name or description the platform
+    would refuse. A value with no place in the current schema, or one a Draft save
+    would refuse, is dropped and reported; one dropped value doesn't fail the
+    import. So export, import and load gives the same Draft as loading the
+    original, except for a stored value the current schema refuses, which is
+    dropped and reported at import rather than loaded and listed.
 
 ### Notes
 
@@ -800,7 +819,9 @@ batches arrive.
   - values placed under their key's current category;
   - rename with unique names;
   - delete clears origins and keeps values;
-  - privacy between owners.
+  - privacy between owners;
+  - a Ruleset file's round trip, refused files, dropped values, a taken name and
+    another owner's Ruleset answering 404.
 - **Notes:**
   - author taken from the session;
   - edit and delete only one's own;
@@ -847,7 +868,8 @@ batches arrive.
 ## Out of Scope
 
 - Co-admins and roles; V1 is owner-only.
-- Sharing Rulesets (a public library, share links, forking).
+- Sharing Rulesets on the platform (a public library, share links, forking).
+  Rulesets stay private; an owner can send someone a Ruleset file directly.
 - Live collaborative editing and per-key merging of Draft saves. Stale saves
   are rejected instead.
 - Selective Apply, and a separate Retry action.

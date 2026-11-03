@@ -3,7 +3,9 @@
  *
  * Validates config entries against the schema to ensure:
  * - Config key exists in the schema
- * - Value type matches the expected data type
+ * - Value type matches the expected data type, and holds nothing else: a value
+ *   that passes is a boolean, a finite number, a short list of them, a vector
+ *   of exactly its axes or a listed choice, even from a file someone else made
  */
 
 import {
@@ -96,6 +98,38 @@ function getTypeName(dataType: DataType): string {
 }
 
 /**
+ * A number that survives being stored: JSON has no Infinity (1e999 parses to
+ * it) and would write it as null.
+ */
+const isStorableNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+
+/**
+ * Far above any key's list (the game's own hold at most 4): each value is a
+ * field in the editor and a number in a command.
+ */
+const FLOAT_ARRAY_MAX = 64;
+
+/** An object with exactly these axes, each a storable number, and nothing else. */
+function isVector(value: unknown, axes: readonly string[]): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const keys = Object.keys(value);
+  return (
+    keys.length === axes.length &&
+    axes.every(
+      (axis) =>
+        keys.includes(axis) &&
+        isStorableNumber((value as Record<string, unknown>)[axis]),
+    )
+  );
+}
+
+const VECTOR_AXES = ["x", "y", "z"] as const;
+const VECTOR_2D_AXES = ["x", "y"] as const;
+
+/**
  * Get the actual type name for a value
  */
 function getActualTypeName(value: ConfigValue): string {
@@ -103,27 +137,26 @@ function getActualTypeName(value: ConfigValue): string {
     return "Boolean";
   }
   if (typeof value === "number") {
-    return "Float";
+    return isStorableNumber(value) ? "Float" : String(value);
   }
   if (typeof value === "string") {
     return "String";
   }
   if (Array.isArray(value)) {
-    if (value.every((v) => typeof v === "number")) {
-      return "FloatArray";
+    if (!value.every(isStorableNumber)) {
+      return "Array";
     }
-    return "Array";
+    return value.length <= FLOAT_ARRAY_MAX
+      ? "FloatArray"
+      : `FloatArray of ${value.length} values, more than ${FLOAT_ARRAY_MAX}`;
   }
-  if (typeof value === "object" && value !== null) {
-    if ("x" in value && "y" in value) {
-      if ("z" in value) {
-        return "Vector";
-      }
-      return "Vector2D";
-    }
-    return "Object";
+  if (isVector(value, VECTOR_AXES)) {
+    return "Vector";
   }
-  return typeof value;
+  if (isVector(value, VECTOR_2D_AXES)) {
+    return "Vector2D";
+  }
+  return typeof value === "object" && value !== null ? "Object" : typeof value;
 }
 
 /**
@@ -135,38 +168,23 @@ function valueMatchesType(value: ConfigValue, dataType: DataType): boolean {
       return typeof value === "boolean";
 
     case DataType.Float:
-      return typeof value === "number";
+      return isStorableNumber(value);
 
     case DataType.FloatArray:
-      return Array.isArray(value) && value.every((v) => typeof v === "number");
+      return (
+        Array.isArray(value) &&
+        value.length <= FLOAT_ARRAY_MAX &&
+        value.every(isStorableNumber)
+      );
 
     case DataType.String:
       return typeof value === "string";
 
     case DataType.Vector2D:
-      return (
-        typeof value === "object" &&
-        value !== null &&
-        !Array.isArray(value) &&
-        "x" in value &&
-        "y" in value &&
-        !("z" in value) &&
-        typeof (value as { x: number; y: number }).x === "number" &&
-        typeof (value as { x: number; y: number }).y === "number"
-      );
+      return isVector(value, VECTOR_2D_AXES);
 
     case DataType.Vector:
-      return (
-        typeof value === "object" &&
-        value !== null &&
-        !Array.isArray(value) &&
-        "x" in value &&
-        "y" in value &&
-        "z" in value &&
-        typeof (value as { x: number; y: number; z: number }).x === "number" &&
-        typeof (value as { x: number; y: number; z: number }).y === "number" &&
-        typeof (value as { x: number; y: number; z: number }).z === "number"
-      );
+      return isVector(value, VECTOR_AXES);
 
     default:
       return false;

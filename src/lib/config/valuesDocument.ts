@@ -53,7 +53,7 @@ for (const [category, entries] of Object.entries(CHARACTER_CONFIG_OPTIONS)) {
   for (const entry of entries) if (!characterEntries.has(entry.configKey)) characterEntries.set(entry.configKey, { category, entry });
 }
 
-const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+export const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /** Whether `value` has a document's shape: its values are not checked. */
 export function isValuesDocument(value: unknown): value is ValuesDocument {
@@ -133,6 +133,27 @@ export function knownValues(document: unknown): { document: ValuesDocument; drop
     else dropped++;
   }
   return { document: known, dropped };
+}
+
+/**
+ * The values a Draft save would accept, as a document of their own, as a Ruleset
+ * file is imported: `values` counts them, and `dropped` says why each of the rest
+ * has no place in the schema or is refused.
+ */
+export function acceptedValues(document: unknown): { document: ValuesDocument; values: number; dropped: FieldError[] } {
+  const accepted: ValuesDocument = {};
+  const dropped: FieldError[] = [];
+  let values = 0;
+  for (const field of documentFields(document)) {
+    const error = fieldError(field);
+    if (error) {
+      dropped.push({ database: field.database, category: field.category, key: field.key, error });
+    } else {
+      addField(accepted, field.path, field.value);
+      values++;
+    }
+  }
+  return { document: accepted, values, dropped };
 }
 
 /** Places each value under its key's current category, for the editor; `dropped` counts the values the schema has no place for. */

@@ -153,8 +153,9 @@ the resolved tickets on 2026-11-02.
 ## Out of scope
 
 - Co-admins and roles: V1 is owner-only so there are no permissions to manage.
-- Sharing Rulesets (public library, share links, forking): Rulesets are private
-  in V1.
+- Sharing Rulesets on the platform (public library, share links, forking):
+  Rulesets are private in V1. An owner can send someone a Ruleset file directly
+  ([online-platform#54](issues/54-export-and-import-rulesets-as-files.md)).
 - Live collaborative editing: stale saves are rejected instead.
 - Reading values back from a game server: the platform stays the source of
   truth.

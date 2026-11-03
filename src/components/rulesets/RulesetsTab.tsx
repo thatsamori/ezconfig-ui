@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import { Bookmark } from 'lucide-react';
+import { useRef, useState, type FormEvent } from 'react';
+import { Bookmark, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { relativeTime } from '@/components/console/model';
 import {
@@ -11,19 +11,29 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { useRefreshingJson } from '@/lib/hooks/useRefreshingJson';
 import type { RulesetSummary } from '@/lib/platform/rulesets';
+import { ImportRulesetDialog, reviewRulesetFile, type ChosenFile } from './ImportRulesetDialog';
 
 /** Often enough to pick up a version another tab saved. */
 const REFRESH_MS = 10_000;
 
 /**
  * Rulesets: the owner's own, by name, each with its versions newest first.
- * Rename and Delete are here; saving a version and loading one are in a game
- * server's Draft editor, where the Draft is open.
+ * Rename and Delete are here, with Export for each version and Import for a
+ * Ruleset file; saving a version and loading one are in a game server's Draft
+ * editor, where the Draft is open.
  */
 export function RulesetsTab() {
   const { data: rulesets, error, refresh } = useRefreshingJson<RulesetSummary[]>('/api/rulesets', REFRESH_MS);
   const [renaming, setRenaming] = useState<RulesetSummary | null>(null);
   const [deleting, setDeleting] = useState<RulesetSummary | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [reading, setReading] = useState(false);
+  const [chosen, setChosen] = useState<ChosenFile | null>(null);
+  const choose = async (file: File) => {
+    setReading(true);
+    setChosen(await reviewRulesetFile(file));
+    setReading(false);
+  };
   const remove = async (ruleset: RulesetSummary) => {
     try {
       const response = await fetch(`/api/rulesets/${ruleset.id}`, { method: 'DELETE' });
@@ -36,9 +46,17 @@ export function RulesetsTab() {
     refresh();
   };
   return <div className="game-servers-page rulesets-page">
-    <div className="standalone-heading"><div><h1>Rulesets</h1><p className="page-description">Your saved configurations, each a series of versions that never change. In a game server&apos;s Draft editor, save the Draft as a version, or load any version into the Draft. Only you see your Rulesets.</p></div></div>
+    <div className="standalone-heading"><div><h1>Rulesets</h1><p className="page-description">Your saved configurations, each a series of versions that never change. In a game server&apos;s Draft editor, save the Draft as a version, or load any version into the Draft. Only you see your Rulesets, unless you export a version and send someone the file.</p></div>
+      <button type="button" className="outline-button" disabled={reading} onClick={() => fileInput.current?.click()}><Upload size={14} />{reading ? 'Reading…' : 'Import Ruleset'}</button>
+      <input ref={fileInput} type="file" accept=".json,application/json" hidden onChange={event => {
+        const file = event.target.files?.[0];
+        // So choosing the same file again is a change.
+        event.target.value = '';
+        if (file) void choose(file);
+      }} />
+    </div>
     {rulesets === undefined ? <p className="empty-state" role={error ? 'alert' : undefined}>{error || 'Loading your Rulesets…'}</p>
-      : rulesets.length === 0 ? <p className="empty-state">No Rulesets yet. Open a game server&apos;s Draft and choose Save as Ruleset version.</p>
+      : rulesets.length === 0 ? <p className="empty-state">No Rulesets yet. Open a game server&apos;s Draft and choose Save as Ruleset version, or import a Ruleset file someone sent you.</p>
       : <ul className="ruleset-list">{rulesets.map(ruleset => <li key={ruleset.id} className="ruleset-card">
         <div className="ruleset-card-heading">
           <span className="preset-icon"><Bookmark size={15} /></span>
@@ -52,10 +70,12 @@ export function RulesetsTab() {
           <strong>Version {version.number}</strong>
           {version.description ? <span className="ruleset-version-description">{version.description}</span> : <span className="ruleset-version-description none">No description</span>}
           <time dateTime={new Date(version.savedAt).toISOString()} title={new Date(version.savedAt).toLocaleString()}>{relativeTime(version.savedAt)}</time>
+          <a className="outline-button" href={`/api/rulesets/${ruleset.id}/versions/${version.id}/export`} download aria-label={`Export ${ruleset.name} version ${version.number}`}>Export</a>
         </li>)}</ol>
       </li>)}</ul>}
     {rulesets !== undefined && error && <p className="refresh-error" role="status">{error}</p>}
     {renaming && <RenameDialog ruleset={renaming} onClose={() => setRenaming(null)} onRenamed={refresh} />}
+    {chosen && <ImportRulesetDialog chosen={chosen} onClose={() => setChosen(null)} onImported={refresh} />}
     <AlertDialog open={deleting !== null} onOpenChange={open => { if (!open) setDeleting(null); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
