@@ -110,11 +110,6 @@ const isStorableNumber = (value: unknown): value is number =>
  */
 const FLOAT_ARRAY_MAX = 64;
 
-const isFloatArray = (value: unknown): value is number[] =>
-  Array.isArray(value) &&
-  value.length <= FLOAT_ARRAY_MAX &&
-  value.every(isStorableNumber);
-
 /** An object with exactly these axes, each a storable number, and nothing else. */
 function isVector(value: unknown, axes: readonly string[]): boolean {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -148,12 +143,12 @@ function getActualTypeName(value: ConfigValue): string {
     return "String";
   }
   if (Array.isArray(value)) {
-    if (isFloatArray(value)) {
-      return "FloatArray";
+    if (!value.every(isStorableNumber)) {
+      return "Array";
     }
-    return value.every(isStorableNumber)
-      ? `FloatArray of ${value.length} values, more than ${FLOAT_ARRAY_MAX}`
-      : "Array";
+    return value.length <= FLOAT_ARRAY_MAX
+      ? "FloatArray"
+      : `FloatArray of ${value.length} values, more than ${FLOAT_ARRAY_MAX}`;
   }
   if (isVector(value, VECTOR_AXES)) {
     return "Vector";
@@ -176,7 +171,11 @@ function valueMatchesType(value: ConfigValue, dataType: DataType): boolean {
       return isStorableNumber(value);
 
     case DataType.FloatArray:
-      return isFloatArray(value);
+      return (
+        Array.isArray(value) &&
+        value.length <= FLOAT_ARRAY_MAX &&
+        value.every(isStorableNumber)
+      );
 
     case DataType.String:
       return typeof value === "string";
