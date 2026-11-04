@@ -1,5 +1,6 @@
 import { DataType, type ConfigEntry } from "./types";
 import { weaponDefaults, weaponLengthDefaults } from "./defaults";
+import { STOCK_RELEASE_CURVE } from "./releaseCurve";
 
 export enum CategoryName {
   ArmingSword = "ArmingSword",
@@ -328,6 +329,15 @@ export const WEAPON_CONFIG_OPTIONS: Record<'Attack' | 'General', ConfigEntry[]> 
       isImplemented: false,
       documentation: "",
       default: [],
+    },
+    {
+      configKey: "ReleaseCurve",
+      dataType: DataType.FloatArray,
+      isImplemented: true,
+      documentation: "How a stab's movement is spread across the same release, as time and progress pairs from 0,0 to 1,1. Release still sets how long the stab takes. No override keeps the game's stock curve.",
+      defaultValue: STOCK_RELEASE_CURVE,
+      supportedCategories: [WeaponConfigAttackName.Stab, WeaponConfigAttackName.AltStab],
+      isReleaseCurve: true,
     },
   ],
 

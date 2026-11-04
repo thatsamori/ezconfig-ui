@@ -39,6 +39,9 @@ describe('Ruleset files through their route handlers', () => {
   test('a taken name, ignoring case, is shown, refused on import with nothing written, and can be changed', () => {
     expect(scenario('name-taken').filter(line => line.level !== 'info')).toEqual([]);
   });
+  test('a release curve survives a Ruleset version and a Ruleset file, and a bad one is dropped from a file or named when a version loads', () => {
+    expect(scenario('release-curve').filter(line => line.level !== 'info')).toEqual([]);
+  });
   test("another owner's Ruleset answers 404, and export and import need a session and the platform's origin", () => {
     expect(scenario('privacy').filter(line => line.level !== 'info')).toEqual([]);
   });

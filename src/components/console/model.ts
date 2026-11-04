@@ -1,7 +1,9 @@
-import { CategoryName, WeaponConfigGroupName } from '@/lib/config/weaponConfigSchema';
+import { CategoryName, WEAPON_CONFIG_OPTIONS, WeaponConfigGroupName } from '@/lib/config/weaponConfigSchema';
 import { constrainedFloatTextError } from '@/lib/config/numericConstraints';
-import { DataType, type ConfigEntry, type DefaultValue } from '@/lib/config/types';
-import type { ConfigState, ConfigValue } from '@/lib/store/configStore';
+import { resolveDefault } from '@/lib/config/defaults';
+import { curveValueError } from '@/lib/config/releaseCurve';
+import { DataType, supportsCategory, type ConfigEntry, type DefaultValue } from '@/lib/config/types';
+import type { ConfigState, ConfigValue, ValueChange } from '@/lib/store/configStore';
 export const weapons = Object.values(CategoryName).sort((a, b) => a.localeCompare(b));
 export const attackGroups = Object.values(WeaponConfigGroupName);
 export const isOverride = (value: ConfigValue | undefined): value is Exclude<ConfigValue, null> => value !== undefined && value !== null;
@@ -10,7 +12,35 @@ export const countGroups = (groups: Record<string, Record<string, ConfigValue>> 
 export const countOverrides = (values: ConfigState['values']) => countGroups(values.character) + Object.values(values.weapons).reduce((total, groups) => total + countGroups(groups), 0);
 export const showValue = (value: ConfigValue | undefined): string => !isOverride(value) ? 'Game default' : typeof value === 'object' ? Array.isArray(value) ? value.join(', ') : Object.entries(value).map(([axis, n]) => `${axis.toUpperCase()} ${n}`).join(' · ') : String(value);
 export const sameValue = (a: ConfigValue | undefined, b: ConfigValue | undefined) => JSON.stringify(a) === JSON.stringify(b);
+/** Of a row's groups, the ones that take this key: the only ones "Set all" and the All weapons sheet write to. */
+export const groupsTaking = (entry: ConfigEntry, groups: string[]) => groups.filter(group => supportsCategory(entry, group));
+/**
+ * Whether a table with these groups shows this key's row: a group takes it, or
+ * holds a value of it from a file or an older Draft. That value is refused, so the
+ * owner has to be able to see it and reset it.
+ */
+export const showsKey = (entry: ConfigEntry, groups: string[], categories: Record<string, Record<string, ConfigValue>> = {}) =>
+  groups.some(group => supportsCategory(entry, group) || isOverride(categories[group]?.[entry.configKey]));
+/** Whether a key is a release curve, for what names values by key alone, as the Apply review does. */
+export const isReleaseCurveKey = (key: string) => WEAPON_CONFIG_OPTIONS.Attack.some(entry => entry.configKey === key && entry.isReleaseCurve);
+/** A `Release` that can time a stab, and whether it came from the Draft rather than the default. */
+export type PreviewRelease = { seconds: number; fromDraft: boolean };
+const releaseEntry = WEAPON_CONFIG_OPTIONS.Attack.find(entry => entry.configKey === 'Release')!;
+/**
+ * What times this attack's stab in the curve dialog: the Draft's `Release`, or else
+ * its default. Undefined when there is no single usable number: a default that is
+ * missing or varies, or a stored value that can't time a stab. That stored value is
+ * what would be sent, so the default does not stand in for it.
+ */
+export function previewRelease(values: ConfigState['values'], database: string, category: string): PreviewRelease | undefined {
+  const stored = values.weapons[database]?.[category]?.Release;
+  const fromDraft = isOverride(stored);
+  const seconds = fromDraft ? stored : resolveDefault(releaseEntry, database, category).defaultValue;
+  return typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0 ? { seconds, fromDraft } : undefined;
+}
 export type SweepMode = 'set' | 'multiply' | 'add';
+/** What the All weapons sheet offers for a key; only a Float can be multiplied or added to. */
+export const sweepModes = (entry: ConfigEntry): readonly (SweepMode | 'reset')[] => entry.dataType === DataType.Float ? ['set', 'multiply', 'add', 'reset'] : ['set', 'reset'];
 export function sweepValue(stored: ConfigValue | undefined, mode: SweepMode, value: ConfigValue, base?: number): ConfigValue | undefined {
   if (mode === 'set') return value;
   const start = typeof stored === 'number' ? stored : base;
@@ -18,6 +48,37 @@ export function sweepValue(stored: ConfigValue | undefined, mode: SweepMode, val
   const result = mode === 'multiply' ? start * value : start + value;
   return Number.isFinite(result) ? Number(result.toFixed(6)) : undefined;
 }
+/** Whether the sheet's value can go in the Draft: a curve with a bad shape stays on the sheet, with its reason, until it is fixed. */
+export const sweepSettable = (entry: ConfigEntry, value: ConfigValue | undefined) => isOverride(value) && !(entry.isReleaseCurve && curveValueError(value));
+/** What the sheet starts with: the first stored value it could set, so a bad shape is never offered as the value to spread. */
+export const sweepStart = (entry: ConfigEntry, stored: (ConfigValue | undefined)[]) => stored.find(value => sweepSettable(entry, value));
+/** One row of the All weapons sheet per weapon: what each of `groups` holds, what it would hold, and whether that is a change. */
+export function sweepRows({ entry, groups, values, mode, value, base, selected }: {
+  entry: ConfigEntry;
+  groups: string[];
+  values: ConfigState['values'];
+  mode: SweepMode | 'reset';
+  value: ConfigValue | undefined;
+  base: number | undefined;
+  selected: ReadonlySet<string>;
+}) {
+  const settable = sweepSettable(entry, value);
+  return weapons.map(name => {
+    const before = groups.map(group => values.weapons[name]?.[group]?.[entry.configKey]);
+    const after = before.map(stored => mode === 'reset' ? null : settable ? sweepValue(stored, mode, value!, base) : undefined);
+    const noBase = (mode === 'multiply' || mode === 'add') && before.some(stored => !isOverride(stored)) && base === undefined;
+    const enabled = selected.has(name) && !noBase;
+    const changed = after.map((next, index) => enabled && (next === null ? isOverride(before[index]) : isOverride(next) && !sameValue(next, before[index])));
+    const changes = changed.filter(Boolean).length;
+    return { name: name as string, before, after, noBase, enabled, changed, changes };
+  });
+}
+export type SweepRow = ReturnType<typeof sweepRows>[number];
+/** The sheet's writes: only changed cells, a null being Reset. */
+export const sweepChanges = (rows: SweepRow[], groups: string[], key: string): ValueChange[] => rows.flatMap(row => groups.flatMap((category, index) => {
+  const next = row.after[index];
+  return row.changed[index] && next !== undefined ? [{ database: row.name, category, key, value: next }] : [];
+}));
 /** Why a Float cell's new value is refused; empty text is no value, so nothing to refuse. */
 export const newValueError = (text: string, entry: ConfigEntry) => text.trim() && entry.minimum !== undefined ? constrainedFloatTextError(text, entry.minimum, entry.maximum, entry.integer) : undefined;
 /**

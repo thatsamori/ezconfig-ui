@@ -3,13 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RotateCcw, X } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { DataType, type ConfigEntry } from '@/lib/config/types';
+import { categoryError, DataType, type ConfigEntry } from '@/lib/config/types';
 import { holdRefused, type ConfigValue, type RefusedValue } from '@/lib/store/configStore';
 import { useDebouncedCallback } from '@/lib/hooks';
 import { SaveIndicator } from '@/components/config/SaveIndicator';
 import { isOverride, newValueError, newValueOutcome, valueFromDefault } from './model';
 import { defaultLabel, defaultDetails, resolveDefault } from '@/lib/config/defaults';
 import { constrainedFloatTextError } from '@/lib/config/numericConstraints';
+import { curveValueError } from '@/lib/config/releaseCurve';
+import { ReleaseCurveDialog } from './ReleaseCurveEditor';
+import { ReleaseCurveThumbnail } from './ReleaseCurveThumbnail';
+import type { PreviewAttack } from './StabPreview';
 const fieldError = (message?: string) => message && <small className="field-error" role="alert">{message}</small>;
 type DraftField = Pick<RefusedValue, 'database' | 'category' | 'key'>;
 /**
@@ -70,7 +74,8 @@ export function ValueEditor({
   label,
   disabled = false,
   debounceMs = 1000,
-  error
+  error,
+  previewAttack
 }: {
   entry: ConfigEntry;
   database?: string;
@@ -83,9 +88,12 @@ export function ValueEditor({
   debounceMs?: number;
   /** The platform's mark on this value: the one message it shows, unless what is being typed has its own. */
   error?: string;
+  /** The attack whose `Release` times a curve's preview, where the value has none of its own, as on the All weapons sheet. */
+  previewAttack?: PreviewAttack;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  const [curveOpen, setCurveOpen] = useState(false);
   const baseline = resolveDefault(entry, database, category).defaultValue;
   const baselineLabel = defaultLabel(entry, database, category);
   const baselineDetails = defaultDetails(entry, database, category);
@@ -101,6 +109,17 @@ export function ValueEditor({
     if (outcome !== 'close') onChange(outcome);
     closeDraft();
   };
+  const number = (n: number, change: (n: number) => void, name = label, mark?: string) => <NumberField error={mark} value={n} onChange={change} label={name} field={field} disabled={disabled} debounceMs={debounceMs} minimum={entry.dataType === DataType.Float ? entry.minimum : undefined} maximum={entry.dataType === DataType.Float ? entry.maximum : undefined} integer={entry.dataType === DataType.Float ? entry.integer : undefined} />;
+  const chips = (list: number[]) => <div className="array-value">{list.map((n, index) => <div className="array-chip" key={index}>{number(n, next => onChange(list.map((old, i) => i === index ? next : old)), `${label} value ${index + 1}`)}<button className="icon-button" aria-label={`Remove ${label} value ${index + 1}`} disabled={disabled} onClick={() => onChange(list.filter((_, i) => i !== index))}><X size={11} /></button></div>)}<button className="add-value" disabled={disabled} onClick={() => onChange([...list, 0])}>+ value</button></div>;
+  if (entry.isReleaseCurve) {
+    // The picture stands in for the value and opens the editor, where the first edit makes the override. A value it cannot edit only needs its reason and a Reset.
+    const overridden = isOverride(value);
+    const takesKey = !category || !categoryError(entry, category);
+    const refusal = overridden ? curveValueError(value) ?? (category ? categoryError(entry, category) : undefined) : undefined;
+    const editable = takesKey && !refusal;
+    const picture = <ReleaseCurveThumbnail value={value} />;
+    return <div className="value-with-default curve-value"><div className="value-editor">{editable ? <button type="button" className="curve-open" disabled={disabled} aria-haspopup="dialog" aria-label={`Edit ${label}`} onClick={() => setCurveOpen(true)}>{picture}</button> : picture}{overridden && onReset && <button className="icon-button reset-value" disabled={disabled} title={`Reset — ${baselineDetails}`} aria-label={`Reset ${label} to game default`} onClick={onReset}><RotateCcw size={13} /></button>}</div>{fieldError(refusal ?? error)}{takesKey && (!overridden || onReset) && <small className="default-caption" title={field && baselineDetails}>{field ? 'Default: stock shape' : 'Open it to draw a curve or pick a starter shape'}</small>}{editable && curveOpen && <ReleaseCurveDialog place={database && category ? `${database} · ${category}` : 'All weapons sheet'} value={value} savesToDraft={!!field} attack={previewAttack ?? (database && category ? { database, category } : undefined)} onChange={onChange} onReset={onReset} onClose={() => setCurveOpen(false)} />}</div>;
+  }
   if (!isOverride(value)) {
     if (editing) {
       const refused = newValueError(draft, entry);
@@ -116,7 +135,6 @@ export function ValueEditor({
       } else onChange(valueFromDefault(baseline, entry));
     }}>{baselineLabel}</button>{fieldError(error)}</>;
   }
-  const number = (n: number, change: (n: number) => void, name = label, mark?: string) => <NumberField error={mark} value={n} onChange={change} label={name} field={field} disabled={disabled} debounceMs={debounceMs} minimum={entry.dataType === DataType.Float ? entry.minimum : undefined} maximum={entry.dataType === DataType.Float ? entry.maximum : undefined} integer={entry.dataType === DataType.Float ? entry.integer : undefined} />;
   let control;
   switch (entry.dataType) {
     case DataType.Bool:
@@ -129,7 +147,7 @@ export function ValueEditor({
       control = <select aria-label={label} value={String(value)} disabled={disabled} onChange={event => onChange(event.target.value)}>{[...new Set([...(entry.choices ?? []), String(value)])].map(choice => <option key={choice}>{choice}</option>)}</select>;
       break;
     case DataType.FloatArray:
-      control = <div className="array-value">{(value as number[]).map((n, index) => <div className="array-chip" key={index}>{number(n, next => onChange((value as number[]).map((old, i) => i === index ? next : old)), `${label} value ${index + 1}`)}<button className="icon-button" aria-label={`Remove ${label} value ${index + 1}`} disabled={disabled} onClick={() => onChange((value as number[]).filter((_, i) => i !== index))}><X size={11} /></button></div>)}<button className="add-value" disabled={disabled} onClick={() => onChange([...(value as number[]), 0])}>+ value</button></div>;
+      control = chips(value as number[]);
       break;
     default:
       {

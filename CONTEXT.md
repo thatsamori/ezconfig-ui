@@ -110,6 +110,14 @@ The Ruleset version a Draft or Live configuration was last loaded from or
 saved as. A configuration whose values differ from its origin's is modified.
 _Avoid_: source, base, parent
 
+### Config editing
+
+**Starter shape**:
+A ready-made release curve the editor offers as a starting point. Choosing one
+copies its points into the value being edited; nothing remembers which one was
+chosen.
+_Avoid_: preset, template, named curve
+
 ### Notes
 
 **Note**:

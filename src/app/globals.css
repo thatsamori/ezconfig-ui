@@ -308,6 +308,99 @@ input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-app
 .array-chip input { width: 55px; height: 26px; padding: 0 6px; border: 0; }
 .array-chip .icon-button { width: 18px; }
 .add-value { border: 1px dashed rgba(255,255,255,.1); font-size: 11.5px; color: #9a9ba1; padding: 0 8px; height: 28px; border-radius: 7px; }
+.curve-thumbnail { display: block; flex: none; width: 54px; height: 32px; color: #f2f2f3; background: #0f1012; border: 1px solid rgba(255,255,255,.1); border-radius: 6px; }
+.curve-thumbnail polyline { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
+.curve-stock { color: #6b6c72; border-style: dashed; }
+.curve-refused { display: grid; place-items: center; color: #e5484d; border-color: rgba(229,72,77,.5); font-size: 10px; }
+.curve-open { display: block; border-radius: 7px; }
+.curve-open:hover:not(:disabled) .curve-thumbnail { border-color: rgba(255,255,255,.25); }
+.curve-thumbnails { display: flex; gap: 4px; }
+[data-slot=dialog-content].curve-editor { width: min(880px,calc(100% - 32px)); max-width: 880px; max-height: calc(100dvh - 32px); overflow-y: auto; gap: 14px; padding: 22px 24px; }
+.curve-editor-body { display: grid; grid-template-columns: minmax(0,1fr) 248px; gap: 14px 22px; align-items: start; }
+.curve-graph { display: block; width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+.curve-plot { fill: #0f1012; stroke: rgba(255,255,255,.1); cursor: crosshair; }
+.curve-graph.at-limit .curve-plot { cursor: not-allowed; }
+.curve-graph text, .curve-graph polyline, .curve-graph polygon, .curve-tick, .curve-guide, .curve-ghost { pointer-events: none; }
+.curve-tick path { stroke: rgba(255,255,255,.05); fill: none; }
+.curve-graph text { fill: #6b6c72; font-family: var(--font-mono); font-size: 10.5px; }
+.curve-graph .curve-axis { fill: #9a9ba1; font-family: var(--font-sans); font-size: 11.5px; }
+.curve-graph-stock { fill: none; stroke: #6b6c72; stroke-width: 1.5; stroke-dasharray: 2 5; stroke-linecap: round; }
+.curve-graph-fill { fill: rgba(154,155,161,.07); }
+.curve-graph-line { fill: none; stroke: #b7b8be; stroke-width: 2; stroke-linejoin: round; }
+.curve-graph.is-override .curve-graph-line { stroke: #5fcf8c; }
+.curve-graph.is-override .curve-graph-fill { fill: rgba(95,207,140,.08); }
+.curve-guide { fill: none; stroke: rgba(255,255,255,.22); stroke-dasharray: 2 4; }
+.curve-ghost { fill: #0f1012; stroke: #d4d4d8; stroke-width: 1.5; stroke-dasharray: 3 3; }
+.curve-graph .curve-readout { fill: #f2f2f3; font-size: 12px; paint-order: stroke; stroke: #0f1012; stroke-width: 4px; stroke-linejoin: round; }
+.curve-handle { cursor: grab; outline: none; }
+.curve-handle-hit { fill: transparent; }
+.curve-endpoint { cursor: default; }
+.curve-endpoint-dot { fill: #6b6c72; pointer-events: none; }
+.curve-handle-ring { fill: none; stroke: #f2f2f3; stroke-width: 1.5; opacity: 0; pointer-events: none; }
+.curve-handle-dot { fill: #d4d4d8; stroke: #0f1012; stroke-width: 2; pointer-events: none; transform-box: fill-box; transform-origin: center; transition: transform .12s cubic-bezier(.16,1,.3,1); }
+.curve-graph.is-override .curve-handle-dot { fill: #5fcf8c; }
+.curve-handle:hover .curve-handle-dot, .curve-handle.is-near .curve-handle-dot { transform: scale(1.25); }
+.curve-handle.is-selected .curve-handle-ring { opacity: .55; }
+.curve-handle:focus-visible .curve-handle-ring { opacity: 1; stroke: #5fcf8c; stroke-width: 2; }
+.curve-graph[data-dragging], .curve-graph[data-dragging] * { cursor: grabbing; }
+.curve-graph[data-dragging] .curve-handle.is-selected .curve-handle-dot { transform: scale(1.35); }
+.curve-graph-notes { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-top: 8px; font-size: 12px; line-height: 1.5; }
+.curve-hint { color: #9a9ba1; }
+.curve-hint.is-limit { color: #e0a83c; }
+.curve-legend { display: flex; flex-shrink: 0; align-items: center; gap: 6px; color: #6b6c72; font-size: 11px; line-height: 18px; white-space: nowrap; }
+.curve-legend-line, .curve-legend-stock { display: inline-block; width: 16px; }
+.curve-legend-line { border-top: 2px solid #b7b8be; }
+.curve-graph.is-override ~ .curve-graph-notes .curve-legend-line { border-color: #5fcf8c; }
+.curve-legend-stock { margin-left: 6px; border-top: 2px dotted #6b6c72; }
+.curve-editor-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.curve-editor-side h3 { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12.5px; font-weight: 600; color: #d4d4d8; }
+.curve-editor-side h3 .faint { font-weight: 400; }
+.curve-starters { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+.curve-starter { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 5px; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; color: #d4d4d8; font-size: 12px; line-height: 1.2; text-align: left; }
+.curve-starter:hover { background: #1a1b1f; border-color: rgba(255,255,255,.2); }
+.curve-starter .curve-thumbnail { width: 38px; height: 26px; }
+.curve-fields { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+.curve-fields thead th:first-child { width: 36px; }
+.curve-fields thead th:last-child { width: 24px; }
+.curve-fields th { padding: 0 4px 4px 0; color: #6b6c72; font-size: 10.5px; font-weight: 500; text-align: left; }
+.curve-fields tbody th { padding: 0 0 0 4px; font-family: var(--font-mono); font-size: 11px; font-weight: 400; }
+.curve-fields td { height: 28px; padding: 1px 4px 1px 0; font-family: var(--font-mono); }
+.curve-fields tbody tr.is-selected th { color: #5fcf8c; }
+.curve-fields td:last-child { padding-right: 0; }
+.curve-fields input { width: 100%; height: 26px; padding: 0 6px; background: #0f1012; border: 1px solid rgba(255,255,255,.1); border-radius: 6px; font-family: var(--font-mono); font-size: 12px; }
+.curve-add { width: 100%; height: 30px; margin-top: 8px; font-size: 12.5px; }
+.curve-editor-footer { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.06); }
+.curve-editor-footer p { color: #9a9ba1; font-size: 12px; line-height: 1.5; }
+.curve-save-state { margin-left: 6px; color: #5fcf8c; }
+.curve-save-state.save-problem { color: #e5484d; }
+.stab-preview { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0,1fr) 248px; gap: 14px 22px; align-items: start; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.06); }
+.stab-preview h3 { font-size: 12.5px; font-weight: 600; color: #d4d4d8; }
+.stab-preview h3 .faint { font-weight: 400; }
+.stab-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; min-height: 28px; margin-bottom: 6px; }
+.stab-controls { display: flex; align-items: center; gap: 12px; }
+.stab-play { height: 28px; padding: 0 9px; font-size: 12px; }
+.stab-lanes { display: flex; flex-direction: column; gap: 5px; }
+.stab-lane { --stab-color: #6b6c72; display: grid; grid-template-columns: 58px minmax(0,1fr); align-items: center; gap: 8px; color: #9a9ba1; font-size: 12px; }
+.stab-lane.is-this { --stab-color: #b7b8be; color: #d4d4d8; }
+.stab-preview.is-override .stab-lane.is-this { --stab-color: #5fcf8c; }
+.stab-track { position: relative; height: 26px; overflow: hidden; background: #0f1012; border: 1px solid rgba(255,255,255,.1); border-radius: 6px; }
+/* A whole track's length of bar sliding in from the left, so only its transform changes each frame. */
+.stab-bar { position: absolute; inset: 0; background: linear-gradient(90deg,transparent,color-mix(in srgb,var(--stab-color) 24%,transparent) 55%,var(--stab-color)); clip-path: polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%); transform: translateX(calc((var(--stab-progress) - 1) * 100%)); will-change: transform; }
+.stab-tick { position: absolute; top: 8px; bottom: 8px; width: 1px; background: rgba(255,255,255,.38); }
+.stab-half { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(255,255,255,.3); transition: box-shadow .12s; }
+.stab-lane[data-past-half] .stab-half { width: 2px; background: var(--stab-color); box-shadow: 0 0 7px var(--stab-color); }
+.stab-scale { display: grid; grid-template-columns: repeat(3,1fr); margin-left: 66px; color: #6b6c72; font-size: 10.5px; line-height: 14px; }
+.stab-scale span:nth-child(2) { text-align: center; }
+.stab-scale span:nth-child(3) { text-align: right; }
+.stab-note { margin-top: 6px; color: #6b6c72; font-size: 11px; line-height: 1.45; }
+.stab-figures { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-top: 6px; }
+.stab-figures dt { color: #9a9ba1; font-size: 11px; }
+.stab-figures dd { color: #9a9ba1; font-family: var(--font-mono); font-size: 20px; line-height: 1.25; }
+.stab-figures .is-this dd { color: #d4d4d8; }
+.stab-preview.is-override .stab-figures .is-this dd { color: #5fcf8c; }
+.stab-compared { margin-top: 2px; color: #d4d4d8; font-size: 12.5px; }
+.stab-clock { margin-top: 4px; color: #6b6c72; font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
+@media (max-width: 800px) { .curve-editor-body { grid-template-columns: minmax(0,1fr); } .curve-graph-notes { flex-direction: column; gap: 4px; } .curve-editor-footer { flex-direction: column; align-items: flex-start; } .stab-preview { grid-template-columns: minmax(0,1fr); order: 1; } .curve-editor-side { order: 2; } .curve-editor-footer { order: 3; } }
 .row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; flex-wrap: wrap; }
 .row-actions > button { height: 28px; padding: 0 8px; border-radius: 7px; font-size: 12px; white-space: nowrap; }
 .set-all { border: 1px solid rgba(255,255,255,.08); color: #d4d4d8; }
@@ -609,6 +702,7 @@ body { -webkit-font-smoothing: antialiased; }
 .apply-key { color: #d4d4d8; overflow-wrap: anywhere; }
 .apply-value { color: #f2f2f3; font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
 .apply-before { color: #9a9ba1; text-decoration: line-through; }
+.apply-curves { display: flex; align-items: center; gap: 6px; }
 .apply-warning { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid rgba(224,168,60,.35); border-radius: 10px; background: rgba(224,168,60,.08); color: #e0a83c; }
 .apply-warning > svg { flex-shrink: 0; margin-top: 3px; }
 .apply-warning p { color: #d4d4d8; }

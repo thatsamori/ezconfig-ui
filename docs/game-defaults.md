@@ -7,7 +7,10 @@ General, Strike, AltStrike, Stab and AltStab values. The other 8 character keys
 were added after the snapshot and declare `defaultValue` in their schema:
 CustomFOV, CustomFOVMax, DynamicFeintWindow, EllipseBubbleRadius,
 EllipseBubbleLength, EllipseBubbleMaxHeightDiff, ForwardParryLength and
-ForwardParryHalfWidth (counts as of 2026-10-31). `sources` records the weapon assets and the
+ForwardParryHalfWidth (counts as of 2026-10-31). The weapon key `ReleaseCurve` also
+declares its `defaultValue`: the 8-point copy of the stock curve in
+`src/lib/config/releaseCurve.ts`, the same for every `Stab` and `AltStab`, since the
+game's own stock curve is an asset and not a value. `sources` records the weapon assets and the
 actual attack/parry motion classes referenced by stock runtime animation profiles.
 Unused SDK test motions are excluded.
 

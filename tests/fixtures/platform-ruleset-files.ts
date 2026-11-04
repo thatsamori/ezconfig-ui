@@ -13,6 +13,7 @@ const { env } = await import('../../src/lib/env');
 const { platformStore } = await import('../../src/lib/platform/storage');
 const { applyDraft } = await import('../../src/lib/platform/live-configurations');
 const { RULESET_FILE_LIMIT, RULESET_FILE_TOO_LARGE, writeRulesetFile } = await import('../../src/lib/config/rulesetFile');
+const { encodeValues } = await import('../../src/lib/config/encodeValues');
 const gameServersRoute = await import('../../src/app/api/game-servers/route');
 const draftRoute = await import('../../src/app/api/game-servers/[id]/draft/route');
 const saveVersionRoute = await import('../../src/app/api/game-servers/[id]/draft/save-version/route');
@@ -343,6 +344,62 @@ switch (process.argv[2]) {
     // Importing the same file twice is refused the second time: it is never a new version.
     await imported(session, fileOf({ name: 'Once' }));
     assert.equal((await commit(session, fileOf({ name: 'Once' }))).status, 409);
+    break;
+  }
+  case 'release-curve': {
+    const FAST_START = [0, 0, 0.2, 0.9, 1, 1];
+    const STOCK = [0, 0, 0.48, 0.32, 0.63, 0.44, 0.69, 0.5, 0.79, 0.62, 0.85, 0.71, 0.93, 0.85, 1, 1];
+    const CURVES = { Weapon: { Longsword: { Stab: { ReleaseCurve: FAST_START }, AltStab: { ReleaseCurve: [0, 0, 0.8, 0.1, 1, 1] } }, Rapier: { Stab: { ReleaseCurve: STOCK, Windup: 0.5 } } } };
+
+    // Ruleset version: saved from the Draft, and loaded back exactly, with nothing dropped or refused.
+    await save(session, id, CURVES);
+    const version = await saved(session, id, { name: 'Curves' });
+    await save(session, id, {});
+    const original = await loaded(session, id, version.version.id);
+    assert.deepEqual(original.document, CURVES);
+    assert.deepEqual([original.dropped, original.errors], [0, []]);
+    assert.deepEqual(original.values.weapons.Longsword.Stab.ReleaseCurve, FAST_START);
+
+    // Ruleset file: exported as stored, reviewed with nothing dropped, imported, and the same Draft and file again.
+    const text = await exportedText(session, version);
+    assert.deepEqual(JSON.parse(text).values, CURVES);
+    const reviewed = (await review(friend, text)).body.data!;
+    assert.deepEqual([reviewed.values, reviewed.dropped, reviewed.droppedValues], [4, 0, []]);
+    const theirs = await register(friend, 'Friend server');
+    const result = await imported(friend, text);
+    assert.deepEqual(await loaded(friend, theirs, result.version.id), original);
+    assert.equal(await exportedText(friend, result), text);
+    assert.deepEqual(encodeValues(JSON.parse(storedDraft(theirs).overrides)), encodeValues(CURVES));
+
+    // A file's bad curve is dropped with its reason, whatever kind of bad; the rest imports.
+    const bad = fileOf({ name: 'Bad curves', values: { Weapon: {
+      Longsword: { Stab: { ReleaseCurve: [0, 0, 0.5, 0.5] }, AltStab: { ReleaseCurve: [0, 0, 0.205, 0.9, 1, 1] }, Strike: { ReleaseCurve: FAST_START, Windup: 0.5 }, AltStrike: { ReleaseCurve: FAST_START } },
+      Rapier: { Stab: { ReleaseCurve: [0, 0, 0.5, 0.5, 0.5, 0.6, 1, 1] }, AltStab: { ReleaseCurve: FAST_START } },
+    } } });
+    const dropping = (await review(friend, bad)).body.data!;
+    assert.deepEqual(Object.fromEntries(dropping.droppedValues.map(({ database, category, key, error }) => [`${database}/${category}/${key}`, error])), {
+      'Longsword/Stab/ReleaseCurve': 'End the curve at (1,1).',
+      'Longsword/AltStab/ReleaseCurve': 'Use values on the 0.01 grid; 0.205 is not.',
+      'Longsword/Strike/ReleaseCurve': 'Use this key only in Stab and AltStab.',
+      'Longsword/AltStrike/ReleaseCurve': 'Use this key only in Stab and AltStab.',
+      'Rapier/Stab/ReleaseCurve': 'Keep times increasing; point 3 is not after point 2.',
+    });
+    const partial = await imported(friend, bad);
+    assert.deepEqual([partial.values, partial.dropped], [2, 5]);
+    assert.deepEqual(JSON.parse(versionRows().at(-1)!.overrides), { Weapon: { Longsword: { Strike: { Windup: 0.5 } }, Rapier: { AltStab: { ReleaseCurve: FAST_START } } } }, 'only what a save would accept is stored');
+
+    // A version stored before the rules or holding the key in a strike: loading it names the refused values, and Apply cannot send them.
+    const older = await saved(session, id, { name: 'Older' });
+    const OLDER = { Weapon: { Longsword: { Stab: { ReleaseCurve: [0, 0, 0.5, 0.5] }, Strike: { ReleaseCurve: FAST_START } } } };
+    platformStore().run('UPDATE ruleset_versions SET overrides = ? WHERE id = ?', JSON.stringify(OLDER), older.version.id);
+    const opened = await loaded(session, id, older.version.id);
+    assert.deepEqual(opened.document, OLDER, 'loaded as it is, to fix in the Draft');
+    assert.deepEqual([opened.dropped, opened.errors], [0, [
+      { database: 'Longsword', category: 'Stab', key: 'ReleaseCurve', error: 'End the curve at (1,1).' },
+      { database: 'Longsword', category: 'Strike', key: 'ReleaseCurve', error: 'Use this key only in Stab and AltStab.' },
+    ]]);
+    const applied = applyDraft(id, { revision: storedDraft(id).revision, liveConfigurationId: null });
+    assert(applied && !applied.ok && applied.reason === 'invalid', 'Apply refuses the Draft that holds them');
     break;
   }
   case 'privacy': {

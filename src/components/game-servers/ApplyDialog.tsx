@@ -3,7 +3,8 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
-import { relativeTime } from '@/components/console/model';
+import { isReleaseCurveKey, relativeTime } from '@/components/console/model';
+import { ReleaseCurveThumbnail } from '@/components/console/ReleaseCurveThumbnail';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
@@ -117,7 +118,7 @@ export function ApplyDialog({ server, review, onReview, onClose, onApplied }: {
         {first ? review.added.length ? <ReviewList title={`The Draft sets ${review.added.length} value${review.added.length === 1 ? '' : 's'}`} entries={review.added} />
           : <p className="apply-none">The Draft sets no values: every EZConfig value returns to game default.</p>
           : unchanged ? <p className="apply-none">No changes; the server will be sent this configuration again</p> : <>
-            {review.added.length > 0 && <ReviewList title={`Added (${review.added.length})`} entries={review.added} />}
+            {review.added.length > 0 && <ReviewList title={`Added (${review.added.length})`} entries={review.added} addedToDefault />}
             {review.changed.length > 0 && <ReviewList title={`Changed (${review.changed.length})`} entries={review.changed} />}
             {review.reset.length > 0 && <ReviewList title={`Reset to game default (${review.reset.length})`} entries={review.reset} />}
           </>}
@@ -131,10 +132,17 @@ export function ApplyDialog({ server, review, onReview, onClose, onApplied }: {
   </Dialog>;
 }
 
-function ReviewList({ title, entries }: { title: string; entries: ReviewEntry[] }) {
+/**
+ * One list of the review. A release curve shows as pictures, the stock shape where
+ * there is no override. `addedToDefault`: what the list adds replaces a game default,
+ * so a curve can show the shape it replaces; before the first Apply it may not.
+ */
+export function ReviewList({ title, entries, addedToDefault = false }: { title: string; entries: ReviewEntry[]; addedToDefault?: boolean }) {
   return <section className="apply-changes"><h4>{title}</h4><ul>{entries.map(entry => <li key={`${entry.database}/${entry.category}/${entry.key}`}>
     <span className="apply-key">{place(entry)} · <code>{entry.key}</code></span>
-    <span className="apply-value">{'live' in entry && <><span className="apply-before">{shown(entry.live)}</span> → </>}{'draft' in entry ? shown(entry.draft) : 'game default'}</span>
+    {isReleaseCurveKey(entry.key)
+      ? <span className="apply-value apply-curves">{('live' in entry || addedToDefault) && <><ReleaseCurveThumbnail value={entry.live} /> → </>}<ReleaseCurveThumbnail value={entry.draft} /></span>
+      : <span className="apply-value">{'live' in entry && <><span className="apply-before">{shown(entry.live)}</span> → </>}{'draft' in entry ? shown(entry.draft) : 'game default'}</span>}
   </li>)}</ul></section>;
 }
 

@@ -11,6 +11,7 @@
 import {
   DataType,
   type ConfigEntry as SchemaConfigEntry,
+  supportsCategory,
   supportsWeapon,
 } from "@/lib/config/types";
 import { CHARACTER_CONFIG_OPTIONS } from "@/lib/config/characterConfigSchema";
@@ -20,6 +21,7 @@ import {
 } from "@/lib/config/weaponConfigSchema";
 import type { ConfigData, ConfigValue } from "./types";
 import { constrainedFloatError } from '@/lib/config/numericConstraints';
+import { curveValueError } from '@/lib/config/releaseCurve';
 
 /**
  * Schema lookup result - a flat map of config key to schema entry
@@ -66,7 +68,7 @@ export function getSchemaForCategory(
   const attackCategories: string[] = Object.values(WeaponConfigAttackName);
   if (attackCategories.includes(category)) {
     return WEAPON_CONFIG_OPTIONS.Attack.reduce((acc, entry) => {
-      if (supportsWeapon(entry, database)) acc[entry.configKey] = entry;
+      if (supportsWeapon(entry, database) && supportsCategory(entry, category)) acc[entry.configKey] = entry;
       return acc;
     }, {} as SchemaMap);
   }
@@ -234,6 +236,12 @@ export function validateConfigEntry(
   // Opt-in numeric limits preserve the policy of existing controls.
   if (schemaEntry.dataType === DataType.Float && schemaEntry.minimum !== undefined) {
     const error = constrainedFloatError(value, schemaEntry.minimum, schemaEntry.maximum, schemaEntry.integer);
+    if (error) return { valid: false, error };
+  }
+
+  // A release curve must also have a shape the game reads as intended.
+  if (schemaEntry.isReleaseCurve) {
+    const error = curveValueError(value);
     if (error) return { valid: false, error };
   }
 

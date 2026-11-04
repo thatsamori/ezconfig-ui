@@ -193,6 +193,53 @@ const scenarios: Record<string, () => Promise<void>> = {
     console.log(JSON.stringify({ fixture: { scenario, applied, key } }));
   },
 
+  /** A Live configuration whose release curve the rules refuse (stab-curve-keys#04): a stored bad shape or the key in a strike Blocks it the same way. */
+  async releaseCurve() {
+    platformStore().run('INSERT INTO supported_build (id, stamp, set_at) VALUES (1, ?, 0)', SUPPORTED);
+    const owner = await signInForTest();
+    const created = await gameServersRoute.POST(owner.request('/api/game-servers', json('POST', { name: 'Duel EU' })));
+    const { gameServer: { id }, key } = (await created.json()).data as { gameServer: { id: number }; key: string };
+    const FAST_START = [0, 0, 0.2, 0.9, 1, 1];
+    const GOOD = { Weapon: { Longsword: { Stab: { ReleaseCurve: FAST_START } } } };
+    const GOOD_COMMANDS = [{ database: 'Longsword', category: 'Stab', values: '{"ReleaseCurve":"0.00,0.00,0.20,0.90,1.00,1.00"}' }];
+    await save(owner, id, GOOD);
+    setPollHoldMs(60_000);
+    at(T0);
+    let game = await held(key, id, report());
+    at(T0 + MINUTE);
+    const live = await applies(owner, id);
+    assert.deepEqual((await game.answered).body, { answer: 'live-configuration', liveConfigurationId: live.id, commands: GOOD_COMMANDS }, 'a good curve is delivered as the mod takes it');
+    at(T0 + MINUTE + 2 * SECOND);
+    await getsNothing(key, report({ processed: succeeded(live.id) }), 'processed');
+
+    const OLDER = { Weapon: { Longsword: { Stab: { ReleaseCurve: [0, 0, 0.5, 0.5] }, Strike: { ReleaseCurve: FAST_START }, AltStab: { ReleaseCurve: [0, 0, 0.205, 0.9, 1, 1] } } } };
+    const REFUSED_CURVES = [
+      { database: 'Longsword', category: 'Stab', key: 'ReleaseCurve', error: 'End the curve at (1,1).' },
+      { database: 'Longsword', category: 'Strike', key: 'ReleaseCurve', error: 'Use this key only in Stab and AltStab.' },
+      { database: 'Longsword', category: 'AltStab', key: 'ReleaseCurve', error: 'Use values on the 0.01 grid; 0.205 is not.' },
+    ];
+    platformStore().run('UPDATE live_configurations SET overrides = ? WHERE game_server_id = ?', JSON.stringify(OLDER), id);
+    platformStore().run('UPDATE drafts SET overrides = ? WHERE game_server_id = ?', JSON.stringify(OLDER), id);
+
+    // A build change: the mod reports no id, and is sent nothing. The page and the Draft name the values with their reasons, and Apply is refused.
+    at(T0 + 6 * MINUTE);
+    await getsNothing(key, report({ instanceId: 'instance-c' }), 'a Blocked Live configuration is not sent');
+    assert.deepEqual((await viewOf(owner, id)).liveConfiguration, { ...live, state: 'blocked', refusedValues: REFUSED_CURVES });
+    assert.deepEqual((await opened(owner, id)).errors, REFUSED_CURVES, 'the Draft opens with the refused values named');
+    assert.deepEqual((await review(owner, id)).errors, REFUSED_CURVES);
+    game = await held(key, id, report({ instanceId: 'instance-c' }));
+    const refused = await apply(owner, id);
+    assert.deepEqual([refused.status, (await refused.json()).details], [400, REFUSED_CURVES], 'Apply is refused while the Draft holds them');
+
+    // Fixed in the Draft, Apply wakes the held poll with the new Live configuration.
+    await save(owner, id, GOOD);
+    assert.deepEqual((await opened(owner, id)).errors, []);
+    at(T0 + 7 * MINUTE);
+    const next = await applies(owner, id);
+    assert.deepEqual((await game.answered).body, { answer: 'live-configuration', liveConfigurationId: next.id, commands: GOOD_COMMANDS });
+    console.log(JSON.stringify({ fixture: { scenario, applied, key } }));
+  },
+
   /** After a restart: the same Blocked Live configuration is logged once more, then not again. */
   async restarted() {
     assert(storedKey, 'the key `blocked` printed');

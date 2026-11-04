@@ -2,7 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { CHARACTER_CONFIG_OPTIONS } from '../src/lib/config/characterConfigSchema';
 import { WEAPON_CONFIG_OPTIONS, CategoryName, WeaponConfigGroupName } from '../src/lib/config/weaponConfigSchema';
 import { defaultDetails, defaultLabel, formatDefaultValue, lookupDefault, resolveDefault } from '../src/lib/config/defaults';
-import { DataType, type ConfigEntry, type DefaultValue } from '../src/lib/config/types';
+import { DataType, supportsCategory, type ConfigEntry, type DefaultValue } from '../src/lib/config/types';
+import { STOCK_RELEASE_CURVE } from '../src/lib/config/releaseCurve';
 import snapshot from '../src/lib/config/gameDefaults.json';
 
 function checkType(entry: ConfigEntry, value: DefaultValue | undefined) {
@@ -39,10 +40,11 @@ describe('verified default coverage', () => {
     expect(Object.keys(snapshot.weapons).sort()).toEqual(Object.values(CategoryName).sort());
     for (const weapon of Object.values(CategoryName)) {
       for (const group of Object.values(WeaponConfigGroupName)) {
-        for (const entry of WEAPON_CONFIG_OPTIONS[group === 'General' ? 'General' : 'Attack'].filter(entry => !entry.supportedWeapons || entry.supportedWeapons.includes(weapon))) {
+        for (const entry of WEAPON_CONFIG_OPTIONS[group === 'General' ? 'General' : 'Attack'].filter(entry => (!entry.supportedWeapons || entry.supportedWeapons.includes(weapon)) && supportsCategory(entry, group))) {
           const resolved = resolveDefault(entry, weapon, group);
           checkType(entry, resolved.defaultValue);
-          expect(lookupDefault(weapon, group, entry.configKey)).toEqual(resolved);
+          // A key added after the snapshot declares its default in the schema, so only the rest are the snapshot's.
+          if (entry.defaultValue === undefined) expect(lookupDefault(weapon, group, entry.configKey)).toEqual(resolved);
         }
       }
     }
@@ -62,6 +64,13 @@ describe('verified default coverage', () => {
     expect(resolveDefault(alternate, 'Spear', 'General').defaultValue).toBe(135);
     expect(resolveDefault(main, 'ArmingSword', 'General').defaultValue).toBe(75);
     expect(resolveDefault(alternate, 'ArmingSword', 'General').defaultValue).toBeUndefined();
+  });
+  test("the stock shape is ReleaseCurve's default for every stab, and for the sheet with no weapon named", () => {
+    const entry = WEAPON_CONFIG_OPTIONS.Attack.find(entry => entry.configKey === 'ReleaseCurve')!;
+    for (const weapon of Object.values(CategoryName)) {
+      for (const group of ['Stab', 'AltStab']) expect(resolveDefault(entry, weapon, group).defaultValue).toEqual(STOCK_RELEASE_CURVE);
+    }
+    expect(resolveDefault(entry).defaultValue).toEqual(STOCK_RELEASE_CURVE);
   });
   test('weapon and alternate mode values are not replaced by generic seeds', () => {
     const entry = WEAPON_CONFIG_OPTIONS.Attack.find(entry => entry.configKey === 'Windup')!;

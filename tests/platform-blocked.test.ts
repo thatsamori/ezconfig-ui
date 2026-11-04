@@ -43,3 +43,11 @@ test('a Live configuration the current schema refuses is Blocked: held and never
     }
   });
 });
+
+test('a Live configuration holding a bad release curve, or the key in a strike, is Blocked with the reason and recovered by an Apply of the fixed Draft', () => {
+  withPlatformDatabase(run => {
+    const { applied: ids, log } = scenario(run, ['releaseCurve']);
+    expect(ids).toHaveLength(2);
+    expect(log.filter(line => line.level !== 'info')).toEqual([blocked(ids[0])]);
+  });
+});

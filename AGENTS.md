@@ -41,7 +41,11 @@ instance's settings or secrets.
 ## Layout
 - `src/lib/config/` - schemas (`characterConfigSchema.ts` aggregates the
   category schemas; `weaponConfigSchema.ts`), `gameDefaults.json`, `defaults.ts`;
-  `formatters.ts` writes each value in the mod's command encoding.
+  `formatters.ts` writes each value in the mod's command encoding; `releaseCurve.ts`
+  is the release curve's shape rules, stock and starter shapes, point edits and half-movement
+  time, with the preview's clock factor as one named constant, and no React or storage. The
+  editor dialog that maps gestures onto those edits is
+  `src/components/console/ReleaseCurveEditor.tsx`; its animated preview is `StabPreview.tsx` beside it.
 - `src/lib/database/` - `validation.ts` (each value against the schema) and
   `types.ts`. Database is the mod's term (Character, or a weapon class);
   platform storage is `src/lib/platform/`.

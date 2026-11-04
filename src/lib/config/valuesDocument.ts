@@ -11,10 +11,12 @@
  * under the attack: Strike, AltStrike, Stab or AltStab. No General key has an
  * attack's name. A value whose key or weapon class the schema lacks is not
  * shown or sent, and is left as it is stored.
+ * A key limited to some attacks is different under another attack: it has a place,
+ * so that it is refused with its reason, and shows so that it can be reset.
  */
 import { CHARACTER_CONFIG_OPTIONS } from './characterConfigSchema';
 import { CategoryName, WEAPON_CONFIG_OPTIONS, WeaponConfigAttackName } from './weaponConfigSchema';
-import { supportsWeapon, type ConfigEntry } from './types';
+import { categoryError, supportsWeapon, type ConfigEntry } from './types';
 import { validateConfigEntry } from '@/lib/database/validation';
 import type { ConfigValue } from '@/lib/database/types';
 
@@ -90,7 +92,7 @@ export function documentFields(document: unknown): DocumentField[] {
 /** Why the current schema refuses a field, camera policy included; undefined when it accepts it. */
 export function fieldError(field: DocumentField): string | undefined {
   if (!field.entry) return field.database === 'Character' || WEAPON_CLASSES.includes(field.database) ? 'Unknown config key' : 'Unknown weapon class';
-  return validateConfigEntry(field.key, field.value as ConfigValue, { [field.key]: field.entry }).error;
+  return (field.category ? categoryError(field.entry, field.category) : undefined) ?? validateConfigEntry(field.key, field.value as ConfigValue, { [field.key]: field.entry }).error;
 }
 
 /** Every value of a document the current schema refuses, in document order. */

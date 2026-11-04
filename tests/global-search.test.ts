@@ -43,6 +43,16 @@ describe('global search', () => {
     expect(alternate.some(result => result.weapon === 'ArmingSword' && result.configKey === 'AltWeaponLength')).toBe(false);
   });
 
+  test('finds the stab curve by its key and in words, in Stab and AltStab only', () => {
+    const groups = (query: string) => new Set(searchGlobal(query, context).results.filter(result => result.configKey === 'ReleaseCurve').map(result => result.group));
+    expect(searchGlobal('ReleaseCurve', context).results[0]).toMatchObject({ weapon: 'ArmingSword', configKey: 'ReleaseCurve' });
+    expect(groups('ReleaseCurve')).toEqual(new Set(['Stab', 'AltStab']));
+    expect(groups('stab curve')).toEqual(new Set(['Stab', 'AltStab']));
+    expect(searchGlobal('Longsword Stab ReleaseCurve', context).results[0]).toMatchObject({ weapon: 'Longsword', group: 'Stab', configKey: 'ReleaseCurve' });
+    expect(searchGlobal('Longsword Strike ReleaseCurve', context).results).toEqual([]);
+    expect(searchGlobal('Longsword General ReleaseCurve', context).results).toEqual([]);
+  });
+
   test("a weapon's General screen shows main length roster-wide but alternate only where native", () => {
     // The rows the editor shows for a weapon: its group's keys that the weapon supports.
     const lengths = (weapon: string) => WEAPON_CONFIG_OPTIONS.General.filter(entry => supportsWeapon(entry, weapon) && entry.configKey.includes('WeaponLength')).map(entry => entry.configKey);

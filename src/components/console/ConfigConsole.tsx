@@ -14,14 +14,14 @@ import { useConfigStore, flushConfigWrites, fieldName, editName, type ConfigStat
 import { useSessionStore } from '@/lib/store';
 import { WEAPON_CONFIG_OPTIONS } from '@/lib/config/weaponConfigSchema';
 import { CHARACTER_CONFIG_OPTIONS, CharacterConfigGroupName } from '@/lib/config/characterConfigSchema';
-import { supportsWeapon, type ConfigEntry } from '@/lib/config/types';
+import { supportsCategory, supportsWeapon, type ConfigEntry } from '@/lib/config/types';
 import { useNotes } from '@/lib/hooks';
 import { ValueEditor } from './ValueEditor';
 import { DraftBar, overridesText } from './DraftBar';
 import { SweepPanel } from './SweepPanel';
 import { GlobalSearch } from './GlobalSearch';
 import type { SearchDestination } from './search';
-import { attackGroups, weapons, countEntries, countGroups, countOverrides, holdNumberForWheel, isOverride, showValue, toggleAttackGroup } from './model';
+import { attackGroups, weapons, countEntries, countGroups, countOverrides, groupsTaking, holdNumberForWheel, isOverride, showsKey, showValue, toggleAttackGroup } from './model';
 import { parrySections } from './parry-sections';
 function Helm() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12a8 8 0 0 1 16 0v2l-2 6H6l-2-6Z" /><path d="M13 12h7M13 12v8M12 4V2" /></svg>;
@@ -38,7 +38,7 @@ function SearchField({
   return <label className="console-search"><Search size={13} /><input aria-label={placeholder} placeholder={placeholder} value={value} onChange={event => onChange(event.target.value)} /></label>;
 }
 const characterGroups = Object.values(CharacterConfigGroupName).filter(group => CHARACTER_CONFIG_OPTIONS[group].length > 0);
-function KeyRow({
+export function KeyRow({
   entry,
   database,
   groups,
@@ -69,13 +69,14 @@ function KeyRow({
   const categories = database === 'Character' ? values.character : values.weapons[database];
   const rowValues = groups.map(group => categories?.[group]?.[entry.configKey]);
   const overridden = rowValues.some(isOverride);
-  const first = rowValues.find(isOverride);
+  const taking = groupsTaking(entry, groups);
+  const first = taking.map(group => categories?.[group]?.[entry.configKey]).find(isOverride);
   const muted = !!entry.gatedBy && categories?.[groups[0]]?.[entry.gatedBy] !== true;
   return <>
     <div role="row" tabIndex={-1} data-config-key={entry.configKey} className={`config-grid config-row${overridden ? ' has-override' : ''}${muted ? ' feature-muted' : ''}${highlighted ? ' search-destination' : ''}`} title={muted ? 'Feature parameter: stored and sent, but only read while the feature toggle is on.' : undefined}>
       <div role="cell" className="key-cell"><div className="key-label"><span title={entry.documentation || entry.configKey}>{entry.label ?? entry.configKey}</span>{entry.isFeatureToggle && <span className="feature-badge">feature</span>}<button className={`notes-button${notes.length ? ' has-notes' : ''}`} title={notes.length ? `${notes.length} notes` : 'Add a note'} aria-label={`Notes for ${entry.configKey}`} onClick={() => setNotesOpen(true)}><MessageCircle size={12} />{notes.length || ''}</button></div>{muted && <small>needs {entry.gatedBy}</small>}</div>
-      {groups.map((group, index) => <div role="cell" key={group} data-config-database={database} data-config-category={group} data-config-key={entry.configKey}><ValueEditor entry={entry} database={database} category={group} value={rowValues[index]} label={`${database} ${group} ${entry.label ?? entry.configKey}`} onChange={value => setValue(database, group, entry.configKey, value)} onReset={() => removeValue(database, group, entry.configKey)} error={fieldErrors[fieldName(database, group, entry.configKey)]} /></div>)}
-      <div role="cell" className="row-actions">{groups.length > 1 && isOverride(first) && <button className="set-all" title={`Write ${showValue(first)} to ${groups.join(', ')}`} onClick={() => groups.forEach(group => setValue(database, group, entry.configKey, structuredClone(first)))}>Set all {groups.length}</button>}{database !== 'Character' && !entry.supportedWeapons && <button className="sweep-link" onClick={() => onSweep(entry)}>All weapons →</button>}</div>
+      {groups.map((group, index) => <div role="cell" key={group} data-config-database={database} data-config-category={group} data-config-key={entry.configKey}>{supportsCategory(entry, group) || isOverride(rowValues[index]) ? <ValueEditor entry={entry} database={database} category={group} value={rowValues[index]} label={`${database} ${group} ${entry.label ?? entry.configKey}`} onChange={value => setValue(database, group, entry.configKey, value)} onReset={() => removeValue(database, group, entry.configKey)} error={fieldErrors[fieldName(database, group, entry.configKey)]} /> : <span className="faint" title={`${group} does not take ${entry.label ?? entry.configKey}`}>—</span>}</div>)}
+      <div role="cell" className="row-actions">{taking.length > 1 && isOverride(first) && <button className="set-all" title={`Write ${showValue(first)} to ${taking.join(', ')}`} onClick={() => taking.forEach(group => setValue(database, group, entry.configKey, structuredClone(first)))}>Set all {taking.length}</button>}{database !== 'Character' && !entry.supportedWeapons && taking.length > 0 && <button className="sweep-link" onClick={() => onSweep(entry)}>All weapons →</button>}</div>
     </div>
     {notesOpen && <NotesDialog open={notesOpen} onOpenChange={setNotesOpen} configKey={entry.configKey} context={database === 'Character' ? `Character · ${groups[0]}` : database} notes={notes} onAddNote={addNote} onEditNote={editNote} onDeleteNote={deleteNote} />}
   </>;
@@ -104,7 +105,7 @@ const DRAFT_REFRESH_MS = 3_000;
 /** True while the owner is typing a value in the editor: a refresh waits rather than replace it. */
 const typingValue = () => {
   const active = document.activeElement;
-  return !!active?.closest('.config-table') && active.matches('input, select, textarea');
+  return !!active?.closest('.config-table, .curve-editor') && active.matches('input, select, textarea');
 };
 /** While the editor is showing, fetches its Draft again every few seconds the page is visible, and at once when it is shown again. */
 function useDraftRefresh(showing: boolean) {
@@ -160,7 +161,7 @@ function ConsoleContent() {
   const title = isCharacter ? charGroup : weapon;
   const options: ConfigEntry[] = isCharacter
     ? CHARACTER_CONFIG_OPTIONS[charGroup]
-    : WEAPON_CONFIG_OPTIONS[groups[0] === 'General' ? 'General' : 'Attack'].filter(entry => supportsWeapon(entry, weapon));
+    : WEAPON_CONFIG_OPTIONS[groups[0] === 'General' ? 'General' : 'Attack'].filter(entry => supportsWeapon(entry, weapon) && showsKey(entry, groups, values.weapons[weapon]));
   const rows = [...options].sort((a, b) => {
     // Keep each feature together, with its toggle before the parameters it gates.
     const featureOrder = (a.gatedBy || a.configKey).localeCompare(b.gatedBy || b.configKey);

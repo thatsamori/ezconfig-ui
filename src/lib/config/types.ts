@@ -32,6 +32,10 @@ export type ConfigEntry = DefaultMetadata & {
   maximum?: number;
   /** Weapon database names that may use this entry; unset means all weapons. */
   supportedWeapons?: string[];
+  /** Weapon attack categories that may use this entry; unset means all of them. */
+  supportedCategories?: string[];
+  /** FloatArray entries only: the value is a release curve, judged by the shape rules in releaseCurve.ts and shown as a picture. */
+  isReleaseCurve?: boolean;
   /** With minimum, reject fractional values before native Float rounding. */
   integer?: boolean;
   /**
@@ -59,6 +63,13 @@ export function supportsWeapon(entry: ConfigEntry, database: string): boolean {
   const weapon = database.replace(/^Weapon\//, "");
   return !entry.supportedWeapons || entry.supportedWeapons.includes(weapon);
 }
+
+export function supportsCategory(entry: ConfigEntry, category: string): boolean {
+  return !entry.supportedCategories || entry.supportedCategories.includes(category);
+}
+
+/** Why a weapon attack category does not take this key; undefined when it does. */
+export const categoryError = (entry: ConfigEntry, category: string) => supportsCategory(entry, category) ? undefined : `Use this key only in ${entry.supportedCategories!.join(' and ')}.`;
 
 export enum DataType {
   Bool = "Bool",
