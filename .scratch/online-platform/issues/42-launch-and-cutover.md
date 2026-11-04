@@ -144,3 +144,12 @@ the deploy found no stored value that #54's stricter rules refuse. The app, Lite
 Caddy and the timer are active, and the app logged no warnings or errors in the 5 minutes
 after it. `/` answers 200; the session, game servers and Rulesets APIs, the Ruleset
 import and a poll with no key answer 401; `/internal/backup-heartbeat` answers 403.
+
+2026-11-03, later: `main` at `a6d7b12` deployed, with the `SpawnServerActorsOnMapLoad`
+line in the setup block, its instructions and the spec. There was no migration. The
+owner told the session that added the line to push and deploy, and this record is from
+its report: typecheck is clean, 249 tests pass, lint stays at 5 and the build works. The
+instance runs this commit, `/` answers 200 and the built page holds the new line. The
+setup page itself was not opened. Not proven on a real server: that a server without the
+line fails, pasting the block where a `MordhauGameMode` section already exists, and
+running beside another mod's spawn line.

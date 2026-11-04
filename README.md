@@ -39,14 +39,23 @@ followed by a server restart:
 ```ini
 [/Script/Mordhau.MordhauGameSession]
 bAllowHttpRequests=True
+Mods=5696753
+
+[/Script/Mordhau.MordhauGameMode]
+SpawnServerActorsOnMapLoad=/EZConfig/BP_EZConfigB.BP_EZConfigB_C
 
 [EZConfigPlatform]
 GameServerKey=<the key>
 ```
 
-The EZConfig mod must also be in the server's mod list. The page shows
-Connected once the mod's first poll arrives, and the platform sends
-configuration only to the Supported build that the platform operator sets.
+`Mods=5696753` installs EZConfig, `SpawnServerActorsOnMapLoad` starts it on each
+map, and `bAllowHttpRequests=True` lets the game server reach the platform. If
+`Game.ini` already has either game section, add that section's lines to it
+instead of pasting a second one, and keep any other `Mods=` or
+`SpawnServerActorsOnMapLoad=` lines.
+
+The page shows Connected once the mod's first poll arrives, and the platform
+sends configuration only to the Supported build that the platform operator sets.
 
 ## Development
 
